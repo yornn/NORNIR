@@ -1,5 +1,21 @@
 /* Norse Calendar — стили виджета (скандинавская тема, формат Yorni) */
 
+/* Подключаем фирменный шрифт Norse. Файлы лежат в папке fonts/ рядом со style.css. */
+@font-face {
+    font-family: "Norse";
+    src: url("fonts/Norse-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Norse";
+    src: url("fonts/Norse-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 #norse-calendar-widget {
     position: fixed;
     right: 16px;
@@ -105,6 +121,16 @@
 }
 
 /* ---------- Кликабельные слова (адаптация на 5 секунд) ---------- */
+
+/* Базовые слова (эйкта, дата, день недели, луна) — шрифт Norse Bold капсом.
+   font-family задан с !important и высокой специфичностью, чтобы темы
+   SillyTavern не перебивали его своими CSS. */
+#norse-calendar-widget .ncw-hintable {
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
 .ncw-hintable {
     cursor: pointer;
