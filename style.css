@@ -126,21 +126,25 @@
 /* ---------- Сетка календаря ---------- */
 
 #ncw-grid {
-    display: grid;
-    /* равные колонки фиксированной доли — не схлопываются в столбец */
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
     text-align: center;
     border-top: 1px solid #3a352a;
     margin-top: 10px;
     padding-top: 10px;
 }
 
+/* Каждая неделя — своя flex-строка из 7 равных ячеек: столбец невозможен */
+.ncw-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
 .ncw-cell {
+    flex: 1 1 0;
+    min-width: 0; /* не даём содержимому растянуть колонку */
     font-size: 15px;
     padding: 6px 0;
     border-radius: 4px;
-    min-width: 0; /* не даём содержимому растянуть колонку */
 }
 
 .ncw-wd {
@@ -170,13 +174,12 @@
 /* ---------- Auknætr (дополнительные дни) ---------- */
 
 .ncw-auk-title {
-    grid-column: 1 / -1;
     font-size: 13px;
     letter-spacing: 1px;
     color: #b8946a;
     padding: 6px 0 8px;
     border-bottom: 1px solid #57503f;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 .ncw-aukday {

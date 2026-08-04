@@ -551,22 +551,34 @@ function buildGrid() {
         return;
     }
 
+    // Строка заголовков дней недели (порядок с понедельника)
+    const headRow = $("<div>", { "class": "ncw-row" });
     for (let i = 0; i < WEEKDAYS_SHORT_NORSE.length; i++) {
-        const wd = (i + 1) % 7; // порядок с понедельника
+        const wd = (i + 1) % 7;
         const tip = `${WEEKDAY_DESC_RU[wd]} — ${WEEKDAYS_FULL_RU[wd]}`;
-        grid.append($("<div>", { "class": "ncw-cell ncw-wd", text: WEEKDAYS_SHORT_NORSE[i], title: tip }));
+        headRow.append($("<div>", { "class": "ncw-cell ncw-wd", text: WEEKDAYS_SHORT_NORSE[i], title: tip }));
     }
+    grid.append(headRow);
 
-    // Неделя начинается с понедельника
-    const offset = (weekdayOf(year, month, 1) + 6) % 7;
+    // Собираем дни в массив ячеек: сначала пустые под смещение, затем 1..30
+    const cells = [];
+    const offset = (weekdayOf(year, month, 1) + 6) % 7; // неделя с понедельника
     for (let i = 0; i < offset; i++) {
-        grid.append($("<div>", { "class": "ncw-cell ncw-empty" }));
+        cells.push($("<div>", { "class": "ncw-cell ncw-empty" }));
     }
-
     const dim = daysInMonth(year, month);
     for (let d = 1; d <= dim; d++) {
         const cls = d === day ? "ncw-cell ncw-day ncw-today" : "ncw-cell ncw-day";
-        grid.append($("<div>", { "class": cls, text: d }));
+        cells.push($("<div>", { "class": cls, text: d }));
+    }
+
+    // Раскладываем ячейки по строкам-неделям строго по 7 — сетка не может «разъехаться»
+    for (let i = 0; i < cells.length; i += 7) {
+        const row = $("<div>", { "class": "ncw-row" });
+        for (let j = i; j < i + 7 && j < cells.length; j++) {
+            row.append(cells[j]);
+        }
+        grid.append(row);
     }
 }
 
