@@ -4,7 +4,9 @@
     position: fixed;
     right: 16px;
     bottom: 16px;
-    width: 300px;
+    width: 360px;
+    min-width: 320px;
+    box-sizing: border-box;
     z-index: 1000;
     background: #16151d;
     border: 1px solid #57503f;
@@ -14,6 +16,12 @@
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
     user-select: none;
     opacity: 0.96;
+}
+
+/* Чтобы содержимое не разъезжалось и не выталкивало колонки grid */
+#norse-calendar-widget,
+#norse-calendar-widget * {
+    box-sizing: border-box;
 }
 
 /* ---------- Шапка ---------- */
@@ -30,7 +38,7 @@
 }
 
 .ncw-runes {
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 4px;
     color: #b8946a;
 }
@@ -65,7 +73,7 @@
 
 #ncw-eykt {
     text-align: center;
-    font-size: 16px;
+    font-size: 19px;
     font-weight: bold;
     letter-spacing: 1px;
     color: #e5d5b0;
@@ -74,7 +82,7 @@
 
 #ncw-sun {
     text-align: center;
-    font-size: 11px;
+    font-size: 13px;
     font-style: italic;
     color: #8a8069;
     margin-bottom: 10px;
@@ -84,14 +92,14 @@
 
 #ncw-date {
     text-align: center;
-    font-size: 14px;
+    font-size: 16px;
     color: #a89a7d;
     margin: 2px 0 3px;
 }
 
 #ncw-lore {
     text-align: center;
-    font-size: 12px;
+    font-size: 14px;
     color: #8fa3b8; /* холодный «лунный» оттенок */
     margin-bottom: 4px;
 }
@@ -119,24 +127,26 @@
 
 #ncw-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
+    /* равные колонки фиксированной доли — не схлопываются в столбец */
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
     text-align: center;
     border-top: 1px solid #3a352a;
-    margin-top: 8px;
-    padding-top: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
 }
 
 .ncw-cell {
-    font-size: 14px;
-    padding: 5px 0;
+    font-size: 15px;
+    padding: 6px 0;
     border-radius: 4px;
+    min-width: 0; /* не даём содержимому растянуть колонку */
 }
 
 .ncw-wd {
     color: #b8946a;
     font-weight: bold;
-    font-size: 12px;
+    font-size: 13px;
     border-bottom: 1px solid #57503f;
     margin-bottom: 3px;
     padding-bottom: 5px;
