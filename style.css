@@ -120,6 +120,26 @@
     margin-bottom: 4px;
 }
 
+/* Базовый (скандинавский) вид — весь текст эйкты/даты/лора в Norse Bold капсом:
+   и кликабельные слова, и цифры, и сезон, и номер эйкты. Залочено от тем. */
+#norse-calendar-widget #ncw-eykt,
+#norse-calendar-widget #ncw-date,
+#norse-calendar-widget #ncw-lore {
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Активная подсказка (по клику) — обычный читабельный шрифт на русском,
+   строчными, чтобы визуально отличать «перевод» от скандинавского оригинала. */
+#norse-calendar-widget .ncw-hintable.ncw-hint {
+    font-family: Georgia, "Times New Roman", serif !important;
+    font-weight: 400 !important;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
 /* ---------- Кликабельные слова (адаптация на 5 секунд) ---------- */
 
 /* Базовые слова (эйкта, дата, день недели, луна) — шрифт Norse Bold капсом.

@@ -631,7 +631,9 @@ function renderAll(force = false) {
         );
     } else {
         dateEl.append(
-            plainSpan(`${seasonIcon} ${season.norse} • ${day} `),
+            plainSpan(`${seasonIcon} `),
+            hintSpan("season", season.norse, season.ru),
+            plainSpan(` • ${day} `),
             hintSpan("date", MONTHS_NORSE_RU[month - 1], MONTHS_RU_NOM[month - 1]),
             plainSpan(` ${year}`),
         );
