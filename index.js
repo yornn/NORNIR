@@ -30,7 +30,7 @@ const defaultSettings = {
     hours24: true,          // 24-часовой формат часов
     showMoon: true,         // показывать фазу Луны (Tungl)
     showEykt: true,         // показывать текущую эйкту
-    collapsed: false,       // свёрнут ли виджет
+    collapsed: true,        // свёрнута ли сетка дней (шапка и текст видны всегда)
     customRegex: "",        // пользовательский regex для инфоблока
     posX: null,             // сохранённая позиция виджета
     posY: null,
@@ -704,14 +704,16 @@ function buildWidget() {
         el.style.top = `${s.posY}px`;
     }
 
-    // Сворачивание по кнопке в шапке
-    $("#ncw-collapse").on("click", () => {
+    // Разворачивание сетки календаря: кнопка в шапке или клик по строке даты
+    const toggleGrid = () => {
         const collapsed = !widget.hasClass("ncw-collapsed");
         widget.toggleClass("ncw-collapsed", collapsed);
         $("#ncw-collapse").text(collapsed ? "+" : "–");
         extension_settings[extensionName].collapsed = collapsed;
         saveSettingsDebounced();
-    });
+    };
+    $("#ncw-collapse").on("click", toggleGrid);
+    $("#ncw-date").on("click", toggleGrid);
 
     enableDrag(widget.get(0), document.getElementById("ncw-header"));
 }
