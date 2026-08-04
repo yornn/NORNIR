@@ -1,7 +1,7 @@
 /*
  * Norse Calendar — расширение-виджет для SillyTavern.
  *
- * Показывает плавающий виджет в формате Yorni: текущая эйкта,
+ * Показывает плавающий виджет в формате YORNIE: текущая эйкта,
  * положение солнца, дата, день недели и фаза Луны (Tungl).
  * Данные подхватываются только из «инфоблока» в сообщениях чата,
  * например: [Date: 12 Góa 875 | Time: Hádegi]
@@ -23,7 +23,7 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 // Настройки по умолчанию
 const defaultSettings = {
     enabled: true,   // показывать виджет
-    collapsed: true, // свёрнута ли сетка дней (шапка Yorni видна всегда)
+    collapsed: true, // свёрнута ли сетка дней (шапка YORNIE видна всегда)
     posX: null,      // сохранённая позиция виджета
     posY: null,
 };
@@ -394,25 +394,39 @@ function hasDate() {
     return state.day !== null && state.month !== null;
 }
 
-/** Ставит элементу текст с адаптацией на 5 секунд, затем возвращает назад. */
-function swapHint(id, hintText) {
-    const el = $(`#${id}`);
-    const original = el.data("base") ?? el.text();
-    if (!el.data("base")) el.data("base", original);
-    el.text(hintText).addClass("ncw-hint");
-    clearTimeout(hintTimers[id]);
-    hintTimers[id] = setTimeout(() => {
-        el.text(el.data("base")).removeClass("ncw-hint");
+/** На 5 секунд меняет текст конкретного слова на адаптацию, затем возвращает. */
+function swapHint($el) {
+    $el.text($el.data("alt")).addClass("ncw-hint");
+    const key = $el.data("key");
+    clearTimeout(hintTimers[key]);
+    hintTimers[key] = setTimeout(() => {
+        $el.text($el.data("base")).removeClass("ncw-hint");
     }, 5000);
 }
 
-/** Сбрасывает все активные подсказки и обновляет базовые тексты. */
+/** Сбрасывает все активные подсказки (тексты обновятся при следующем рендере). */
 function clearHints() {
-    for (const id of Object.keys(hintTimers)) {
-        clearTimeout(hintTimers[id]);
-        delete hintTimers[id];
+    for (const key of Object.keys(hintTimers)) {
+        clearTimeout(hintTimers[key]);
+        delete hintTimers[key];
     }
     $(".ncw-hint").removeClass("ncw-hint");
+}
+
+/** Создаёт кликабельное слово с базовым текстом и адаптацией. */
+function hintSpan(key, base, alt) {
+    return $("<span>", {
+        "class": "ncw-hintable",
+        "data-key": key,
+        "data-base": base,
+        "data-alt": alt,
+        text: base,
+    });
+}
+
+/** Создаёт простой (некликабельный) текстовый фрагмент. */
+function plainSpan(text) {
+    return $("<span>", { text: text });
 }
 
 /** Сетка календаря (дни 1–30), только когда есть дата из чата. */
@@ -455,7 +469,7 @@ function buildGrid() {
     }
 }
 
-/** Полный рендер виджета в формате Yorni. */
+/** Полный рендер виджета в формате YORNIE. */
 function renderAll(force = false) {
     if (!extension_settings[extensionName].enabled) return;
     clearHints();
@@ -474,12 +488,16 @@ function renderAll(force = false) {
     state.lastDateKey = dateKey;
 
     // --- Блок 1: эйкта и положение солнца ---
-    const eyktEl = $("#ncw-eykt").removeData("base");
+    const eyktEl = $("#ncw-eykt").empty();
     const sunEl = $("#ncw-sun");
     if (hour !== null) {
         const idx = eyktForHour(hour);
         const e = EYKTIR[idx];
-        eyktEl.text(`${e.ru} • ${idx + 1}-я эйкта`).show();
+        const mm = String(minute ?? 0).padStart(2, "0");
+        eyktEl.append(
+            hintSpan("eykt", e.ru, `${String(hour).padStart(2, "0")}:${mm}`),
+            plainSpan(` • ${idx + 1}-я эйкта`),
+        ).show();
         sunEl.text(e.dirText).show();
     } else {
         eyktEl.hide();
@@ -490,18 +508,30 @@ function renderAll(force = false) {
     const season = seasonOf(month);
     const seasonIcon = season.norse === "Sumar" ? "🌿" : "❄️";
 
-    const dateEl = $("#ncw-date").removeData("base");
+    const dateEl = $("#ncw-date").empty();
     if (isAuk(month)) {
         const total = aukDays(year);
-        dateEl.text(`${seasonIcon} ${season.norse} • Sumarauki ${day} из ${total}, ${year}`);
+        dateEl.append(
+            plainSpan(`${seasonIcon} ${season.norse} • `),
+            hintSpan("date", `Sumarauki ${day} из ${total}, ${year}`,
+                "Особые дни в середине лета перед сенокосом"),
+        );
     } else {
-        dateEl.text(`${seasonIcon} ${season.norse} • ${day} ${MONTHS_NORSE_RU[month - 1]} ${year}`);
+        dateEl.append(
+            plainSpan(`${seasonIcon} ${season.norse} • ${day} `),
+            hintSpan("date", MONTHS_NORSE_RU[month - 1], MONTHS_RU_NOM[month - 1]),
+            plainSpan(` ${year}`),
+        );
     }
 
     const wdIdx = weekdayOf(year, month, day);
     const { phase } = moonPhase(year, month, day);
-    $("#ncw-lore").removeData("base")
-        .text(`${WEEKDAY_DESC_RU[wdIdx]} • ${phase.icon} ${phase.norse} ${phase.desc}`);
+    $("#ncw-lore").empty().append(
+        hintSpan("wd", WEEKDAY_DESC_RU[wdIdx], WEEKDAYS_FULL_RU[wdIdx]),
+        plainSpan(` • ${phase.icon} `),
+        hintSpan("moon", phase.norse, phase.ru),
+        plainSpan(` ${phase.desc}`),
+    );
 
     // Сетка
     buildGrid();
@@ -589,27 +619,9 @@ function buildWidget() {
         saveSettingsDebounced();
     });
 
-    // Кликабельные адаптации формата Yorni (текст на 5 секунд)
-    $("#ncw-eykt").on("click", () => {
-        if (state.hour === null) return;
-        const mm = String(state.minute ?? 0).padStart(2, "0");
-        swapHint("ncw-eykt", `${String(state.hour).padStart(2, "0")}:${mm}`);
-    });
-
-    $("#ncw-date").on("click", () => {
-        if (!hasDate()) return;
-        if (isAuk(state.month)) {
-            swapHint("ncw-date", "Особые дни в середине лета перед сенокосом (между Сольмануд и Хейаннир)");
-        } else {
-            swapHint("ncw-date", `${state.day} ${MONTHS_RU_NOM[state.month - 1]} ${state.year}`);
-        }
-    });
-
-    $("#ncw-lore").on("click", () => {
-        if (!hasDate()) return;
-        const wdIdx = weekdayOf(state.year, state.month, state.day);
-        const { phase } = moonPhase(state.year, state.month, state.day);
-        swapHint("ncw-lore", `${WEEKDAYS_FULL_RU[wdIdx]} • ${phase.icon} ${phase.ru} ${phase.desc}`);
+    // Кликабельные адаптации формата YORNIE: делегировано по словам .ncw-hintable
+    widget.on("click", ".ncw-hintable", function () {
+        swapHint($(this));
     });
 
     enableDrag(widget.get(0), document.getElementById("ncw-header"));

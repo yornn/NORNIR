@@ -96,21 +96,23 @@
     margin-bottom: 4px;
 }
 
-/* ---------- Кликабельные подсказки (адаптация на 5 секунд) ---------- */
+/* ---------- Кликабельные слова (адаптация на 5 секунд) ---------- */
 
-.ncw-clickable {
+.ncw-hintable {
     cursor: pointer;
     transition: color 0.15s ease;
+    border-bottom: 1px dotted rgba(184, 148, 106, 0.4);
 }
 
-.ncw-clickable:hover {
+.ncw-hintable:hover {
     color: #e5d5b0;
 }
 
-/* Подсветка активной подсказки */
+/* Подсветка слова с активной адаптацией */
 .ncw-hint {
     color: #b8946a !important;
     text-shadow: 0 0 8px rgba(184, 148, 106, 0.4);
+    border-bottom-color: transparent;
 }
 
 /* ---------- Сетка календаря ---------- */
