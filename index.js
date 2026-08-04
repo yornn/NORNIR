@@ -491,7 +491,8 @@ function findLoreDateTime() {
     const chat = context?.chat;
     if (!Array.isArray(chat) || chat.length === 0) return null;
 
-    // --- 1. Инфоблок на последнем сообщении персонажа ---
+    // --- 1. Инфоблок: сканируем сообщения персонажа с конца ---
+    // (последнее сообщение в чате может быть юзерским — теги ищем у бота).
     for (let i = chat.length - 1; i >= 0; i--) {
         const msg = chat[i];
         if (!msg || typeof msg.mes !== "string") continue;
@@ -499,7 +500,9 @@ function findLoreDateTime() {
         // Сначала строгий тег <norse/>, затем инфоблок {Time | Date | ...}
         const fromTag = parseNorseTag(msg.mes) || parseInfoblock(msg.mes);
         if (fromTag) return fromTag;
-        break; // смотрим только последнее сообщение персонажа
+        // Если у последнего сообщения бота тегов нет — идём к предыдущему,
+        // но не глубже SCAN_DEPTH сообщений.
+        if (chat.length - 1 - i >= SCAN_DEPTH) break;
     }
 
     // --- 2. Fallback: свободные даты в чате ---
@@ -724,13 +727,23 @@ function renderAll(force = false) {
     if (!extension_settings[extensionName].enabled) return;
     clearHints();
 
+    // Инфоблок виден ВСЕГДА (по запросу). Если даты нет — показываем заглушку.
+    $("#norse-calendar-widget").show();
+
     if (!hasDate()) {
-        // Нет инфоблока — прячем виджет и отцепляем его от сообщения
-        $("#norse-calendar-widget").hide().detach();
         state.lastDateKey = "";
+        $("#ncw-eykt, #ncw-sun, #ncw-date, #ncw-lore").hide();
+        $("#ncw-grid").hide();
+        $("#ncw-extra").hide();
+        let stub = $("#ncw-stub");
+        if (!stub.length) {
+            stub = $("<div>", { id: "ncw-stub", text: "ᚱ Ожидание инфоблока…" });
+            $("#ncw-body").append(stub);
+        }
+        stub.show();
         return;
     }
-    $("#norse-calendar-widget").show();
+    $("#ncw-stub").hide();
 
     const { year, month, day, hour, minute } = state;
     const dateKey = `${year}|${month}|${day}|${hour}|${minute}`;
@@ -844,8 +857,6 @@ function refresh() {
     const lore = findLoreDateTime();
     if (lore) {
         applyLore(lore);
-        renderAll(true);
-        mountWidget(); // цепляем к последнему сообщению персонажа
     } else {
         state.source = "none";
         state.year = null;
@@ -860,8 +871,9 @@ function refresh() {
         state.charMood = null;
         state.charAttire = null;
         state.thought = null;
-        renderAll(true);
     }
+    renderAll(true);
+    mountWidget(); // инфоблок всегда встроен в последнее сообщение персонажа
 }
 
 /**
@@ -878,7 +890,9 @@ function mountWidget() {
     const chat = context?.chat;
     if (!Array.isArray(chat) || chat.length === 0) return;
 
-    // Индекс последнего сообщения персонажа (не юзера)
+    // Индекс последнего сообщения персонажа (не юзера).
+    // Если сообщений бота нет (пустой чат / только юзер) — цепляем к самому
+    // последнему сообщению, чтобы инфоблок всё равно был виден.
     let charIdx = -1;
     for (let i = chat.length - 1; i >= 0; i--) {
         if (chat[i] && !chat[i].is_user) {
@@ -886,7 +900,7 @@ function mountWidget() {
             break;
         }
     }
-    if (charIdx === -1) return;
+    if (charIdx === -1) charIdx = chat.length - 1;
 
     // DOM-элемент этого сообщения. mesId — стандартный атрибут сообщений ST.
     let msgEl = document.querySelector(`#chat .mes[mesId="${charIdx}"]`);
