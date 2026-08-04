@@ -1,10 +1,11 @@
 /*
  * Norse Calendar — расширение-виджет для SillyTavern.
  *
- * Показывает плавающий виджет с календарём и часами, подхватывая
- * дату и время из «инфоблока» в сообщениях чата, например:
- *   [Date: 12 March 875 | Time: 14:30]
- *   Дата: 12 марта 875, время: 21:45
+ * Показывает плавающий виджет с календарём, часами, текущей эйктой
+ * и фазой Луны (Tungl), подхватывая дату и время из «инфоблока»
+ * в сообщениях чата, например:
+ *   [Date: 12 Góa 875 | Time: 14:30]
+ *   Дата: 12 марта 875, время: Hádegi
  *   875-03-12 14:30
  *
  * Расширение чисто визуальное и никак не влияет на генерацию.
@@ -27,6 +28,8 @@ const defaultSettings = {
     tickLoreTime: false,    // «тикать» ли время из чата в реальном темпе
     norseNames: true,       // скандинавские названия месяцев/дней недели
     hours24: true,          // 24-часовой формат часов
+    showMoon: true,         // показывать фазу Луны (Tungl)
+    showEykt: true,         // показывать текущую эйкту
     collapsed: false,       // свёрнут ли виджет
     customRegex: "",        // пользовательский regex для инфоблока
     posX: null,             // сохранённая позиция виджета
@@ -37,19 +40,25 @@ const defaultSettings = {
 const SCAN_DEPTH = 25;
 
 /* ------------------------------------------------------------------ */
-/* Названия месяцев и дней недели                                      */
+/* ЛОР: Викингские месяцы                                              */
+/*                                                                     */
+/* Vetr (зима):  Gormánaður (ноябрь), Ýlir (декабрь), Mörsugur (январь),*/
+/*               Þorri (февраль), Góa (март), Einmánuður (апрель)      */
+/* Sumar (лето): Harpa (май), Skerpla (июнь), Sólmánuður (июль),       */
+/*               Heyannir (август), Tvímánuður (сентябрь),             */
+/*               Haustmánuður (октябрь)                                */
 /* ------------------------------------------------------------------ */
 
+// Современные английские названия (при выключенных норс-названиях)
 const MONTHS_EN = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
 ];
 
-// Упрощённое соответствие месяцам современного календаря
+// Викингские месяцы, индекс = номер современного месяца - 1
 const MONTHS_NORSE = [
-    "Þorri", "Gói", "Einmánuðr", "Harpa", "Skerpla", "Sólmánuðr",
-    "Heyannir", "Kornskurðarmánuðr", "Haustmánuðr", "Frermánuðr",
-    "Hrútmánuðr", "Jólmánuðr",
+    "Mörsugur", "Þorri", "Góa", "Einmánuður", "Harpa", "Skerpla",
+    "Sólmánuður", "Heyannir", "Tvímánuður", "Haustmánuður", "Gormánaður", "Ýlir",
 ];
 
 const WEEKDAYS_SHORT_EN = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -57,26 +66,61 @@ const WEEKDAYS_SHORT_NORSE = ["Mán", "Týs", "Óðn", "Þór", "Frj", "Lau", "S
 const WEEKDAYS_FULL_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WEEKDAYS_FULL_NORSE = ["sunnudagr", "mánadagr", "týsdagr", "óðinsdagr", "þórsdagr", "frjádagr", "laugardagr"];
 
-// «Корни» названий месяцев для распознавания (en/ru/norse, включая падежи)
+// Лор дней недели (индекс 0 = воскресенье / sunnudagr)
+const WEEKDAY_DESC_EN = [
+    "Day of the Sun", "Day of the Moon", "Day of Týr", "Day of Odin",
+    "Day of Thor", "Day of Frigg / Freyja", "Bath day — day of washing",
+];
+const WEEKDAY_DESC_RU = [
+    "День Солнца", "День Луны", "День Тюра", "День Одина",
+    "День Тора", "День Фригг / Фрейи", "«Банный день» — день омовения",
+];
+
+// Названия дополнительных дней (Sumarauki / Auknætr) для распознавания
+const AUK_STEMS = ["sumarauki", "aukn", "auk"];
+
+// Сезоны: Vetr — ноябрь..апрель, Sumar — май..октябрь (+ Auknætr)
+function seasonOf(month) {
+    return isAuk(month) || (month >= 5 && month <= 10)
+        ? { norse: "Sumar", ru: "Лето" }
+        : { norse: "Vetr", ru: "Зима" };
+}
+
+// «Корни» названий месяцев для распознавания из чата.
+// Индекс массива = современный месяц (0 = январь).
+// Понимаем en / ru / norse / транслит, включая падежи (startsWith).
 const MONTH_STEMS = [
-    ["jan", "янв", "þorri"],
-    ["feb", "фев", "gói", "goi"],
-    ["mar", "мар", "einm"],
-    ["apr", "апр", "harpa"],
-    ["may", "мая", "май", "skerpla"],
-    ["jun", "июн", "sólm", "solm"],
-    ["jul", "июл", "heyan"],
-    ["aug", "авг", "korn"],
-    ["sep", "сен", "haust"],
-    ["oct", "окт", "frer"],
-    ["nov", "ноя", "ной", "hrút", "hrut"],
-    ["dec", "дек", "jól", "jol"],
+    // 1 — Январь / Mörsugur
+    ["jan", "янв", "mörs", "mors", "морс"],
+    // 2 — Февраль / Þorri
+    ["feb", "фев", "þor", "thor", "торр"],
+    // 3 — Март / Góa
+    ["mar", "мар", "góa", "goa", "гоа"],
+    // 4 — Апрель / Einmánuður
+    ["apr", "апр", "einm", "эйн"],
+    // 5 — Май / Harpa
+    ["may", "мая", "май", "harp", "харп"],
+    // 6 — Июнь / Skerpla
+    ["jun", "июн", "skerp", "скерп"],
+    // 7 — Июль / Sólmánuður
+    ["jul", "июл", "sólm", "solm", "сольм"],
+    // 8 — Август / Heyannir
+    ["aug", "авг", "heyan", "хейан"],
+    // 9 — Сентябрь / Tvímánuður
+    ["sep", "сен", "tvím", "tvim", "твим"],
+    // 10 — Октябрь / Haustmánuður
+    ["oct", "окт", "haust", "хауст"],
+    // 11 — Ноябрь / Gormánaður
+    ["nov", "ноя", "ной", "gorm", "горм"],
+    // 12 — Декабрь / Ýlir
+    ["dec", "дек", "ýl", "ylir", "юлир"],
 ];
 
 /** Определяет номер месяца (1–12) по названию или числу. */
 function monthFromName(name) {
     if (!name) return null;
     const n = String(name).toLowerCase().trim();
+    if (AUK_STEMS.some((s) => n.startsWith(s))) return "AUK";
     if (/^\d{1,2}$/.test(n)) {
         const v = parseInt(n, 10);
         return v >= 1 && v <= 12 ? v : null;
@@ -88,6 +132,88 @@ function monthFromName(name) {
 }
 
 /* ------------------------------------------------------------------ */
+/* ЛОР: Эйкты — 8 отрезков суток по 3 часа                             */
+/* ------------------------------------------------------------------ */
+
+const EYKTIR = [
+    { norse: "Miðnætti",  en: "Midnatti", ru: "Миднатти", desc: "Полночь",                dir: "С",  start: 0,  mid: 1.5 },
+    { norse: "Ótta",      en: "Otta",     ru: "Отта",     desc: "Ночь перед рассветом",   dir: "СВ", start: 3,  mid: 4.5 },
+    { norse: "Morgun",    en: "Morgun",   ru: "Моргун",   desc: "Утро, подъём",           dir: "В",  start: 6,  mid: 7.5 },
+    { norse: "Dagmál",    en: "Dagmal",   ru: "Дагмал",   desc: "Дневное время, завтрак", dir: "ЮВ", start: 9,  mid: 10.5 },
+    { norse: "Hádegi",    en: "Hadegi",   ru: "Хадеги",   desc: "Полдень",                dir: "Ю",  start: 12, mid: 13.5 },
+    { norse: "Undorn",    en: "Undorn",   ru: "Ундорн",   desc: "Полдник",                dir: "ЮЗ", start: 15, mid: 16.5 },
+    { norse: "Miðaftann", en: "Midaftan", ru: "Мидафтан", desc: "Вечер",                  dir: "З",  start: 18, mid: 19.5 },
+    { norse: "Náttmál",   en: "Nattmal",  ru: "Наттмал",  desc: "Ужин, ночь",             dir: "СЗ", start: 21, mid: 22.5 },
+];
+
+// Алиасы для распознавания эйкты из текста чата (все в нижнем регистре).
+// Внимание к пересечениям: "полночь" содержит "ночь", "afternoon" содержит
+// "noon" — побеждает алиас, встретившийся раньше в тексте.
+const EYKT_ALIASES = [
+    ["miðn", "midn", "мидн", "полноч", "midnight"],                          // Miðnætti
+    ["ótta", "otta", "отта", "предрассвет", "рассвет"],                      // Ótta
+    ["morgun", "моргун", "rismál", "rismal", "утро", "morning"],             // Morgun
+    ["dagmál", "dagmal", "дагмал"],                                          // Dagmál
+    ["hádegi", "hadegi", "хадеги", "полдень", "полдня", "midday", "noon"],   // Hádegi
+    ["undorn", "ундорн", "полдник", "afternoon"],                            // Undorn
+    ["miðaftan", "midaftan", "мидафтан", "вечер", "evening"],                // Miðaftann
+    ["náttmál", "nattmal", "наттмал", "ужин", "ночь", "night"],              // Náttmál
+];
+
+/** Индекс эйкты по часу (0–24). */
+function eyktForHour(hour) {
+    return Math.floor((hour % 24) / 3) % 8;
+}
+
+/** Ищет название эйкты в тексте. Возвращает индекс эйкты или null. */
+function eyktFromText(text) {
+    const t = text.toLowerCase();
+    let bestIdx = null;
+    let bestPos = Infinity;
+    for (let i = 0; i < EYKT_ALIASES.length; i++) {
+        for (const alias of EYKT_ALIASES[i]) {
+            const pos = t.indexOf(alias);
+            if (pos !== -1 && pos < bestPos) {
+                bestPos = pos;
+                bestIdx = i;
+            }
+        }
+    }
+    return bestIdx;
+}
+
+/* ------------------------------------------------------------------ */
+/* ЛОР: Фазы Луны (Tungl). Цикл 29.53 дня от астрономического          */
+/* новолуния. Точка отсчёта: новолуние 2000-01-06 18:14 UTC.           */
+/* ------------------------------------------------------------------ */
+
+const MOON_CYCLE = 29.53;
+// Точка отсчёта лунного цикла: 6 Mörsugur 2000 — соответствует реальному
+// астрономическому новолунию 2000-01-06. Возраст считается по серийным
+// дням лорного календаря (см. serialOf в разделе календарной математики).
+
+const MOON_PHASES = [
+    { norse: "Ný",             en: "New Moon",    ru: "Новолуние",      icon: "🌑", from: 0,    to: 1.8,
+      desc: "Символ зарождения месяца, время планирования" },
+    { norse: "Vaxandi tungl",  en: "Waxing Moon", ru: "Растущая луна",  icon: "🌒", from: 1.8,  to: 13.0,
+      desc: "Время активных дел, похода и строительства" },
+    { norse: "Fullt tungl",    en: "Full Moon",   ru: "Полнолуние",     icon: "🌕", from: 13.0, to: 16.5,
+      desc: "Пик силы, время проведения священных Блотов и Тинга" },
+    { norse: "Minnandi tungl", en: "Waning Moon", ru: "Убывающая луна", icon: "🌖", from: 16.5, to: 27.7,
+      desc: "Время завершения дел, сбора урожая и возвращения домой" },
+    { norse: "Nið",            en: "Dark Moon",   ru: "Безлуние",       icon: "🌚", from: 27.7, to: 29.53,
+      desc: "Ночи волка Хати, время отдыха и осторожности перед рождением Ný" },
+];
+
+/** Возраст Луны и её фаза для заданной даты (по серийному дню календаря). */
+function moonPhase(year, month, day) {
+    const anchor = serialOf(2000, 1, 6); // 6 Mörsugur 2000 — новолуние
+    const age = (((serialOf(year, month, day) - anchor) % MOON_CYCLE) + MOON_CYCLE) % MOON_CYCLE;
+    const phase = MOON_PHASES.find((p) => age >= p.from && age < p.to) ?? MOON_PHASES[0];
+    return { age, phase };
+}
+
+/* ------------------------------------------------------------------ */
 /* Парсинг даты и времени из текста                                    */
 /* ------------------------------------------------------------------ */
 
@@ -96,12 +222,12 @@ const TIME_PATTERN = /\b(\d{1,2}):(\d{2})(?::\d{2})?\b/;
 // Встроенные форматы даты. map() должен вернуть {day, month, year} или null.
 const DATE_PATTERNS = [
     {
-        // "12 March 875", "12th of March, 875", "12 марта 875"
+        // "12 March 875", "12th of March, 875", "12 марта 875", "12 Góa 875"
         re: /(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([^\W\d_]+)\s*,?\s*(\d{3,4})?/giu,
         map: (m) => ({ day: +m[1], month: monthFromName(m[2]), year: m[3] ? +m[3] : null }),
     },
     {
-        // "March 12, 875"
+        // "March 12, 875", "Góa 12, 875"
         re: /([^\W\d_]+)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{3,4})?/giu,
         map: (m) => ({ day: +m[2], month: monthFromName(m[1]), year: m[3] ? +m[3] : null }),
     },
@@ -120,8 +246,13 @@ const DATE_PATTERNS = [
 /** Проверяет, что распарсенная дата правдоподобна. */
 function isValidDate(d) {
     if (!d) return false;
-    if (!d.month || d.month < 1 || d.month > 12) return false;
-    if (!d.day || d.day < 1 || d.day > 31) return false;
+    // Auknætr: 4 дня (5 в високосный год) — здесь допускаем 1..5
+    if (d.month === "AUK") {
+        if (!d.day || d.day < 1 || d.day > 5) return false;
+    } else {
+        if (!d.month || d.month < 1 || d.month > 12) return false;
+        if (!d.day || d.day < 1 || d.day > 30) return false; // в месяце ровно 30 дней
+    }
     if (d.year !== null && (isNaN(d.year) || d.year < 1)) return false;
     return true;
 }
@@ -176,7 +307,7 @@ function parseDateTime(text) {
     }
     if (!date) return null;
 
-    // 3. Время (опционально) — первое вхождение ЧЧ:ММ в сообщении
+    // 3. Время: сначала точное ЧЧ:ММ, затем название эйкты
     date.hour = null;
     date.minute = null;
     const tm = text.match(TIME_PATTERN);
@@ -186,7 +317,14 @@ function parseDateTime(text) {
         if (h >= 0 && h <= 24 && min >= 0 && min <= 59) {
             date.hour = h;
             date.minute = min;
+            return date;
         }
+    }
+    const eyktIdx = eyktFromText(text);
+    if (eyktIdx !== null) {
+        const mid = EYKTIR[eyktIdx].mid;
+        date.hour = Math.floor(mid);
+        date.minute = Math.round((mid % 1) * 60);
     }
     return date;
 }
@@ -214,24 +352,64 @@ function isLeapYear(y) {
     return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 }
 
+/** Дополнительные дни (Sumarauki / Auknætr): 4, в високосный год — 5. */
+function aukDays(year) {
+    return isLeapYear(year) ? 5 : 4;
+}
+
+function isAuk(month) {
+    return month === "AUK";
+}
+
+/** В каждом месяце ровно 30 дней; у Auknætr — 4–5 ночей. */
 function daysInMonth(year, month) {
-    return [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+    return isAuk(month) ? aukDays(year) : 30;
 }
 
-/** День недели (0 = воскресенье). Корректно работает с годами < 100. */
+function leapsBefore(year) {
+    const y = year - 1;
+    return Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400);
+}
+
+/**
+ * Серийный номер дня в лорном календаре.
+ * Год = 12 месяцев по 30 дней (360) + Auknætr (364 / 365 дней).
+ * Auknætr стоит между Sólmánuður (7) и Heyannir (8).
+ */
+function serialOf(year, month, day) {
+    let doy; // день года (1-based)
+    if (isAuk(month)) {
+        doy = 7 * 30 + day;
+    } else {
+        doy = (month - 1) * 30 + day + (month > 7 ? aukDays(year) : 0);
+    }
+    return (year - 1) * 364 + leapsBefore(year) + doy - 1;
+}
+
+function serialToDate(serial) {
+    let y = Math.max(1, Math.floor(serial / 364.25) + 1);
+    while (serial < serialOf(y, 1, 1)) y--;
+    while (serial >= serialOf(y + 1, 1, 1)) y++;
+    const rem = serial - serialOf(y, 1, 1); // 0-based день года
+    const auk = aukDays(y);
+    if (rem < 7 * 30) {
+        return { year: y, month: Math.floor(rem / 30) + 1, day: (rem % 30) + 1 };
+    }
+    if (rem < 7 * 30 + auk) {
+        return { year: y, month: "AUK", day: rem - 7 * 30 + 1 };
+    }
+    const rem2 = rem - auk;
+    return { year: y, month: Math.floor(rem2 / 30) + 1, day: (rem2 % 30) + 1 };
+}
+
+/** День недели (0 = воскресенье). 1 Mörsugur года 1 — mánadagr (понедельник). */
 function weekdayOf(year, month, day) {
-    const d = new Date(2000, 0, 1);
-    d.setFullYear(year, month - 1, day);
-    d.setHours(12, 0, 0, 0);
-    return d.getDay();
+    return (serialOf(year, month, day) + 1) % 7;
 }
 
-/** Прибавляет n дней к дате, корректно обрабатывая переполнение. */
+/** Прибавляет n дней к дате (понимает переход через Auknætr и границы лет). */
 function addDays(year, month, day, n) {
-    const d = new Date(2000, 0, 1);
-    d.setFullYear(year, month - 1, day + n);
-    d.setHours(12, 0, 0, 0);
-    return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+    return serialToDate(serialOf(year, month, day) + n);
 }
 
 /* ------------------------------------------------------------------ */
@@ -280,9 +458,24 @@ function buildGrid() {
     }
     grid.toggleClass("ncw-dim", dimmed);
 
+    // Auknætr: счёт дней месяца отключён — показываем особый статус
+    if (!dimmed && isAuk(month)) {
+        const total = aukDays(year);
+        grid.append($("<div>", { "class": "ncw-auk-title", text: "— Sumarauki · Auknætr —" }));
+        for (let d = 1; d <= total; d++) {
+            const cls = d === day ? "ncw-cell ncw-day ncw-aukday ncw-today" : "ncw-cell ncw-day ncw-aukday";
+            grid.append($("<div>", { "class": cls, text: d }));
+        }
+        return;
+    }
+
     const shortNames = s.norseNames ? WEEKDAYS_SHORT_NORSE : WEEKDAYS_SHORT_EN;
-    for (const n of shortNames) {
-        grid.append($("<div>", { "class": "ncw-cell ncw-wd", text: n }));
+    for (let i = 0; i < shortNames.length; i++) {
+        const wd = (i + 1) % 7; // порядок с понедельника
+        const tip = s.norseNames
+            ? `${WEEKDAYS_FULL_NORSE[wd]} — ${WEEKDAY_DESC_RU[wd]}`
+            : `${WEEKDAYS_FULL_EN[wd]} — ${WEEKDAY_DESC_EN[wd]}`;
+        grid.append($("<div>", { "class": "ncw-cell ncw-wd", text: shortNames[i], title: tip }));
     }
 
     // Неделя начинается с понедельника
@@ -298,6 +491,41 @@ function buildGrid() {
     }
 }
 
+/** Строка эйкты: название — описание (сторона света). */
+function renderEykt() {
+    const s = extension_settings[extensionName];
+    const el = $("#ncw-eykt");
+    if (!s.showEykt || state.hour === null || state.source === "none") {
+        el.hide();
+        return;
+    }
+    const idx = eyktForHour(state.hour);
+    const e = EYKTIR[idx];
+    const name = s.norseNames ? e.norse : e.en;
+    const h0 = String(e.start).padStart(2, "0");
+    const h1 = String((e.start + 3) % 24).padStart(2, "0");
+    el.text(`${name} — ${e.desc} (${e.dir})`)
+        .attr("title", `${idx + 1}-я эйкта · ${h0}:00–${h1}:00 · ${e.ru}`)
+        .show();
+}
+
+/** Строка сезона и фазы Луны (Tungl). */
+function renderMoon() {
+    const s = extension_settings[extensionName];
+    const el = $("#ncw-moon");
+    const hasDate = state.source !== "none" && state.day && state.month;
+    if (!s.showMoon || !hasDate) {
+        el.hide();
+        return;
+    }
+    const { age, phase } = moonPhase(state.year, state.month, state.day);
+    const season = seasonOf(state.month);
+    const phaseName = s.norseNames ? phase.norse : phase.en;
+    el.text(`${season.norse} · ${phase.icon} ${phaseName} · ${phase.ru}`)
+        .attr("title", `${phase.desc}\nДень ${age.toFixed(1)} лунного цикла · ${season.norse} — ${season.ru}`)
+        .show();
+}
+
 function renderAll(force = false) {
     if (!extension_settings[extensionName].enabled) return;
     const s = extension_settings[extensionName];
@@ -305,15 +533,26 @@ function renderAll(force = false) {
     // Часы
     $("#ncw-clock").text(formatTime(state.hour, state.minute));
 
+    // Эйкта
+    renderEykt();
+
     // Строка даты
     if (state.source === "none" || !state.day || !state.month) {
-        $("#ncw-date").text("— no date in chat —");
+        $("#ncw-date").removeAttr("title").text("— no date in chat —");
+    } else if (isAuk(state.month)) {
+        const total = aukDays(state.year);
+        $("#ncw-date")
+            .text(`Sumarauki (Auknætr) — ${state.day} / ${total}, ${state.year}`)
+            .attr("title", "Летнее прибавление: особые дни в середине лета перед сенокосом. Счёт дней месяца отключён.");
     } else {
         const wdIdx = weekdayOf(state.year, state.month, state.day);
         const wdFull = s.norseNames ? WEEKDAYS_FULL_NORSE[wdIdx] : WEEKDAYS_FULL_EN[wdIdx];
         const monthName = s.norseNames ? MONTHS_NORSE[state.month - 1] : MONTHS_EN[state.month - 1];
-        $("#ncw-date").text(`${wdFull}, ${state.day} ${monthName} ${state.year}`);
+        $("#ncw-date").removeAttr("title").text(`${wdFull}, ${state.day} ${monthName} ${state.year}`);
     }
+
+    // Сезон + Луна
+    renderMoon();
 
     // Сетка перестраивается только при смене даты или настроек
     const dateKey = `${state.source}|${state.year}|${state.month}|${state.day}|${s.norseNames}`;
@@ -359,7 +598,7 @@ function applyReal() {
     state.source = "real";
     state.year = now.getFullYear();
     state.month = now.getMonth() + 1;
-    state.day = now.getDate();
+    state.day = Math.min(now.getDate(), 30); // в лорном месяце ровно 30 дней
     state.hour = now.getHours();
     state.minute = now.getMinutes();
 }
@@ -443,7 +682,9 @@ function buildWidget() {
         ),
         $("<div>", { id: "ncw-body" }).append(
             $("<div>", { id: "ncw-clock", text: "--:--" }),
+            $("<div>", { id: "ncw-eykt" }),
             $("<div>", { id: "ncw-date", text: "—" }),
+            $("<div>", { id: "ncw-moon" }),
             $("<div>", { id: "ncw-grid" }),
             $("<div>", { id: "ncw-source" }),
         ),
@@ -539,6 +780,8 @@ function bindSettings() {
     bindCheckbox("#nc_tick", "tickLoreTime", refresh);
     bindCheckbox("#nc_norse", "norseNames", () => renderAll(true));
     bindCheckbox("#nc_24h", "hours24", () => renderAll(true));
+    bindCheckbox("#nc_moon", "showMoon", () => renderAll(true));
+    bindCheckbox("#nc_eykt", "showEykt", () => renderAll(true));
 
     const $re = $("#nc_regex");
     $re.val(extension_settings[extensionName].customRegex);

@@ -85,6 +85,28 @@
     text-overflow: ellipsis;
 }
 
+/* ---------- Эйкта и Луна ---------- */
+
+#ncw-eykt,
+#ncw-moon {
+    text-align: center;
+    font-size: 10px;
+    margin: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#ncw-eykt {
+    color: #b8946a;
+    letter-spacing: 0.5px;
+}
+
+#ncw-moon {
+    color: #8fa3b8; /* холодный «лунный» оттенок */
+    margin-bottom: 6px;
+}
+
 /* ---------- Сетка календаря ---------- */
 
 #ncw-grid {
@@ -121,6 +143,22 @@
     color: #16151d;
     font-weight: bold;
     box-shadow: 0 0 6px rgba(184, 148, 106, 0.5);
+}
+
+/* ---------- Auknætr (дополнительные дни) ---------- */
+
+.ncw-auk-title {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #b8946a;
+    padding: 4px 0 6px;
+    border-bottom: 1px solid #57503f;
+    margin-bottom: 2px;
+}
+
+.ncw-aukday {
+    border: 1px dashed #57503f;
 }
 
 /* Приглушённый режим — когда даты в чате нет */
