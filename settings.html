@@ -1,0 +1,50 @@
+<div class="norse-calendar-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>Norse Calendar</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <div class="nc-block">
+                <label class="checkbox_label" for="nc_enabled">
+                    <input id="nc_enabled" type="checkbox" />
+                    <span>Show widget</span>
+                </label>
+                <label class="checkbox_label" for="nc_realtime">
+                    <input id="nc_realtime" type="checkbox" />
+                    <span>Fall back to real time if no date found in chat</span>
+                </label>
+                <label class="checkbox_label" for="nc_tick">
+                    <input id="nc_tick" type="checkbox" />
+                    <span>Advance chat time in real time (1 chat min = 1 real min)</span>
+                </label>
+                <label class="checkbox_label" for="nc_norse">
+                    <input id="nc_norse" type="checkbox" />
+                    <span>Old Norse month / weekday names</span>
+                </label>
+                <label class="checkbox_label" for="nc_24h">
+                    <input id="nc_24h" type="checkbox" />
+                    <span>24-hour clock</span>
+                </label>
+            </div>
+
+            <hr class="sysHR" />
+
+            <div class="nc-block">
+                <label for="nc_regex"><b>Custom infoblock regex</b> <small>(optional)</small></label>
+                <input id="nc_regex" type="text" class="text_pole"
+                       placeholder="Date: (?<day>\d+) (?<month>\w+) (?<year>\d+) \| Time: (?<hour>\d+):(?<minute>\d+)" />
+                <small>
+                    Named groups supported: <code>day</code>, <code>month</code>, <code>year</code>,
+                    <code>hour</code>, <code>minute</code>. If empty, built-in formats are used
+                    (e.g. "12 March 875", "12 марта 875", "875-03-12" + "14:30").
+                </small>
+            </div>
+
+            <div class="nc-block">
+                <input id="nc_reset_pos" type="button" class="menu_button" value="Reset widget position" />
+            </div>
+        </div>
+    </div>
+    <hr class="sysHR" />
+</div>

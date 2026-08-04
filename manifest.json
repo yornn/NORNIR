@@ -1,0 +1,12 @@
+{
+    "display_name": "Norse Calendar",
+    "loading_order": 5,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "yornn",
+    "version": "1.0.0",
+    "home_page": "https://github.com/yornn/Norse-Calendar",
+    "auto_update": false
+}

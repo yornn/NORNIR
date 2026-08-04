@@ -1,0 +1,157 @@
+/* Norse Calendar — стили виджета (скандинавская тема) */
+
+#norse-calendar-widget {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    width: 224px;
+    z-index: 1000;
+    background: #16151d;
+    border: 1px solid #57503f;
+    border-radius: 8px;
+    color: #d8cdb4;
+    font-family: Georgia, "Times New Roman", serif;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+    user-select: none;
+    opacity: 0.96;
+}
+
+/* ---------- Шапка ---------- */
+
+#ncw-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    background: #201e29;
+    border-bottom: 1px solid #57503f;
+    border-radius: 7px 7px 0 0;
+    cursor: move;
+}
+
+.ncw-runes {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #b8946a;
+}
+
+#ncw-collapse {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 1px 6px;
+    border: 1px solid #57503f;
+    border-radius: 4px;
+    color: #b8946a;
+}
+
+#ncw-collapse:hover {
+    background: #2c2937;
+    color: #e5d5b0;
+}
+
+/* Свёрнутое состояние — видна только шапка */
+#norse-calendar-widget.ncw-collapsed {
+    width: 150px;
+}
+
+#norse-calendar-widget.ncw-collapsed #ncw-body {
+    display: none;
+}
+
+/* ---------- Тело ---------- */
+
+#ncw-body {
+    padding: 8px 10px 10px;
+}
+
+#ncw-clock {
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #e5d5b0;
+    text-shadow: 0 0 8px rgba(184, 148, 106, 0.35);
+}
+
+#ncw-date {
+    text-align: center;
+    font-size: 11px;
+    font-style: italic;
+    color: #a89a7d;
+    margin: 2px 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Сетка календаря ---------- */
+
+#ncw-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+}
+
+.ncw-cell {
+    font-size: 11px;
+    padding: 3px 0;
+    border-radius: 3px;
+}
+
+.ncw-wd {
+    color: #b8946a;
+    font-weight: bold;
+    font-size: 10px;
+    border-bottom: 1px solid #57503f;
+    margin-bottom: 2px;
+}
+
+.ncw-day {
+    color: #cfc4a8;
+}
+
+.ncw-empty {
+    /* пустые ячейки перед 1-м числом месяца */
+}
+
+.ncw-today {
+    background: #b8946a;
+    color: #16151d;
+    font-weight: bold;
+    box-shadow: 0 0 6px rgba(184, 148, 106, 0.5);
+}
+
+/* Приглушённый режим — когда даты в чате нет */
+#ncw-grid.ncw-dim {
+    opacity: 0.4;
+}
+
+/* ---------- Подпись источника ---------- */
+
+#ncw-source {
+    margin-top: 7px;
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #7a705c;
+}
+
+/* ---------- Панель настроек ---------- */
+
+.norse-calendar-settings .inline-drawer-header {
+    width: 100%;
+}
+
+.norse-calendar-settings .nc-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+.norse-calendar-settings small {
+    opacity: 0.65;
+    font-style: italic;
+}
