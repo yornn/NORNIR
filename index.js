@@ -3,8 +3,11 @@
  *
  * Показывает плавающий виджет в формате YORNIE: текущая эйкта,
  * положение солнца, дата, день недели и фаза Луны (Tungl).
- * Данные подхватываются только из «инфоблока» в сообщениях чата,
- * например: [Date: 12 Góa 875 | Time: Hádegi]
+ *
+ * Из чата подхватывается ТОЛЬКО ДАТА (в любом формате).
+ * Всё остальное — эйкта, положение солнца, сезон, день недели, луна —
+ * ВЫЧИСЛЯЕТСЯ из даты по правилам времени викингов. Это сделано специально:
+ * пользователь может вообще не употреблять эти термины в чате.
  * Реальное время не используется.
  *
  * Расширение чисто визуальное и никак не влияет на генерацию.
@@ -185,11 +188,11 @@ const MOON_CYCLE = 29.53;
 const MOON_PHASES = [
     { norse: "Ný",             en: "New Moon",    ru: "Новолуние",      icon: "🌑", from: 0,    to: 1.8,
       desc: "время зарождения и планов" },
-    { norse: "Vaxandi tungl",  en: "Waxing Moon", ru: "Растущая луна",  icon: "🌒", from: 1.8,  to: 13.0,
+    { norse: "Vaxandi",        en: "Waxing Moon", ru: "Растущая луна",  icon: "🌒", from: 1.8,  to: 13.0,
       desc: "время дел, походов и строительства" },
     { norse: "Fullt tungl",    en: "Full Moon",   ru: "Полнолуние",     icon: "🌕", from: 13.0, to: 16.5,
       desc: "пик силы, время Блотов и Тинга" },
-    { norse: "Minnandi tungl", en: "Waning Moon", ru: "Убывающая луна", icon: "🌖", from: 16.5, to: 27.7,
+    { norse: "Minnandi",       en: "Waning Moon", ru: "Убывающая луна", icon: "🌖", from: 16.5, to: 27.7,
       desc: "время завершать дела и возвращаться домой" },
     { norse: "Nið",            en: "Dark Moon",   ru: "Безлуние",       icon: "🌚", from: 27.7, to: 29.53,
       desc: "ночи волка Хати, время отдыха и осторожности" },
@@ -209,16 +212,21 @@ function moonPhase(year, month, day) {
 
 const TIME_PATTERN = /\b(\d{1,2}):(\d{2})(?::\d{2})?\b/;
 
+// Ключевые слова, помечающие «инфоблок» с датой (теги вида [Date: ...] и строки «Дата: ...»)
+const DATE_KEYWORD_RE = /(date|дата|day|year|год|calendar|календар|tungl|эйкт|eykt|time|время)/iu;
+const TIME_KEYWORD_RE = /(time|время|эйкт|eykt|час)/iu;
+
 // Встроенные форматы даты. map() должен вернуть {day, month, year} или null.
+// Год — только 3–4 цифры: двухзначный год ("26.01.04") игнорируем как мусор.
 const DATE_PATTERNS = [
     {
         // "12 March 875", "12th of March, 875", "12 марта 875", "12 Góa 875"
-        re: /(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([^\W\d_]+)\s*,?\s*(\d{3,4})?/giu,
+        re: /(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([^\W\d_]{2,})\s*,?\s*(\d{3,4})?/giu,
         map: (m) => ({ day: +m[1], month: monthFromName(m[2]), year: m[3] ? +m[3] : null }),
     },
     {
         // "March 12, 875", "Góa 12, 875"
-        re: /([^\W\d_]+)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{3,4})?/giu,
+        re: /([^\W\d_]{2,})\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{3,4})?/giu,
         map: (m) => ({ day: +m[2], month: monthFromName(m[1]), year: m[3] ? +m[3] : null }),
     },
     {
@@ -227,8 +235,8 @@ const DATE_PATTERNS = [
         map: (m) => ({ year: +m[1], month: +m[2], day: +m[3] }),
     },
     {
-        // "12.03.875" или "12/03/875" (день.месяц.год)
-        re: /(\d{1,2})[./](\d{1,2})[./](\d{2,4})/g,
+        // "12.03.875" или "12/03/875" (день.месяц.год, год строго 3–4 цифры)
+        re: /(\d{1,2})[./](\d{1,2})[./](\d{3,4})/g,
         map: (m) => ({ day: +m[1], month: +m[2], year: +m[3] }),
     },
 ];
@@ -241,66 +249,120 @@ function isValidDate(d) {
         if (!d.day || d.day < 1 || d.day > 5) return false;
     } else {
         if (!d.month || d.month < 1 || d.month > 12) return false;
-        if (!d.day || d.day < 1 || d.day > 30) return false; // в месяце ровно 30 дней
+        if (!d.day || d.day < 1 || d.day > 31) return false; // 31 подожмём до 30 в finalizeDate
     }
-    if (d.year !== null && (isNaN(d.year) || d.year < 1)) return false;
+    if (d.year !== null && (isNaN(d.year) || d.year < 1 || d.year > 9999)) return false;
     return true;
 }
 
-/**
- * Ищет дату и время в тексте сообщения.
- * Возвращает {day, month, year, hour, minute} или null.
- */
-function parseDateTime(text) {
-    // 1. Встроенные форматы даты
-    let date = null;
+/** Приводит дату к лорному календарю (в месяце ровно 30 дней). */
+function finalizeDate(d) {
+    if (d.month !== "AUK" && d.day > 30) d.day = 30;
+    return d;
+}
+
+/** Собирает «зоны» сообщения, где вероятнее всего дата: скобочные теги и строки с ключевыми словами. */
+function dateZones(cleanText) {
+    const zones = [];
+    let m;
+    const bracketRe = /[\[<(][^\]>)]{0,160}[\])>]/g;
+    while ((m = bracketRe.exec(cleanText)) !== null) {
+        if (DATE_KEYWORD_RE.test(m[0])) zones.push(m[0]);
+    }
+    for (const line of cleanText.split(/\r?\n/)) {
+        if (DATE_KEYWORD_RE.test(line)) zones.push(line);
+    }
+    return zones;
+}
+
+/** Ищет лучшую дату в тексте. allowNoYear=false — только полные даты с годом. */
+function findDateIn(text, { allowNoYear }) {
+    let best = null;
     for (const { re, map } of DATE_PATTERNS) {
         re.lastIndex = 0;
         let m;
         while ((m = re.exec(text)) !== null) {
-            const candidate = map(m);
-            if (isValidDate(candidate)) {
-                date = candidate;
-                break;
-            }
+            const c = map(m);
+            if (!isValidDate(c)) continue;
+            if (!allowNoYear && c.year === null) continue;
+            if (!best || (best.year === null && c.year !== null)) best = c;
         }
-        if (date) break;
     }
-    if (!date) return null;
+    return best ? finalizeDate(best) : null;
+}
 
-    // 2. Время: сначала точное ЧЧ:ММ, затем название эйкты
+/** Дополняет дату временем из той же зоны (ЧЧ:ММ, затем название эйкты). */
+function attachTime(date, zone, allowEyktAliases) {
     date.hour = null;
     date.minute = null;
-    const tm = text.match(TIME_PATTERN);
+    const tm = zone.match(TIME_PATTERN);
     if (tm) {
-        const h = parseInt(tm[1], 10);
-        const min = parseInt(tm[2], 10);
-        if (h >= 0 && h <= 24 && min >= 0 && min <= 59) {
+        const h = +tm[1];
+        const min = +tm[2];
+        if (h <= 24 && min <= 59) {
             date.hour = h;
             date.minute = min;
             return date;
         }
     }
-    const eyktIdx = eyktFromText(text);
-    if (eyktIdx !== null) {
-        const mid = EYKTIR[eyktIdx].mid;
-        date.hour = Math.floor(mid);
-        date.minute = Math.round((mid % 1) * 60);
+    if (allowEyktAliases) {
+        const idx = eyktFromText(zone);
+        if (idx !== null) {
+            const mid = EYKTIR[idx].mid;
+            date.hour = Math.floor(mid);
+            date.minute = Math.round((mid % 1) * 60);
+        }
     }
     return date;
 }
 
-/** Сканирует чат с конца в поисках последнего инфоблока с датой. */
+/**
+ * Ищет ДАТУ в тексте одного сообщения (главная функция захвата).
+ * Приоритет: 1) теги/строки с ключевыми словами даты (год необязателен);
+ * 2) любая полная дата с годом в тексте.
+ * Луна, сезон и день недели потом вычисляются из даты — в чате они не нужны.
+ */
+function parseMessage(rawText) {
+    const clean = rawText.replace(/<[^>]*>/g, " ");
+    for (const zone of dateZones(clean)) {
+        const d = findDateIn(zone, { allowNoYear: true });
+        if (d) return attachTime(d, zone, true);
+    }
+    const d = findDateIn(clean, { allowNoYear: false });
+    if (d) return attachTime(d, clean, TIME_KEYWORD_RE.test(clean));
+    return null;
+}
+
+/**
+ * Сканирует чат с конца в поисках последнего инфоблока с датой.
+ * Если самая свежая дата без года — берёт год из ближайшей ранней полной даты
+ * (или сохраняет текущий год виджета).
+ */
 function findLoreDateTime() {
     const context = getContext();
     const chat = context?.chat;
     if (!Array.isArray(chat) || chat.length === 0) return null;
     const from = Math.max(0, chat.length - SCAN_DEPTH);
+    let partial = null; // свежая дата без года
     for (let i = chat.length - 1; i >= from; i--) {
         const text = chat[i]?.mes;
         if (typeof text !== "string" || !text) continue;
-        const parsed = parseDateTime(text);
-        if (parsed) return parsed;
+        const parsed = parseMessage(text);
+        if (!parsed) continue;
+        if (parsed.year !== null) {
+            // Полная дата. Если выше была более свежая дата без года — она важнее,
+            // а год подставляем из этой полной.
+            if (partial) {
+                partial.year = parsed.year;
+                return partial;
+            }
+            return parsed;
+        }
+        if (!partial) partial = parsed;
+    }
+    if (partial) {
+        partial.year = state.year ?? 1;
+        return partial;
     }
     return null;
 }
