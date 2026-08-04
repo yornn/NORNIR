@@ -384,6 +384,32 @@ function attachTime(date, zone, allowEyktAliases) {
 }
 
 /**
+ * Разбирает инфоблок {Time | Date | Weather | Location | userAttire | charMood | charAttire | thought}
+ * на поля. Возвращает объект с полями тегов или null, если даты нет.
+ * Работает и по | -разделителям, и извлекает дату/время через parseMessage.
+ */
+function parseInfoblock(rawText) {
+    // Берём первый скобочный блок {...}
+    const m = rawText.match(/\{([^{}]{10,400})\}/);
+    if (!m) return null;
+    const inner = m[1];
+    const parts = inner.split("|").map((s) => s.trim()).filter(Boolean);
+    // Дата/время ищем по всему блоку (там 1-я и 2-я части)
+    const dt = parseMessage(rawText);
+    if (!dt) return null;
+    return {
+        ...dt,
+        timeRaw: parts[0] ?? null,
+        weather: parts[2] ?? null,
+        location: parts[3] ?? null,
+        userAttire: parts[4] ?? null,
+        charMood: parts[5] ?? null,
+        charAttire: parts[6] ?? null,
+        thought: parts[7] ?? null,
+    };
+}
+
+/**
  * Парсит строгий тег <norse .../> — приоритетный источник данных.
  * Возвращает {day, month, year, hour, minute} или null.
  */
@@ -471,7 +497,7 @@ function findLoreDateTime() {
         if (!msg || typeof msg.mes !== "string") continue;
         if (msg.is_user) continue; // только сообщения бота/{{char}}
         // Сначала строгий тег <norse/>, затем инфоблок {Time | Date | ...}
-        const fromTag = parseNorseTag(msg.mes) || parseMessage(msg.mes);
+        const fromTag = parseNorseTag(msg.mes) || parseInfoblock(msg.mes);
         if (fromTag) return fromTag;
         break; // смотрим только последнее сообщение персонажа
     }
@@ -589,6 +615,14 @@ const state = {
     hour: null,
     minute: null,
     lastDateKey: "",
+    // Поля инфоблока (теги из промпта)
+    timeRaw: null,
+    weather: null,
+    location: null,
+    userAttire: null,
+    charMood: null,
+    charAttire: null,
+    thought: null,
 };
 
 let refreshTimer = null;
@@ -751,8 +785,37 @@ function renderAll(force = false) {
         plainSpan(` ${phase.desc}`),
     );
 
+    // --- Доп.поля инфоблока (погода, локация, одежда, настроение, мысль) ---
+    renderExtraFields();
+
     // Сетка
     buildGrid();
+}
+
+/** Рендерит дополнительные теги инфоблока (из промпта), если они есть. */
+function renderExtraFields() {
+    const rows = [
+        ["ncw-weather", "🌤", state.weather],
+        ["ncw-location", "📍", state.location],
+        ["ncw-attire-user", "🧍", state.userAttire],
+        ["ncw-mood", "🎭", state.charMood],
+        ["ncw-attire-char", "🛡", state.charAttire],
+        ["ncw-thought", "💭", state.thought],
+    ];
+    let any = false;
+    for (const [id, icon, val] of rows) {
+        const el = $(`#${id}`);
+        if (val) {
+            el.empty().append(
+                $("<span>", { "class": "ncw-x-icon", text: icon }),
+                $("<span>", { "class": "ncw-x-text", text: val }),
+            ).show();
+            any = true;
+        } else {
+            el.hide();
+        }
+    }
+    $("#ncw-extra").toggle(any);
 }
 
 /* ------------------------------------------------------------------ */
@@ -766,6 +829,14 @@ function applyLore(lore) {
     state.day = lore.day;
     state.hour = lore.hour;
     state.minute = lore.minute;
+    // Поля инфоблока (могут отсутствовать у свободных дат)
+    state.timeRaw = lore.timeRaw ?? null;
+    state.weather = lore.weather ?? null;
+    state.location = lore.location ?? null;
+    state.userAttire = lore.userAttire ?? null;
+    state.charMood = lore.charMood ?? null;
+    state.charAttire = lore.charAttire ?? null;
+    state.thought = lore.thought ?? null;
 }
 
 /** Полное обновление: ищем дату в чате, перецепляем виджет и перерисовываем. */
@@ -782,6 +853,13 @@ function refresh() {
         state.day = null;
         state.hour = null;
         state.minute = null;
+        state.timeRaw = null;
+        state.weather = null;
+        state.location = null;
+        state.userAttire = null;
+        state.charMood = null;
+        state.charAttire = null;
+        state.thought = null;
         renderAll(true);
     }
 }
@@ -860,6 +938,15 @@ function buildWidget() {
             // Блок 2: дата и лор (кликабельно)
             $("<div>", { id: "ncw-date", "class": "ncw-clickable" }),
             $("<div>", { id: "ncw-lore", "class": "ncw-clickable" }),
+            // Доп.поля инфоблока (погода, локация, одежда, настроение, мысль)
+            $("<div>", { id: "ncw-extra" }).append(
+                $("<div>", { id: "ncw-weather", "class": "ncw-x-row" }),
+                $("<div>", { id: "ncw-location", "class": "ncw-x-row" }),
+                $("<div>", { id: "ncw-attire-user", "class": "ncw-x-row" }),
+                $("<div>", { id: "ncw-mood", "class": "ncw-x-row" }),
+                $("<div>", { id: "ncw-attire-char", "class": "ncw-x-row" }),
+                $("<div>", { id: "ncw-thought", "class": "ncw-x-row" }),
+            ),
             // Разворачиваемая сетка дней
             $("<div>", { id: "ncw-grid" }),
         ),

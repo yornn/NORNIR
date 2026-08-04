@@ -169,6 +169,49 @@
     border-bottom-color: transparent;
 }
 
+/* ---------- Доп.поля инфоблока (погода, локация, одежда, настроение, мысль) ---------- */
+
+#ncw-extra {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #3a352a;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ncw-x-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #c4b694;
+    text-align: left;
+}
+
+.ncw-x-icon {
+    flex: 0 0 auto;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.ncw-x-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Мысль персонажа — курсивом и приглушённым «лунным» оттенком */
+#ncw-thought .ncw-x-text {
+    font-style: italic;
+    color: #8fa3b8;
+}
+
+/* Настроение — чуть теплее */
+#ncw-mood .ncw-x-text {
+    color: #c9a06a;
+}
+
 /* ---------- Сетка календаря ---------- */
 
 #ncw-grid {
