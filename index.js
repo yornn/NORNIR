@@ -216,30 +216,44 @@ const TIME_PATTERN = /\b(\d{1,2}):(\d{2})(?::\d{2})?\b/;
 const DATE_KEYWORD_RE = /(date|дата|day|year|год|calendar|календар|tungl|эйкт|eykt|time|время)/iu;
 const TIME_KEYWORD_RE = /(time|время|эйкт|eykt|час)/iu;
 
+// Символы, из которых может состоять слово месяца
+// (латиница + кириллица + скандинавская диакритика Þ ð ó á ý æ ö).
+const MWORD = "A-Za-zÀ-ÿÞðþÁ-ž\\u0400-\\u04FF";
+
 // Встроенные форматы даты. map() должен вернуть {day, month, year} или null.
 // Год — только 3–4 цифры: двухзначный год ("26.01.04") игнорируем как мусор.
+// Слово месяца идёт из явного набора букв MWORD, поэтому ловит и кириллицу,
+// и скандинавские названия. monthWord=true помечает, что месяц задан словом.
 const DATE_PATTERNS = [
     {
-        // "12 March 875", "12th of March, 875", "12 марта 875", "12 Góa 875"
-        re: /(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([^\W\d_]{2,})\s*,?\s*(\d{3,4})?/giu,
-        map: (m) => ({ day: +m[1], month: monthFromName(m[2]), year: m[3] ? +m[3] : null }),
+        // "12 March 875", "12th of March, 875", "12 марта 875", "12 Góa 875", "4 Хаустмануд 1015"
+        re: new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?([${MWORD}]{2,})\\s*,?\\s*(\\d{3,4})?`, "giu"),
+        map: (m) => ({ day: +m[1], month: monthFromName(m[2]), year: m[3] ? +m[3] : null, monthWord: true }),
     },
     {
         // "March 12, 875", "Góa 12, 875"
-        re: /([^\W\d_]{2,})\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{3,4})?/giu,
-        map: (m) => ({ day: +m[2], month: monthFromName(m[1]), year: m[3] ? +m[3] : null }),
+        re: new RegExp(`([${MWORD}]{2,})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*,?\\s*(\\d{3,4})?`, "giu"),
+        map: (m) => ({ day: +m[2], month: monthFromName(m[1]), year: m[3] ? +m[3] : null, monthWord: true }),
     },
     {
         // "875-03-12"
         re: /(\d{3,4})-(\d{1,2})-(\d{1,2})/g,
-        map: (m) => ({ year: +m[1], month: +m[2], day: +m[3] }),
+        map: (m) => ({ year: +m[1], month: +m[2], day: +m[3], monthWord: false }),
     },
     {
         // "12.03.875" или "12/03/875" (день.месяц.год, год строго 3–4 цифры)
         re: /(\d{1,2})[./](\d{1,2})[./](\d{3,4})/g,
-        map: (m) => ({ day: +m[1], month: +m[2], year: +m[3] }),
+        map: (m) => ({ day: +m[1], month: +m[2], year: +m[3], monthWord: false }),
     },
 ];
+
+/** «Точность» даты: 2 = полная с годом, 1 = месяц словом без года, 0 = мусор. */
+function dateScore(d) {
+    if (typeof d.month === "string") return d.year !== null ? 2 : 1; // AUK
+    if (d.year !== null) return 2;
+    if (d.monthWord) return 1; // "12 марта" без года — ок
+    return 0; // "12.03" без года — не дата, чтобы не путать с числами в тексте
+}
 
 /** Проверяет, что распарсенная дата правдоподобна. */
 function isValidDate(d) {
@@ -261,31 +275,48 @@ function finalizeDate(d) {
     return d;
 }
 
-/** Собирает «зоны» сообщения, где вероятнее всего дата: скобочные теги и строки с ключевыми словами. */
+/**
+ * Собирает «зоны» сообщения, где вероятнее всего дата.
+ * Возвращает {kw, bracket} — зоны с ключевыми словами даты и просто скобочные блоки.
+ * Ловим все виды скобок: {..}, [..], <..>, (..) — инфоблоки бывают в любом виде.
+ */
 function dateZones(cleanText) {
-    const zones = [];
+    const kw = [];
+    const bracket = [];
     let m;
-    const bracketRe = /[\[<(][^\]>)]{0,160}[\])>]/g;
+    const bracketRe = /[{\[<(][^\]>)}]{0,160}[\])>}]/g;
     while ((m = bracketRe.exec(cleanText)) !== null) {
-        if (DATE_KEYWORD_RE.test(m[0])) zones.push(m[0]);
+        if (DATE_KEYWORD_RE.test(m[0])) kw.push(m[0]);
+        else bracket.push(m[0]);
     }
     for (const line of cleanText.split(/\r?\n/)) {
-        if (DATE_KEYWORD_RE.test(line)) zones.push(line);
+        if (DATE_KEYWORD_RE.test(line)) kw.push(line);
     }
-    return zones;
+    return { kw, bracket };
 }
 
-/** Ищет лучшую дату в тексте. allowNoYear=false — только полные даты с годом. */
+/**
+ * Ищет лучшую дату в тексте.
+ * allowNoYear=false — только полные даты с годом (score 2).
+ * allowNoYear=true — также даты с названным месяцем без года (score 1).
+ * Побеждает самая «точная», при равной точности — первая в тексте.
+ */
 function findDateIn(text, { allowNoYear }) {
     let best = null;
+    let bestScore = -1;
     for (const { re, map } of DATE_PATTERNS) {
         re.lastIndex = 0;
         let m;
         while ((m = re.exec(text)) !== null) {
             const c = map(m);
             if (!isValidDate(c)) continue;
-            if (!allowNoYear && c.year === null) continue;
-            if (!best || (best.year === null && c.year !== null)) best = c;
+            const s = dateScore(c);
+            if (s === 0) continue;
+            if (!allowNoYear && s < 2) continue;
+            if (s > bestScore) {
+                best = c;
+                bestScore = s;
+            }
         }
     }
     return best ? finalizeDate(best) : null;
@@ -324,10 +355,18 @@ function attachTime(date, zone, allowEyktAliases) {
  */
 function parseMessage(rawText) {
     const clean = rawText.replace(/<[^>]*>/g, " ");
-    for (const zone of dateZones(clean)) {
+    const { kw, bracket } = dateZones(clean);
+    // 1) Зоны с ключевыми словами даты — здесь год необязателен
+    for (const zone of kw) {
         const d = findDateIn(zone, { allowNoYear: true });
         if (d) return attachTime(d, zone, true);
     }
+    // 2) Просто скобочные блоки {..}, [..] и т.п. (инфоблоки без слова "дата")
+    for (const zone of bracket) {
+        const d = findDateIn(zone, { allowNoYear: true });
+        if (d) return attachTime(d, zone, true);
+    }
+    // 3) Fallback: полная дата с годом в любом месте сообщения
     const d = findDateIn(clean, { allowNoYear: false });
     if (d) return attachTime(d, clean, TIME_KEYWORD_RE.test(clean));
     return null;
