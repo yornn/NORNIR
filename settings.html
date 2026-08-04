@@ -10,44 +10,18 @@
                     <input id="nc_enabled" type="checkbox" />
                     <span>Show widget</span>
                 </label>
-                <label class="checkbox_label" for="nc_realtime">
-                    <input id="nc_realtime" type="checkbox" />
-                    <span>Fall back to real time if no date found in chat</span>
-                </label>
-                <label class="checkbox_label" for="nc_tick">
-                    <input id="nc_tick" type="checkbox" />
-                    <span>Advance chat time in real time (1 chat min = 1 real min)</span>
-                </label>
-                <label class="checkbox_label" for="nc_norse">
-                    <input id="nc_norse" type="checkbox" />
-                    <span>Old Norse month / weekday names</span>
-                </label>
-                <label class="checkbox_label" for="nc_24h">
-                    <input id="nc_24h" type="checkbox" />
-                    <span>24-hour clock</span>
-                </label>
-                <label class="checkbox_label" for="nc_eykt">
-                    <input id="nc_eykt" type="checkbox" />
-                    <span>Show current eykt (8 day-quarters)</span>
-                </label>
-                <label class="checkbox_label" for="nc_moon">
-                    <input id="nc_moon" type="checkbox" />
-                    <span>Show moon phase (Tungl) & season</span>
-                </label>
+                <small>
+                    Виджет работает в формате <b>Yorni</b>: он только считывает дату и время
+                    из инфоблока чата и показывает эйкту, положение солнца, дату, день недели
+                    и фазу Луны. Реальное время не используется.
+                </small>
+                <small>
+                    Клик по строке эйкты / даты / дня недели-луны на 5 секунд показывает
+                    адаптацию (HH:MM, современный месяц, русский день недели, фазу на русском).
+                </small>
             </div>
 
             <hr class="sysHR" />
-
-            <div class="nc-block">
-                <label for="nc_regex"><b>Custom infoblock regex</b> <small>(optional)</small></label>
-                <input id="nc_regex" type="text" class="text_pole"
-                       placeholder="Date: (?<day>\d+) (?<month>\w+) (?<year>\d+) \| Time: (?<hour>\d+):(?<minute>\d+)" />
-                <small>
-                    Named groups supported: <code>day</code>, <code>month</code>, <code>year</code>,
-                    <code>hour</code>, <code>minute</code>. If empty, built-in formats are used
-                    (e.g. "12 March 875", "12 марта 875", "875-03-12" + "14:30").
-                </small>
-            </div>
 
             <div class="nc-block">
                 <input id="nc_reset_pos" type="button" class="menu_button" value="Reset widget position" />

@@ -1,4 +1,4 @@
-/* Norse Calendar — стили виджета (скандинавская тема) */
+/* Norse Calendar — стили виджета (скандинавская тема, формат Yorni) */
 
 #norse-calendar-widget {
     position: fixed;
@@ -58,54 +58,59 @@
 /* ---------- Тело ---------- */
 
 #ncw-body {
-    padding: 12px 14px 14px;
+    padding: 10px 14px 12px;
 }
 
-#ncw-clock {
+/* ---------- Блок 1: эйкта и солнце ---------- */
+
+#ncw-eykt {
     text-align: center;
-    font-size: 36px;
+    font-size: 16px;
     font-weight: bold;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     color: #e5d5b0;
-    text-shadow: 0 0 8px rgba(184, 148, 106, 0.35);
+    margin: 2px 0 1px;
 }
+
+#ncw-sun {
+    text-align: center;
+    font-size: 11px;
+    font-style: italic;
+    color: #8a8069;
+    margin-bottom: 10px;
+}
+
+/* ---------- Блок 2: дата и лор ---------- */
 
 #ncw-date {
     text-align: center;
     font-size: 14px;
-    font-style: italic;
     color: #a89a7d;
-    margin: 3px 0 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer; /* клик по дате тоже разворачивает сетку */
+    margin: 2px 0 3px;
 }
 
-#ncw-date:hover {
-    color: #d8cdb4;
-}
-
-/* ---------- Эйкта и Луна ---------- */
-
-#ncw-eykt,
-#ncw-moon {
+#ncw-lore {
     text-align: center;
     font-size: 12px;
-    margin: 3px 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-#ncw-eykt {
-    color: #b8946a;
-    letter-spacing: 0.5px;
-}
-
-#ncw-moon {
     color: #8fa3b8; /* холодный «лунный» оттенок */
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+}
+
+/* ---------- Кликабельные подсказки (адаптация на 5 секунд) ---------- */
+
+.ncw-clickable {
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.ncw-clickable:hover {
+    color: #e5d5b0;
+}
+
+/* Подсветка активной подсказки */
+.ncw-hint {
+    color: #b8946a !important;
+    text-shadow: 0 0 8px rgba(184, 148, 106, 0.4);
 }
 
 /* ---------- Сетка календаря ---------- */
@@ -116,6 +121,7 @@
     gap: 3px;
     text-align: center;
     border-top: 1px solid #3a352a;
+    margin-top: 8px;
     padding-top: 8px;
 }
 
@@ -163,21 +169,6 @@
 
 .ncw-aukday {
     border: 1px dashed #57503f;
-}
-
-/* Приглушённый режим — когда даты в чате нет */
-#ncw-grid.ncw-dim {
-    opacity: 0.4;
-}
-
-/* ---------- Подпись источника ---------- */
-
-#ncw-source {
-    margin-top: 10px;
-    text-align: center;
-    font-size: 11px;
-    letter-spacing: 1px;
-    color: #7a705c;
 }
 
 /* ---------- Панель настроек ---------- */

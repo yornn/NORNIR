@@ -1,12 +1,11 @@
 /*
  * Norse Calendar — расширение-виджет для SillyTavern.
  *
- * Показывает плавающий виджет с календарём, часами, текущей эйктой
- * и фазой Луны (Tungl), подхватывая дату и время из «инфоблока»
- * в сообщениях чата, например:
- *   [Date: 12 Góa 875 | Time: 14:30]
- *   Дата: 12 марта 875, время: Hádegi
- *   875-03-12 14:30
+ * Показывает плавающий виджет в формате Yorni: текущая эйкта,
+ * положение солнца, дата, день недели и фаза Луны (Tungl).
+ * Данные подхватываются только из «инфоблока» в сообщениях чата,
+ * например: [Date: 12 Góa 875 | Time: Hádegi]
+ * Реальное время не используется.
  *
  * Расширение чисто визуальное и никак не влияет на генерацию.
  *
@@ -23,16 +22,9 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 // Настройки по умолчанию
 const defaultSettings = {
-    enabled: true,          // показывать виджет
-    realTimeFallback: true, // показывать реальное время, если в чате даты нет
-    tickLoreTime: false,    // «тикать» ли время из чата в реальном темпе
-    norseNames: true,       // скандинавские названия месяцев/дней недели
-    hours24: true,          // 24-часовой формат часов
-    showMoon: true,         // показывать фазу Луны (Tungl)
-    showEykt: true,         // показывать текущую эйкту
-    collapsed: true,        // свёрнута ли сетка дней (шапка и текст видны всегда)
-    customRegex: "",        // пользовательский regex для инфоблока
-    posX: null,             // сохранённая позиция виджета
+    enabled: true,   // показывать виджет
+    collapsed: true, // свёрнута ли сетка дней (шапка Yorni видна всегда)
+    posX: null,      // сохранённая позиция виджета
     posY: null,
 };
 
@@ -49,22 +41,20 @@ const SCAN_DEPTH = 25;
 /*               Haustmánuður (октябрь)                                */
 /* ------------------------------------------------------------------ */
 
-// Современные английские названия (при выключенных норс-названиях)
-const MONTHS_EN = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+// Русские названия месяцев (именительный падеж) — для кликабельной адаптации
+const MONTHS_RU_NOM = [
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
 ];
 
-// Викингские месяцы, индекс = номер современного месяца - 1
-const MONTHS_NORSE = [
-    "Mörsugur", "Þorri", "Góa", "Einmánuður", "Harpa", "Skerpla",
-    "Sólmánuður", "Heyannir", "Tvímánuður", "Haustmánuður", "Gormánaður", "Ýlir",
+// Русские названия викингских месяцев, индекс = номер современного месяца - 1
+const MONTHS_NORSE_RU = [
+    "Морсугур", "Торри", "Гоа", "Эйнмануд", "Харпа", "Скерпла",
+    "Сольмануд", "Хейаннир", "Твимануд", "Хаустмануд", "Гормануд", "Юлир",
 ];
 
-const WEEKDAYS_SHORT_EN = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const WEEKDAYS_SHORT_NORSE = ["Mán", "Týs", "Óðn", "Þór", "Frj", "Lau", "Sun"];
-const WEEKDAYS_FULL_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const WEEKDAYS_FULL_NORSE = ["sunnudagr", "mánadagr", "týsdagr", "óðinsdagr", "þórsdagr", "frjádagr", "laugardagr"];
+const WEEKDAYS_FULL_RU = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 
 // Лор дней недели (индекс 0 = воскресенье / sunnudagr)
 const WEEKDAY_DESC_EN = [
@@ -136,14 +126,14 @@ function monthFromName(name) {
 /* ------------------------------------------------------------------ */
 
 const EYKTIR = [
-    { norse: "Miðnætti",  en: "Midnatti", ru: "Миднатти", desc: "Полночь",                dir: "С",  start: 0,  mid: 1.5 },
-    { norse: "Ótta",      en: "Otta",     ru: "Отта",     desc: "Ночь перед рассветом",   dir: "СВ", start: 3,  mid: 4.5 },
-    { norse: "Morgun",    en: "Morgun",   ru: "Моргун",   desc: "Утро, подъём",           dir: "В",  start: 6,  mid: 7.5 },
-    { norse: "Dagmál",    en: "Dagmal",   ru: "Дагмал",   desc: "Дневное время, завтрак", dir: "ЮВ", start: 9,  mid: 10.5 },
-    { norse: "Hádegi",    en: "Hadegi",   ru: "Хадеги",   desc: "Полдень",                dir: "Ю",  start: 12, mid: 13.5 },
-    { norse: "Undorn",    en: "Undorn",   ru: "Ундорн",   desc: "Полдник",                dir: "ЮЗ", start: 15, mid: 16.5 },
-    { norse: "Miðaftann", en: "Midaftan", ru: "Мидафтан", desc: "Вечер",                  dir: "З",  start: 18, mid: 19.5 },
-    { norse: "Náttmál",   en: "Nattmal",  ru: "Наттмал",  desc: "Ужин, ночь",             dir: "СЗ", start: 21, mid: 22.5 },
+    { norse: "Miðnætti",  ru: "Миднатти", desc: "Полночь",                dir: "С",  dirText: "Солнце строго на Севере",       start: 0,  mid: 1.5 },
+    { norse: "Ótta",      ru: "Отта",     desc: "Ночь перед рассветом",   dir: "СВ", dirText: "Солнце на Северо-Востоке",      start: 3,  mid: 4.5 },
+    { norse: "Morgun",    ru: "Моргун",   desc: "Утро, подъём",           dir: "В",  dirText: "Солнце строго на Востоке",      start: 6,  mid: 7.5 },
+    { norse: "Dagmál",    ru: "Дагмал",   desc: "Дневное время, завтрак", dir: "ЮВ", dirText: "Солнце на Юго-Востоке",         start: 9,  mid: 10.5 },
+    { norse: "Hádegi",    ru: "Хадеги",   desc: "Полдень",                dir: "Ю",  dirText: "Солнце строго на Юге",          start: 12, mid: 13.5 },
+    { norse: "Undorn",    ru: "Ундорн",   desc: "Полдник",                dir: "ЮЗ", dirText: "Солнце на Юго-Западе",          start: 15, mid: 16.5 },
+    { norse: "Miðaftann", ru: "Мидафтан", desc: "Вечер",                  dir: "З",  dirText: "Солнце строго на Западе",       start: 18, mid: 19.5 },
+    { norse: "Náttmál",   ru: "Наттмал",  desc: "Ужин, ночь",             dir: "СЗ", dirText: "Солнце на Северо-Западе",       start: 21, mid: 22.5 },
 ];
 
 // Алиасы для распознавания эйкты из текста чата (все в нижнем регистре).
@@ -194,15 +184,15 @@ const MOON_CYCLE = 29.53;
 
 const MOON_PHASES = [
     { norse: "Ný",             en: "New Moon",    ru: "Новолуние",      icon: "🌑", from: 0,    to: 1.8,
-      desc: "Символ зарождения месяца, время планирования" },
+      desc: "время зарождения и планов" },
     { norse: "Vaxandi tungl",  en: "Waxing Moon", ru: "Растущая луна",  icon: "🌒", from: 1.8,  to: 13.0,
-      desc: "Время активных дел, похода и строительства" },
+      desc: "время дел, походов и строительства" },
     { norse: "Fullt tungl",    en: "Full Moon",   ru: "Полнолуние",     icon: "🌕", from: 13.0, to: 16.5,
-      desc: "Пик силы, время проведения священных Блотов и Тинга" },
+      desc: "пик силы, время Блотов и Тинга" },
     { norse: "Minnandi tungl", en: "Waning Moon", ru: "Убывающая луна", icon: "🌖", from: 16.5, to: 27.7,
-      desc: "Время завершения дел, сбора урожая и возвращения домой" },
+      desc: "время завершать дела и возвращаться домой" },
     { norse: "Nið",            en: "Dark Moon",   ru: "Безлуние",       icon: "🌚", from: 27.7, to: 29.53,
-      desc: "Ночи волка Хати, время отдыха и осторожности перед рождением Ný" },
+      desc: "ночи волка Хати, время отдыха и осторожности" },
 ];
 
 /** Возраст Луны и её фаза для заданной даты (по серийному дню календаря). */
@@ -257,41 +247,12 @@ function isValidDate(d) {
     return true;
 }
 
-/** Парсинг по пользовательскому regex с именованными группами. */
-function parseWithCustomRegex(text) {
-    const src = extension_settings[extensionName].customRegex?.trim();
-    if (!src) return null;
-    let re;
-    try {
-        re = new RegExp(src, "i");
-    } catch (e) {
-        console.warn(`[${extensionName}] Некорректный customRegex:`, e);
-        return null;
-    }
-    const m = text.match(re);
-    if (!m || !m.groups) return null;
-    const g = m.groups;
-    const date = {
-        day: g.day ? parseInt(g.day, 10) : null,
-        month: g.month ? monthFromName(g.month) : null,
-        year: g.year ? parseInt(g.year, 10) : null,
-    };
-    if (!isValidDate(date)) return null;
-    date.hour = g.hour !== undefined ? parseInt(g.hour, 10) : null;
-    date.minute = g.minute !== undefined ? parseInt(g.minute, 10) : null;
-    return date;
-}
-
 /**
  * Ищет дату и время в тексте сообщения.
  * Возвращает {day, month, year, hour, minute} или null.
  */
 function parseDateTime(text) {
-    // 1. Пользовательский regex имеет приоритет
-    const custom = parseWithCustomRegex(text);
-    if (custom) return custom;
-
-    // 2. Встроенные форматы даты
+    // 1. Встроенные форматы даты
     let date = null;
     for (const { re, map } of DATE_PATTERNS) {
         re.lastIndex = 0;
@@ -307,7 +268,7 @@ function parseDateTime(text) {
     }
     if (!date) return null;
 
-    // 3. Время: сначала точное ЧЧ:ММ, затем название эйкты
+    // 2. Время: сначала точное ЧЧ:ММ, затем название эйкты
     date.hour = null;
     date.minute = null;
     const tm = text.match(TIME_PATTERN);
@@ -417,49 +378,55 @@ function addDays(year, month, day, n) {
 /* ------------------------------------------------------------------ */
 
 const state = {
-    source: "none", // "lore" | "real" | "none"
+    source: "none", // "lore" | "none"
     year: null,
     month: null,
     day: null,
     hour: null,
     minute: null,
-    loreBase: null,   // {at, year, month, day, hour, minute} для «тикающего» времени
-    lastElapsed: -1,
     lastDateKey: "",
 };
 
-let tickTimer = null;
 let refreshTimer = null;
+const hintTimers = {}; // таймеры возврата кликабельных подсказок
 
-function formatTime(h, m) {
-    if (h === null || m === null) return "--:--";
-    const mm = String(m).padStart(2, "0");
-    if (extension_settings[extensionName].hours24) {
-        return `${String(h).padStart(2, "0")}:${mm}`;
-    }
-    const ap = h >= 12 ? "PM" : "AM";
-    let hh = h % 12;
-    if (hh === 0) hh = 12;
-    return `${hh}:${mm} ${ap}`;
+function hasDate() {
+    return state.day !== null && state.month !== null;
 }
 
-/** Строит сетку календаря для state (или реальной даты, если данных нет). */
-function buildGrid() {
-    const s = extension_settings[extensionName];
-    const grid = $("#ncw-grid").empty();
+/** Ставит элементу текст с адаптацией на 5 секунд, затем возвращает назад. */
+function swapHint(id, hintText) {
+    const el = $(`#${id}`);
+    const original = el.data("base") ?? el.text();
+    if (!el.data("base")) el.data("base", original);
+    el.text(hintText).addClass("ncw-hint");
+    clearTimeout(hintTimers[id]);
+    hintTimers[id] = setTimeout(() => {
+        el.text(el.data("base")).removeClass("ncw-hint");
+    }, 5000);
+}
 
-    let { year, month, day } = state;
-    const dimmed = state.source === "none" || !day || !month;
-    if (dimmed) {
-        const now = new Date();
-        year = now.getFullYear();
-        month = now.getMonth() + 1;
-        day = null; // без подсветки
+/** Сбрасывает все активные подсказки и обновляет базовые тексты. */
+function clearHints() {
+    for (const id of Object.keys(hintTimers)) {
+        clearTimeout(hintTimers[id]);
+        delete hintTimers[id];
     }
-    grid.toggleClass("ncw-dim", dimmed);
+    $(".ncw-hint").removeClass("ncw-hint");
+}
+
+/** Сетка календаря (дни 1–30), только когда есть дата из чата. */
+function buildGrid() {
+    const grid = $("#ncw-grid").empty();
+    if (!hasDate()) {
+        grid.hide();
+        return;
+    }
+    grid.show();
+    const { year, month, day } = state;
 
     // Auknætr: счёт дней месяца отключён — показываем особый статус
-    if (!dimmed && isAuk(month)) {
+    if (isAuk(month)) {
         const total = aukDays(year);
         grid.append($("<div>", { "class": "ncw-auk-title", text: "— Sumarauki · Auknætr —" }));
         for (let d = 1; d <= total; d++) {
@@ -469,13 +436,10 @@ function buildGrid() {
         return;
     }
 
-    const shortNames = s.norseNames ? WEEKDAYS_SHORT_NORSE : WEEKDAYS_SHORT_EN;
-    for (let i = 0; i < shortNames.length; i++) {
+    for (let i = 0; i < WEEKDAYS_SHORT_NORSE.length; i++) {
         const wd = (i + 1) % 7; // порядок с понедельника
-        const tip = s.norseNames
-            ? `${WEEKDAYS_FULL_NORSE[wd]} — ${WEEKDAY_DESC_RU[wd]}`
-            : `${WEEKDAYS_FULL_EN[wd]} — ${WEEKDAY_DESC_EN[wd]}`;
-        grid.append($("<div>", { "class": "ncw-cell ncw-wd", text: shortNames[i], title: tip }));
+        const tip = `${WEEKDAY_DESC_RU[wd]} — ${WEEKDAYS_FULL_RU[wd]}`;
+        grid.append($("<div>", { "class": "ncw-cell ncw-wd", text: WEEKDAYS_SHORT_NORSE[i], title: tip }));
     }
 
     // Неделя начинается с понедельника
@@ -491,172 +455,82 @@ function buildGrid() {
     }
 }
 
-/** Строка эйкты: название — описание (сторона света). */
-function renderEykt() {
-    const s = extension_settings[extensionName];
-    const el = $("#ncw-eykt");
-    if (!s.showEykt || state.hour === null || state.source === "none") {
-        el.hide();
-        return;
-    }
-    const idx = eyktForHour(state.hour);
-    const e = EYKTIR[idx];
-    const name = s.norseNames ? e.norse : e.en;
-    const h0 = String(e.start).padStart(2, "0");
-    const h1 = String((e.start + 3) % 24).padStart(2, "0");
-    el.text(`${name} — ${e.desc} (${e.dir})`)
-        .attr("title", `${idx + 1}-я эйкта · ${h0}:00–${h1}:00 · ${e.ru}`)
-        .show();
-}
-
-/** Строка сезона и фазы Луны (Tungl). */
-function renderMoon() {
-    const s = extension_settings[extensionName];
-    const el = $("#ncw-moon");
-    const hasDate = state.source !== "none" && state.day && state.month;
-    if (!s.showMoon || !hasDate) {
-        el.hide();
-        return;
-    }
-    const { age, phase } = moonPhase(state.year, state.month, state.day);
-    const season = seasonOf(state.month);
-    const phaseName = s.norseNames ? phase.norse : phase.en;
-    el.text(`${season.norse} · ${phase.icon} ${phaseName} · ${phase.ru}`)
-        .attr("title", `${phase.desc}\nДень ${age.toFixed(1)} лунного цикла · ${season.norse} — ${season.ru}`)
-        .show();
-}
-
+/** Полный рендер виджета в формате Yorni. */
 function renderAll(force = false) {
     if (!extension_settings[extensionName].enabled) return;
-    const s = extension_settings[extensionName];
+    clearHints();
 
-    // Часы
-    $("#ncw-clock").text(formatTime(state.hour, state.minute));
+    if (!hasDate()) {
+        // Нет инфоблока — весь виджет скрыт
+        $("#ncw-body").hide();
+        state.lastDateKey = "";
+        return;
+    }
+    $("#ncw-body").show();
 
-    // Эйкта
-    renderEykt();
+    const { year, month, day, hour, minute } = state;
+    const dateKey = `${year}|${month}|${day}|${hour}|${minute}`;
+    if (!force && dateKey === state.lastDateKey) return;
+    state.lastDateKey = dateKey;
 
-    // Строка даты
-    if (state.source === "none" || !state.day || !state.month) {
-        $("#ncw-date").removeAttr("title").text("— no date in chat —");
-    } else if (isAuk(state.month)) {
-        const total = aukDays(state.year);
-        $("#ncw-date")
-            .text(`Sumarauki (Auknætr) — ${state.day} / ${total}, ${state.year}`)
-            .attr("title", "Летнее прибавление: особые дни в середине лета перед сенокосом. Счёт дней месяца отключён.");
+    // --- Блок 1: эйкта и положение солнца ---
+    const eyktEl = $("#ncw-eykt").removeData("base");
+    const sunEl = $("#ncw-sun");
+    if (hour !== null) {
+        const idx = eyktForHour(hour);
+        const e = EYKTIR[idx];
+        eyktEl.text(`${e.ru} • ${idx + 1}-я эйкта`).show();
+        sunEl.text(e.dirText).show();
     } else {
-        const wdIdx = weekdayOf(state.year, state.month, state.day);
-        const wdFull = s.norseNames ? WEEKDAYS_FULL_NORSE[wdIdx] : WEEKDAYS_FULL_EN[wdIdx];
-        const monthName = s.norseNames ? MONTHS_NORSE[state.month - 1] : MONTHS_EN[state.month - 1];
-        $("#ncw-date").removeAttr("title").text(`${wdFull}, ${state.day} ${monthName} ${state.year}`);
+        eyktEl.hide();
+        sunEl.hide();
     }
 
-    // Сезон + Луна
-    renderMoon();
+    // --- Блок 2: сезон + дата, день недели + луна ---
+    const season = seasonOf(month);
+    const seasonIcon = season.norse === "Sumar" ? "🌿" : "❄️";
 
-    // Сетка перестраивается только при смене даты или настроек
-    const dateKey = `${state.source}|${state.year}|${state.month}|${state.day}|${s.norseNames}`;
-    if (force || dateKey !== state.lastDateKey) {
-        state.lastDateKey = dateKey;
-        buildGrid();
+    const dateEl = $("#ncw-date").removeData("base");
+    if (isAuk(month)) {
+        const total = aukDays(year);
+        dateEl.text(`${seasonIcon} ${season.norse} • Sumarauki ${day} из ${total}, ${year}`);
+    } else {
+        dateEl.text(`${seasonIcon} ${season.norse} • ${day} ${MONTHS_NORSE_RU[month - 1]} ${year}`);
     }
 
-    // Подпись источника времени
-    const srcText = {
-        lore: "⚔ chat time",
-        real: "🕯 real time",
-        none: "no infoblock found",
-    }[state.source];
-    $("#ncw-source").text(`— ${srcText} —`);
+    const wdIdx = weekdayOf(year, month, day);
+    const { phase } = moonPhase(year, month, day);
+    $("#ncw-lore").removeData("base")
+        .text(`${WEEKDAY_DESC_RU[wdIdx]} • ${phase.icon} ${phase.norse} ${phase.desc}`);
+
+    // Сетка
+    buildGrid();
 }
 
 /* ------------------------------------------------------------------ */
-/* Обновление состояния из чата / реального времени                    */
+/* Обновление состояния из чата                                        */
 /* ------------------------------------------------------------------ */
-
-function stopTicking() {
-    if (tickTimer) {
-        clearInterval(tickTimer);
-        tickTimer = null;
-    }
-}
-
-function startTicking() {
-    stopTicking();
-    tickTimer = setInterval(() => {
-        if (state.source === "real") {
-            applyReal();
-        } else if (state.source === "lore") {
-            advanceLore();
-        }
-        renderAll();
-    }, 10000);
-}
-
-function applyReal() {
-    const now = new Date();
-    state.source = "real";
-    state.year = now.getFullYear();
-    state.month = now.getMonth() + 1;
-    state.day = Math.min(now.getDate(), 30); // в лорном месяце ровно 30 дней
-    state.hour = now.getHours();
-    state.minute = now.getMinutes();
-}
 
 function applyLore(lore) {
-    const now = new Date();
     state.source = "lore";
-    state.year = lore.year ?? now.getFullYear();
+    state.year = lore.year ?? 1;
     state.month = lore.month;
     state.day = lore.day;
     state.hour = lore.hour;
     state.minute = lore.minute;
-    state.lastElapsed = -1;
-    state.loreBase = {
-        at: Date.now(),
-        year: state.year,
-        month: state.month,
-        day: state.day,
-        hour: lore.hour,
-        minute: lore.minute,
-    };
-}
-
-/** Продвигает «время мира» в реальном темпе (если включено). */
-function advanceLore() {
-    const base = state.loreBase;
-    if (!base || base.hour === null) return;
-    const elapsedMin = Math.floor((Date.now() - base.at) / 60000);
-    if (elapsedMin === state.lastElapsed) return;
-    state.lastElapsed = elapsedMin;
-    const total = base.hour * 60 + base.minute + elapsedMin;
-    const dayShift = Math.floor(total / 1440);
-    const minutes = total % 1440;
-    const d = addDays(base.year, base.month, base.day, dayShift);
-    state.year = d.year;
-    state.month = d.month;
-    state.day = d.day;
-    state.hour = Math.floor(minutes / 60);
-    state.minute = minutes % 60;
 }
 
 /** Полное обновление: ищем дату в чате и перерисовываем виджет. */
 function refresh() {
-    const s = extension_settings[extensionName];
-    stopTicking();
     const lore = findLoreDateTime();
     if (lore) {
         applyLore(lore);
         renderAll(true);
-        if (s.tickLoreTime && lore.hour !== null) startTicking();
-    } else if (s.realTimeFallback) {
-        applyReal();
-        renderAll(true);
-        startTicking();
     } else {
         state.source = "none";
-        state.day = null;
+        state.year = null;
         state.month = null;
+        state.day = null;
         state.hour = null;
         state.minute = null;
         renderAll(true);
@@ -678,15 +552,17 @@ function buildWidget() {
     const widget = $("<div>", { id: "norse-calendar-widget" }).append(
         $("<div>", { id: "ncw-header" }).append(
             $("<span>", { "class": "ncw-runes", text: "ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ" }),
-            $("<span>", { id: "ncw-collapse", title: "Collapse / expand", text: "–" }),
+            $("<span>", { id: "ncw-collapse", title: "Показать / скрыть сетку дней", text: "+" }),
         ),
         $("<div>", { id: "ncw-body" }).append(
-            $("<div>", { id: "ncw-clock", text: "--:--" }),
-            $("<div>", { id: "ncw-eykt" }),
-            $("<div>", { id: "ncw-date", text: "—" }),
-            $("<div>", { id: "ncw-moon" }),
+            // Блок 1: время (кликабельно)
+            $("<div>", { id: "ncw-eykt", "class": "ncw-clickable" }),
+            $("<div>", { id: "ncw-sun" }),
+            // Блок 2: дата и лор (кликабельно)
+            $("<div>", { id: "ncw-date", "class": "ncw-clickable" }),
+            $("<div>", { id: "ncw-lore", "class": "ncw-clickable" }),
+            // Разворачиваемая сетка дней
             $("<div>", { id: "ncw-grid" }),
-            $("<div>", { id: "ncw-source" }),
         ),
     );
 
@@ -704,16 +580,37 @@ function buildWidget() {
         el.style.top = `${s.posY}px`;
     }
 
-    // Разворачивание сетки календаря: кнопка в шапке или клик по строке даты
-    const toggleGrid = () => {
+    // Разворачивание сетки календаря по кнопке в шапке
+    $("#ncw-collapse").on("click", () => {
         const collapsed = !widget.hasClass("ncw-collapsed");
         widget.toggleClass("ncw-collapsed", collapsed);
         $("#ncw-collapse").text(collapsed ? "+" : "–");
         extension_settings[extensionName].collapsed = collapsed;
         saveSettingsDebounced();
-    };
-    $("#ncw-collapse").on("click", toggleGrid);
-    $("#ncw-date").on("click", toggleGrid);
+    });
+
+    // Кликабельные адаптации формата Yorni (текст на 5 секунд)
+    $("#ncw-eykt").on("click", () => {
+        if (state.hour === null) return;
+        const mm = String(state.minute ?? 0).padStart(2, "0");
+        swapHint("ncw-eykt", `${String(state.hour).padStart(2, "0")}:${mm}`);
+    });
+
+    $("#ncw-date").on("click", () => {
+        if (!hasDate()) return;
+        if (isAuk(state.month)) {
+            swapHint("ncw-date", "Особые дни в середине лета перед сенокосом (между Сольмануд и Хейаннир)");
+        } else {
+            swapHint("ncw-date", `${state.day} ${MONTHS_RU_NOM[state.month - 1]} ${state.year}`);
+        }
+    });
+
+    $("#ncw-lore").on("click", () => {
+        if (!hasDate()) return;
+        const wdIdx = weekdayOf(state.year, state.month, state.day);
+        const { phase } = moonPhase(state.year, state.month, state.day);
+        swapHint("ncw-lore", `${WEEKDAYS_FULL_RU[wdIdx]} • ${phase.icon} ${phase.ru} ${phase.desc}`);
+    });
 
     enableDrag(widget.get(0), document.getElementById("ncw-header"));
 }
@@ -777,20 +674,6 @@ function bindSettings() {
     bindCheckbox("#nc_enabled", "enabled", (v) => {
         $("#norse-calendar-widget").toggle(v);
         if (v) refresh();
-    });
-    bindCheckbox("#nc_realtime", "realTimeFallback", refresh);
-    bindCheckbox("#nc_tick", "tickLoreTime", refresh);
-    bindCheckbox("#nc_norse", "norseNames", () => renderAll(true));
-    bindCheckbox("#nc_24h", "hours24", () => renderAll(true));
-    bindCheckbox("#nc_moon", "showMoon", () => renderAll(true));
-    bindCheckbox("#nc_eykt", "showEykt", () => renderAll(true));
-
-    const $re = $("#nc_regex");
-    $re.val(extension_settings[extensionName].customRegex);
-    $re.on("input", function () {
-        extension_settings[extensionName].customRegex = String($(this).val());
-        saveSettingsDebounced();
-        refreshDebounced();
     });
 
     $("#nc_reset_pos").on("click", () => {
