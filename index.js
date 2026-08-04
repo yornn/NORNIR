@@ -678,12 +678,12 @@ function renderAll(force = false) {
     clearHints();
 
     if (!hasDate()) {
-        // Нет инфоблока — весь виджет скрыт
-        $("#ncw-body").hide();
+        // Нет инфоблока — прячем виджет и отцепляем его от сообщения
+        $("#norse-calendar-widget").hide().detach();
         state.lastDateKey = "";
         return;
     }
-    $("#ncw-body").show();
+    $("#norse-calendar-widget").show();
 
     const { year, month, day, hour, minute } = state;
     const dateKey = `${year}|${month}|${day}|${hour}|${minute}`;
@@ -755,12 +755,13 @@ function applyLore(lore) {
     state.minute = lore.minute;
 }
 
-/** Полное обновление: ищем дату в чате и перерисовываем виджет. */
+/** Полное обновление: ищем дату в чате, перецепляем виджет и перерисовываем. */
 function refresh() {
     const lore = findLoreDateTime();
     if (lore) {
         applyLore(lore);
         renderAll(true);
+        mountWidget(); // цепляем к последнему сообщению персонажа
     } else {
         state.source = "none";
         state.year = null;
@@ -770,6 +771,56 @@ function refresh() {
         state.minute = null;
         renderAll(true);
     }
+}
+
+/**
+ * Встраивает виджет в начало ПОСЛЕДНЕГО сообщения от {{char}} (перед текстом).
+ * Если последнее сообщение удалили — цепляется к новому последнему сообщению
+ * персонажа и перечитывает теги (это делает refresh → findLoreDateTime).
+ */
+function mountWidget() {
+    const widget = document.getElementById("norse-calendar-widget");
+    if (!widget) return;
+    if (!extension_settings[extensionName].enabled) return;
+
+    const context = getContext();
+    const chat = context?.chat;
+    if (!Array.isArray(chat) || chat.length === 0) return;
+
+    // Индекс последнего сообщения персонажа (не юзера)
+    let charIdx = -1;
+    for (let i = chat.length - 1; i >= 0; i--) {
+        if (chat[i] && !chat[i].is_user) {
+            charIdx = i;
+            break;
+        }
+    }
+    if (charIdx === -1) return;
+
+    // DOM-элемент этого сообщения. mesId — стандартный атрибут сообщений ST.
+    let msgEl = document.querySelector(`#chat .mes[mesId="${charIdx}"]`);
+    if (!msgEl) {
+        const all = document.querySelectorAll("#chat .mes");
+        msgEl = all[all.length - 1] || null;
+    }
+    if (!msgEl) return;
+
+    const textEl = msgEl.querySelector(".mes_text");
+    if (!textEl) return;
+
+    // Встраиваем в поток сообщения: переопределяем плавающее позиционирование
+    // инлайн (CSS-файл не трогаем). Виджет становится блочным, на всю ширину.
+    widget.style.position = "relative";
+    widget.style.right = "auto";
+    widget.style.bottom = "auto";
+    widget.style.left = "auto";
+    widget.style.top = "auto";
+    widget.style.width = "100%";
+    widget.style.minWidth = "0";
+    widget.style.margin = "0 0 10px 0";
+
+    // Вставляем виджет в самое начало текста сообщения
+    textEl.prepend(widget);
 }
 
 function refreshDebounced() {
