@@ -26,6 +26,7 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 // Настройки по умолчанию
 const defaultSettings = {
     enabled: true,   // показывать виджет
+    inject: true,    // инжектить инструкцию в промпт перед генерацией
     collapsed: true, // свёрнута ли сетка дней (шапка YORNIE видна всегда)
     posX: null,      // сохранённая позиция виджета
     posY: null,
@@ -33,6 +34,29 @@ const defaultSettings = {
 
 // Сколько последних сообщений сканировать в поисках инфоблока
 const SCAN_DEPTH = 25;
+
+/* ------------------------------------------------------------------ */
+/* Инфоблок-теги: расширение инжектит инструкцию, бот отвечает тегом,  */
+/* а мы парсим его регексами с ПОСЛЕДНЕГО сообщения персонажа.         */
+/* Формат тега (строгий, детерминированный):                           */
+/*   <norse time="Хадеги" day="13" month="Гормануд" year="1015"/>      */
+/* month может быть числом 1..12 или названием (любой из 3 языков).    */
+/* time — необязателен.                                                */
+/* ------------------------------------------------------------------ */
+
+// Тег целиком (атрибуты вытащим отдельными регексами — так надёжнее)
+const NORSE_TAG_RE = /<norse\b[^>]*\/?>/i;
+
+// Промпт-инструкция, подмешиваемая в запрос перед генерацией
+const NORSE_PROMPT = [
+    "[Norse Calendar — обязательный системный тег]",
+    "В самом КОНЦЕ каждого своего ответа добавляй ровно один служебный тег:",
+    '<norse day="D" month="M" year="Y" time="T"/>',
+    "где D — день (1-30), M — месяц (название или номер 1-12), Y — год,",
+    "T — необязательно: эйкта или время суток (Хадеги, Morgun, 14:30 и т.п.).",
+    "Тег служебный, для виджета календаря. Никогда не упоминай его в тексте.",
+    "Пример: <norse day=\"13\" month=\"Гормануд\" year=\"1015\" time=\"Хадеги\"/>",
+].join("\n");
 
 /* ------------------------------------------------------------------ */
 /* ЛОР: Викингские месяцы                                              */
@@ -348,6 +372,52 @@ function attachTime(date, zone, allowEyktAliases) {
 }
 
 /**
+ * Парсит строгий тег <norse .../> — приоритетный источник данных.
+ * Возвращает {day, month, year, hour, minute} или null.
+ */
+function parseNorseTag(rawText) {
+    const tagMatch = rawText.match(NORSE_TAG_RE);
+    if (!tagMatch) return null;
+    const tag = tagMatch[0];
+    const attr = (name) => {
+        const m = tag.match(new RegExp(`${name}\\s*=\\s*"([^"]*)"`, "i"));
+        return m ? m[1].trim() : null;
+    };
+    const day = parseInt(attr("day"), 10);
+    const monthRaw = attr("month");
+    const year = parseInt(attr("year"), 10);
+    if (isNaN(day) || !monthRaw || isNaN(year)) return null;
+
+    const month = monthFromName(monthRaw);
+    const date = finalizeDate({ day, month, year });
+    if (!isValidDate(date)) return null;
+
+    // Время из атрибута time (необязательно): ЧЧ:ММ или название эйкты
+    date.hour = null;
+    date.minute = null;
+    const timeRaw = attr("time");
+    if (timeRaw) {
+        const tm = timeRaw.match(TIME_PATTERN);
+        if (tm) {
+            const h = +tm[1];
+            const min = +tm[2];
+            if (h <= 24 && min <= 59) {
+                date.hour = h;
+                date.minute = min;
+            }
+        } else {
+            const idx = eyktFromText(timeRaw);
+            if (idx !== null) {
+                const mid = EYKTIR[idx].mid;
+                date.hour = Math.floor(mid);
+                date.minute = Math.round((mid % 1) * 60);
+            }
+        }
+    }
+    return date;
+}
+
+/**
  * Ищет ДАТУ в тексте одного сообщения (главная функция захвата).
  * Приоритет: 1) теги/строки с ключевыми словами даты (год необязателен);
  * 2) любая полная дата с годом в тексте.
@@ -373,14 +443,27 @@ function parseMessage(rawText) {
 }
 
 /**
- * Сканирует чат с конца в поисках последнего инфоблока с датой.
- * Если самая свежая дата без года — берёт год из ближайшей ранней полной даты
- * (или сохраняет текущий год виджета).
+ * Главный источник данных.
+ * 1) Приоритет — тег <norse .../> на ПОСЛЕДНЕМ сообщении персонажа (механика
+ *    «регекс на последнем сообщении», блок активен всегда).
+ * 2) Иначе — скан чата с конца по свободным датам (старое поведение).
  */
 function findLoreDateTime() {
     const context = getContext();
     const chat = context?.chat;
     if (!Array.isArray(chat) || chat.length === 0) return null;
+
+    // --- 1. Тег <norse/> на последнем сообщении персонажа ---
+    for (let i = chat.length - 1; i >= 0; i--) {
+        const msg = chat[i];
+        if (!msg || typeof msg.mes !== "string") continue;
+        if (msg.is_user) continue; // только сообщения бота/{{char}}
+        const fromTag = parseNorseTag(msg.mes);
+        if (fromTag) return fromTag;
+        break; // смотрим только последнее сообщение персонажа
+    }
+
+    // --- 2. Fallback: свободные даты в чате ---
     const from = Math.max(0, chat.length - SCAN_DEPTH);
     let partial = null; // свежая дата без года
     for (let i = chat.length - 1; i >= from; i--) {
@@ -389,8 +472,6 @@ function findLoreDateTime() {
         const parsed = parseMessage(text);
         if (!parsed) continue;
         if (parsed.year !== null) {
-            // Полная дата. Если выше была более свежая дата без года — она важнее,
-            // а год подставляем из этой полной.
             if (partial) {
                 partial.year = parsed.year;
                 return partial;
@@ -404,6 +485,15 @@ function findLoreDateTime() {
         return partial;
     }
     return null;
+}
+
+/** Инжектит инструкцию в промпт перед генерацией (один раз, без дублей). */
+function injectNorsePrompt() {
+    if (!extension_settings[extensionName]?.inject) return;
+    const context = getContext();
+    if (!context || typeof context.setExtensionPrompt !== "function") return;
+    // Позиция 1 = в конец системного/комбинированного промпта, глубина 0
+    context.setExtensionPrompt(extensionName, NORSE_PROMPT, 1, 0);
 }
 
 /* ------------------------------------------------------------------ */
@@ -803,6 +893,16 @@ function bindSettings() {
         if (v) refresh();
     });
 
+    bindCheckbox("#nc_inject", "inject", (v) => {
+        const context = getContext();
+        if (v) {
+            injectNorsePrompt();
+        } else if (context && typeof context.setExtensionPrompt === "function") {
+            // Выключаем инжект — очищаем ранее выставленный промпт
+            context.setExtensionPrompt(extensionName, "", 1, 0);
+        }
+    });
+
     $("#nc_reset_pos").on("click", () => {
         extension_settings[extensionName].posX = null;
         extension_settings[extensionName].posY = null;
@@ -835,6 +935,16 @@ jQuery(async () => {
 
     buildWidget();
     refresh();
+
+    // Инжектим инструкцию в промпт при каждой новой генерации.
+    // GENERATE_AFTER_COMBINE_PROMPTS срабатывает после сборки промпта,
+    // прямо перед отправкой — идеальная точка для подмешивания.
+    if (event_types.GENERATE_AFTER_COMBINE_PROMPTS) {
+        eventSource.on(event_types.GENERATE_AFTER_COMBINE_PROMPTS, injectNorsePrompt);
+    }
+    // Подстраховка: выставляем промпт и сразу (чтобы он был, даже если
+    // событие комбинирования по какой-то причине не сработает).
+    injectNorsePrompt();
 
     // Реагируем на изменения в чате
     const events = [

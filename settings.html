@@ -10,6 +10,16 @@
                     <input id="nc_enabled" type="checkbox" />
                     <span>Show widget</span>
                 </label>
+                <label class="checkbox_label" for="nc_inject">
+                    <input id="nc_inject" type="checkbox" />
+                    <span>Inject tag prompt (infoblock mode)</span>
+                </label>
+                <small>
+                    Режим инфоблока: расширение само подмешивает в запрос инструкцию,
+                    чтобы бот в конце ответа добавлял служебный тег
+                    <code><norse day="13" month="Гормануд" year="1015" time="Хадеги"/></code>.
+                    Виджет читает этот тег с последнего сообщения персонажа.
+                </small>
                 <small>
                     Виджет работает в формате <b>YORNIE</b>: он только считывает дату и время
                     из инфоблока чата и показывает эйкту, положение солнца, дату, день недели
