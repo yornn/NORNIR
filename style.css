@@ -16,20 +16,21 @@
     font-display: swap;
 }
 
+/* Виджет живёт внутри потока сообщения (prepend в .mes_text), поэтому
+   по умолчанию блочный и резиновый. Фиксированная позиция переопределяется
+   инлайн-стилями из mountWidget(). */
 #norse-calendar-widget {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    width: 360px;
-    min-width: 320px;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0 0 10px 0;
+    position: relative;
     box-sizing: border-box;
-    z-index: 1000;
     background: #16151d;
     border: 1px solid #57503f;
     border-radius: 8px;
     color: #d8cdb4;
     font-family: Georgia, "Times New Roman", serif;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
     user-select: none;
     opacity: 0.96;
 }
@@ -50,7 +51,6 @@
     background: #201e29;
     border-bottom: 1px solid #57503f;
     border-radius: 7px 7px 0 0;
-    cursor: move;
 }
 
 .ncw-runes {

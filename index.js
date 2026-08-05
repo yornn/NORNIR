@@ -25,11 +25,9 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 // Настройки по умолчанию
 const defaultSettings = {
-    enabled: true,   // показывать виджет
+    enabled: true,   // показывать инфоблок
     inject: true,    // инжектить инструкцию в промпт перед генерацией
     collapsed: true, // свёрнута ли сетка дней (шапка YORNIE видна всегда)
-    posX: null,      // сохранённая позиция виджета
-    posY: null,
 };
 
 // Сколько последних сообщений сканировать в поисках инфоблока
@@ -884,7 +882,11 @@ function refresh() {
 function mountWidget() {
     const widget = document.getElementById("norse-calendar-widget");
     if (!widget) return;
-    if (!extension_settings[extensionName].enabled) return;
+    if (!extension_settings[extensionName].enabled) {
+        widget.style.display = "none";
+        return;
+    }
+    widget.style.display = "";
 
     const context = getContext();
     const chat = context?.chat;
@@ -971,15 +973,6 @@ function buildWidget() {
     widget.toggleClass("ncw-collapsed", s.collapsed);
     $("#ncw-collapse").text(s.collapsed ? "+" : "–");
 
-    // Восстанавливаем сохранённую позицию
-    if (s.posX !== null && s.posY !== null) {
-        const el = widget.get(0);
-        el.style.right = "auto";
-        el.style.bottom = "auto";
-        el.style.left = `${s.posX}px`;
-        el.style.top = `${s.posY}px`;
-    }
-
     // Разворачивание сетки календаря по кнопке в шапке
     $("#ncw-collapse").on("click", () => {
         const collapsed = !widget.hasClass("ncw-collapsed");
@@ -993,40 +986,7 @@ function buildWidget() {
     widget.on("click", ".ncw-hintable", function () {
         swapHint($(this));
     });
-
-    enableDrag(widget.get(0), document.getElementById("ncw-header"));
-}
-
-/** Перетаскивание виджета за шапку с сохранением позиции. */
-function enableDrag(widgetEl, handleEl) {
-    let startX, startY, originX, originY, dragging = false;
-
-    handleEl.addEventListener("pointerdown", (e) => {
-        if (e.target.id === "ncw-collapse") return;
-        dragging = true;
-        const r = widgetEl.getBoundingClientRect();
-        startX = e.clientX;
-        startY = e.clientY;
-        originX = r.left;
-        originY = r.top;
-        widgetEl.style.right = "auto";
-        widgetEl.style.bottom = "auto";
-        handleEl.setPointerCapture(e.pointerId);
-    });
-
-    handleEl.addEventListener("pointermove", (e) => {
-        if (!dragging) return;
-        widgetEl.style.left = `${originX + e.clientX - startX}px`;
-        widgetEl.style.top = `${originY + e.clientY - startY}px`;
-    });
-
-    handleEl.addEventListener("pointerup", () => {
-        if (!dragging) return;
-        dragging = false;
-        extension_settings[extensionName].posX = parseInt(widgetEl.style.left, 10);
-        extension_settings[extensionName].posY = parseInt(widgetEl.style.top, 10);
-        saveSettingsDebounced();
-    });
+    // Перетаскивания нет: инфоблок закреплён внутри сообщения (см. mountWidget).
 }
 
 /* ------------------------------------------------------------------ */
@@ -1067,18 +1027,6 @@ function bindSettings() {
             context.setExtensionPrompt(extensionName, "", 1, 0);
         }
     });
-
-    $("#nc_reset_pos").on("click", () => {
-        extension_settings[extensionName].posX = null;
-        extension_settings[extensionName].posY = null;
-        saveSettingsDebounced();
-        const el = document.getElementById("norse-calendar-widget");
-        el.style.left = "";
-        el.style.top = "";
-        el.style.right = "";
-        el.style.bottom = "";
-        toastr.info("Norse Calendar: widget position reset");
-    });
 }
 
 /* ------------------------------------------------------------------ */
@@ -1118,10 +1066,56 @@ jQuery(async () => {
         event_types.MESSAGE_EDITED,
         event_types.MESSAGE_SWIPED,
         event_types.MESSAGE_DELETED,
+        // Финал генерации (стрелает и при стриминге) и полная отрисовка
+        // сообщения персонажа — в этот момент .mes_text уже собран.
+        event_types.GENERATION_ENDED,
+        event_types.CHARACTER_MESSAGE_RENDERED,
     ].filter(Boolean);
     for (const ev of events) {
         eventSource.on(ev, refreshDebounced);
     }
+
+    // MutationObserver: при любом rebuild .mes_text (continue/swipe/edit) ST
+    // пересоздаёт разметку и сносит наш блок — возвращаем его на место.
+    try {
+        const chatEl = document.getElementById("chat");
+        if (chatEl) {
+            let pending = false;
+            const reinsert = () => {
+                if (pending) return;
+                pending = true;
+                requestAnimationFrame(() => {
+                    pending = false;
+                    try {
+                        const widget = document.getElementById("norse-calendar-widget");
+                        if (!widget) return;
+                        const host = widget.closest(".mes_text");
+                        if (!host) {
+                            mountWidget(); // нас выкинули/никуда не вмонтированы
+                            return;
+                        }
+                        // ST пересобрал текст вон того сообщения, где мы живём
+                        if (!host.parentElement || !document.contains(host)) mountWidget();
+                    } catch (e) { /* ignore */ }
+                });
+            };
+            const observer = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    if (m.target && (m.target.classList?.contains("mes_text") || m.target.classList?.contains("mes"))) {
+                        reinsert();
+                        return;
+                    }
+                    for (const n of m.removedNodes || []) {
+                        if (n.id === "norse-calendar-widget" || n.querySelector?.("#norse-calendar-widget")) {
+                            reinsert();
+                            return;
+                        }
+                    }
+                }
+            });
+            observer.observe(chatEl, { childList: true, subtree: true });
+        }
+    } catch (e) { /* ignore */ }
 
     console.log(`[${extensionName}] loaded`);
 });
