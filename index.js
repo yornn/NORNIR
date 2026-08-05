@@ -669,8 +669,9 @@ function plainSpan(text) {
 }
 
 /** Сетка календаря (дни 1–30), только когда есть дата из чата. */
-function buildGrid() {
-    const grid = $("#ncw-grid").empty();
+function buildGrid(grid) {
+    grid = grid || $("#ncw-grid");
+    grid.empty();
     if (!hasDate()) {
         grid.hide();
         return;
@@ -682,10 +683,12 @@ function buildGrid() {
     if (isAuk(month)) {
         const total = aukDays(year);
         grid.append($("<div>", { "class": "ncw-auk-title", text: "— Sumarauki · Auknætr —" }));
+        const row = $("<div>", { "class": "ncw-row" });
         for (let d = 1; d <= total; d++) {
             const cls = d === day ? "ncw-cell ncw-day ncw-aukday ncw-today" : "ncw-cell ncw-day ncw-aukday";
-            grid.append($("<div>", { "class": cls, text: d }));
+            row.append($("<div>", { "class": cls, text: d }));
         }
+        grid.append(row);
         return;
     }
 
@@ -732,7 +735,7 @@ function renderAll(force = false) {
         state.lastDateKey = "";
         $("#ncw-eykt, #ncw-sun, #ncw-date, #ncw-lore").hide();
         $("#ncw-grid").hide();
-        $("#ncw-extra").hide();
+        $("#ncw-location, #ncw-user-details, #ncw-char-details, #ncw-thought").hide();
         let stub = $("#ncw-stub");
         if (!stub.length) {
             stub = $("<div>", { id: "ncw-stub", text: "ᚱ Ожидание инфоблока…" });
@@ -744,7 +747,8 @@ function renderAll(force = false) {
     $("#ncw-stub").hide();
 
     const { year, month, day, hour, minute } = state;
-    const dateKey = `${year}|${month}|${day}|${hour}|${minute}`;
+    const dateKey = [year, month, day, hour, minute,
+        state.location, state.userAttire, state.charMood, state.charAttire, state.thought].join("|");
     if (!force && dateKey === state.lastDateKey) return;
     state.lastDateKey = dateKey;
 
@@ -796,37 +800,69 @@ function renderAll(force = false) {
         plainSpan(` ${phase.desc}`),
     );
 
-    // --- Доп.поля инфоблока (погода, локация, одежда, настроение, мысль) ---
+    // --- Правая колонка: локация, {{user}}, {{char}}, мысль ---
     renderExtraFields();
 
     // Сетка
-    buildGrid();
+    buildGrid($("#ncw-grid"));
 }
 
-/** Рендерит дополнительные теги инфоблока (из промпта), если они есть. */
+/**
+ * Рендерит правую колонку инфоблока: локацию, блок {{user}} (одежда),
+ * блок {{char}} (настроение-чипы + одежда) и мысль {{char}} о {{user}}.
+ */
 function renderExtraFields() {
-    const rows = [
-        ["ncw-weather", "🌤", state.weather],
-        ["ncw-location", "📍", state.location],
-        ["ncw-attire-user", "🧍", state.userAttire],
-        ["ncw-mood", "🎭", state.charMood],
-        ["ncw-attire-char", "🛡", state.charAttire],
-        ["ncw-thought", "💭", state.thought],
-    ];
-    let any = false;
-    for (const [id, icon, val] of rows) {
-        const el = $(`#${id}`);
-        if (val) {
-            el.empty().append(
-                $("<span>", { "class": "ncw-x-icon", text: icon }),
-                $("<span>", { "class": "ncw-x-text", text: val }),
-            ).show();
-            any = true;
-        } else {
-            el.hide();
-        }
+    const context = getContext();
+    const userName = context?.name1 || "{{user}}";
+    const charName = context?.name2 || "{{char}}";
+
+    // Локация
+    const locEl = $("#ncw-location");
+    if (state.location) {
+        $("#ncw-location-text").text(state.location);
+        locEl.show();
+    } else {
+        locEl.hide();
     }
-    $("#ncw-extra").toggle(any);
+
+    // Блок {{user}} — раскрывается по клику, внутри одежда
+    const userDetails = $("#ncw-user-details");
+    $("#ncw-user-name").text(userName);
+    if (state.userAttire) {
+        $("#ncw-attire-user-text").text(state.userAttire);
+        userDetails.show();
+    } else {
+        userDetails.hide();
+    }
+
+    // Блок {{char}} — настроение (чипы через запятую) + одежда
+    const charDetails = $("#ncw-char-details");
+    $("#ncw-char-name").text(charName);
+    const moods = state.charMood
+        ? state.charMood.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+    const moodEl = $("#ncw-mood-chips").empty();
+    for (const m of moods) {
+        moodEl.append($("<span>", { "class": "ncw-chip", text: m }));
+    }
+    moodEl.toggle(moods.length > 0);
+    const charAttireRow = $("#ncw-attire-char");
+    if (state.charAttire) {
+        $("#ncw-attire-char-text").text(state.charAttire);
+        charAttireRow.show();
+    } else {
+        charAttireRow.hide();
+    }
+    charDetails.toggle(moods.length > 0 || !!state.charAttire);
+
+    // Мысль {{char}} о {{user}}
+    const thoughtEl = $("#ncw-thought");
+    if (state.thought) {
+        $("#ncw-thought-text").text(state.thought);
+        thoughtEl.show();
+    } else {
+        thoughtEl.hide();
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -948,23 +984,59 @@ function buildWidget() {
             $("<span>", { id: "ncw-collapse", title: "Показать / скрыть сетку дней", text: "+" }),
         ),
         $("<div>", { id: "ncw-body" }).append(
-            // Блок 1: время (кликабельно)
-            $("<div>", { id: "ncw-eykt", "class": "ncw-clickable" }),
-            $("<div>", { id: "ncw-sun" }),
-            // Блок 2: дата и лор (кликабельно)
-            $("<div>", { id: "ncw-date", "class": "ncw-clickable" }),
-            $("<div>", { id: "ncw-lore", "class": "ncw-clickable" }),
-            // Доп.поля инфоблока (погода, локация, одежда, настроение, мысль)
-            $("<div>", { id: "ncw-extra" }).append(
-                $("<div>", { id: "ncw-weather", "class": "ncw-x-row" }),
-                $("<div>", { id: "ncw-location", "class": "ncw-x-row" }),
-                $("<div>", { id: "ncw-attire-user", "class": "ncw-x-row" }),
-                $("<div>", { id: "ncw-mood", "class": "ncw-x-row" }),
-                $("<div>", { id: "ncw-attire-char", "class": "ncw-x-row" }),
-                $("<div>", { id: "ncw-thought", "class": "ncw-x-row" }),
+            // Один цельный блок в две колонки:
+            // слева — наш старый календарик (YORNIE), справа — теги промпта
+            $("<div>", { id: "ncw-columns" }).append(
+                // Левая колонка: календарь
+                $("<div>", { id: "ncw-left" }).append(
+                    // Блок 1: время (кликабельно)
+                    $("<div>", { id: "ncw-eykt", "class": "ncw-clickable" }),
+                    // Блок 2: дата и лор (кликабельно)
+                    $("<div>", { id: "ncw-date", "class": "ncw-clickable" }),
+                    $("<div>", { id: "ncw-lore", "class": "ncw-clickable" }),
+                    // Разворачиваемая сетка дней
+                    $("<div>", { id: "ncw-grid" }),
+                ),
+                // Правая колонка: локация + раскрывающиеся блоки {{user}} и {{char}}
+                $("<div>", { id: "ncw-right" }).append(
+                    $("<div>", { id: "ncw-location", "class": "ncw-loc" }).append(
+                        $("<span>", { "class": "ncw-loc-icon", text: "📍" }),
+                        $("<span>", { id: "ncw-location-text" }),
+                    ),
+                    // {{user}} — раскрывается по клику, внутри одежда
+                    $("<details>", { id: "ncw-user-details", "class": "ncw-details" }).append(
+                        $("<summary>", { "class": "ncw-summary" }).append(
+                            $("<span>", { "class": "ncw-dot" }),
+                            $("<span>", { id: "ncw-user-name", "class": "ncw-name", text: "{{user}}" }),
+                        ),
+                        $("<div>", { "class": "ncw-details-body" }).append(
+                            $("<div>", { id: "ncw-attire-user", "class": "ncw-attire" }).append(
+                                $("<span>", { "class": "ncw-attire-icon", text: "👕" }),
+                                $("<span>", { id: "ncw-attire-user-text" }),
+                            ),
+                        ),
+                    ),
+                    // {{char}} — настроение (чипы) + одежда
+                    $("<details>", { id: "ncw-char-details", "class": "ncw-details" }).append(
+                        $("<summary>", { "class": "ncw-summary" }).append(
+                            $("<span>", { "class": "ncw-dot" }),
+                            $("<span>", { id: "ncw-char-name", "class": "ncw-name", text: "{{char}}" }),
+                        ),
+                        $("<div>", { "class": "ncw-details-body" }).append(
+                            $("<div>", { id: "ncw-mood-chips", "class": "ncw-chips" }),
+                            $("<div>", { id: "ncw-attire-char", "class": "ncw-attire" }).append(
+                                $("<span>", { "class": "ncw-attire-icon", text: "👕" }),
+                                $("<span>", { id: "ncw-attire-char-text" }),
+                            ),
+                        ),
+                    ),
+                    // Мысль {{char}} о {{user}}
+                    $("<div>", { id: "ncw-thought", "class": "ncw-thought" }).append(
+                        $("<span>", { "class": "ncw-thought-icon", text: "💭" }),
+                        $("<span>", { id: "ncw-thought-text" }),
+                    ),
+                ),
             ),
-            // Разворачиваемая сетка дней
-            $("<div>", { id: "ncw-grid" }),
         ),
     );
 

@@ -79,43 +79,80 @@
     display: none;
 }
 
-/* ---------- Тело ---------- */
+/* ---------- Тело: две колонки (слева календарь, справа теги промпта) ---------- */
 
 #ncw-body {
-    padding: 10px 14px 12px;
+    padding: 12px 14px;
 }
 
-/* ---------- Блок 1: эйкта и солнце ---------- */
+#ncw-columns {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+}
+
+/* Левая колонка — наш старый календарик YORNIE */
+#ncw-left {
+    flex: 0 0 250px;
+    min-width: 0;
+    text-align: center;
+}
+
+/* Правая колонка — локация, {{user}}, {{char}}, мысль */
+#ncw-right {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-left: 1px solid #3a352a;
+    padding-left: 14px;
+}
+
+/* На узких сообщениях колонки складываются вертикально */
+@media (max-width: 640px) {
+    #ncw-columns {
+        flex-direction: column;
+    }
+    #ncw-left {
+        flex: 1 1 auto;
+    }
+    #ncw-right {
+        border-left: none;
+        border-top: 1px solid #3a352a;
+        padding-left: 0;
+        padding-top: 10px;
+    }
+}
+
+/* Заглушка «ожидание инфоблока» — на всю ширину тела */
+#ncw-stub {
+    text-align: center;
+    padding: 6px 0 2px;
+    color: #8a8069;
+}
+
+/* ---------- Левая колонка: эйкта, дата, лор ---------- */
 
 #ncw-eykt {
     text-align: center;
-    font-size: 19px;
+    font-size: 17px;
     font-weight: bold;
     letter-spacing: 1px;
     color: #e5d5b0;
-    margin: 2px 0 1px;
+    margin: 2px 0 6px;
 }
-
-#ncw-sun {
-    text-align: center;
-    font-size: 13px;
-    font-style: italic;
-    color: #8a8069;
-    margin-bottom: 10px;
-}
-
-/* ---------- Блок 2: дата и лор ---------- */
 
 #ncw-date {
     text-align: center;
-    font-size: 16px;
+    font-size: 14px;
     color: #a89a7d;
     margin: 2px 0 3px;
 }
 
 #ncw-lore {
     text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     color: #8fa3b8; /* холодный «лунный» оттенок */
     margin-bottom: 4px;
 }
@@ -169,47 +206,162 @@
     border-bottom-color: transparent;
 }
 
-/* ---------- Доп.поля инфоблока (погода, локация, одежда, настроение, мысль) ---------- */
+/* ---------- Правая колонка: локация ---------- */
 
-#ncw-extra {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #3a352a;
+.ncw-loc {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.ncw-x-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
     font-size: 13px;
-    line-height: 1.35;
     color: #c4b694;
-    text-align: left;
+    background: #201e29;
+    border: 1px solid #57503f;
+    border-radius: 14px;
 }
 
-.ncw-x-icon {
-    flex: 0 0 auto;
-    font-size: 13px;
-    opacity: 0.9;
+.ncw-loc-icon {
+    font-size: 12px;
+    opacity: 0.8;
+    flex-shrink: 0;
 }
 
-.ncw-x-text {
-    flex: 1 1 auto;
+#ncw-location-text {
     min-width: 0;
 }
 
-/* Мысль персонажа — курсивом и приглушённым «лунным» оттенком */
-#ncw-thought .ncw-x-text {
-    font-style: italic;
-    color: #8fa3b8;
+/* ---------- Правая колонка: раскрывающиеся блоки {{user}} / {{char}} ---------- */
+
+.ncw-details {
+    background: #201e29;
+    border: 1px solid #57503f;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: background 0.3s ease;
 }
 
-/* Настроение — чуть теплее */
-#ncw-mood .ncw-x-text {
-    color: #c9a06a;
+.ncw-details[open] {
+    background: #262330;
+}
+
+.ncw-summary {
+    list-style: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #c4b694;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.ncw-summary::-webkit-details-marker,
+.ncw-summary::marker {
+    content: "";
+    display: none;
+}
+
+.ncw-details[open] .ncw-summary {
+    opacity: 1;
+    color: #e5d5b0;
+    border-bottom: 1px solid #3a352a;
+}
+
+/* Индикатор-точка слева от имени (как dot в fwn-виджете) */
+.ncw-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: #b8946a;
+    box-shadow: 0 0 4px 1px rgba(184, 148, 106, 0.5);
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.ncw-details[open] .ncw-dot {
+    opacity: 1;
+    box-shadow: 0 0 6px 2px rgba(184, 148, 106, 0.8);
+}
+
+.ncw-details-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 12px 10px;
+    animation: ncw-fade-in 0.35s ease forwards;
+}
+
+@keyframes ncw-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Одежда — компактная строка с иконкой */
+.ncw-attire {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: #c4b694;
+}
+
+.ncw-attire-icon {
+    font-size: 11px;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
+/* Настроение {{char}} — чипы */
+.ncw-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start;
+}
+
+.ncw-chip {
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 10px;
+    color: #c9a06a; /* тёплый оттенок настроения */
+    background: rgba(201, 160, 106, 0.08);
+    border: 1px solid rgba(201, 160, 106, 0.25);
+}
+
+.ncw-chip:empty {
+    display: none;
+}
+
+/* ---------- Правая колонка: мысль {{char}} о {{user}} ---------- */
+
+.ncw-thought {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-style: italic;
+    line-height: 1.4;
+    color: #8fa3b8; /* приглушённый «лунный» оттенок */
+    background: #201e29;
+    border: 1px solid #57503f;
+    border-radius: 14px;
+    animation: ncw-fade-in 0.5s ease forwards;
+}
+
+.ncw-thought-icon {
+    font-size: 12px;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+#ncw-thought-text {
+    min-width: 0;
 }
 
 /* ---------- Сетка календаря ---------- */
@@ -224,25 +376,25 @@
 /* Каждая неделя — своя flex-строка из 7 равных ячеек: столбец невозможен */
 .ncw-row {
     display: flex;
-    gap: 4px;
-    margin-bottom: 4px;
+    gap: 3px;
+    margin-bottom: 3px;
 }
 
 .ncw-cell {
     flex: 1 1 0;
     min-width: 0; /* не даём содержимому растянуть колонку */
-    font-size: 15px;
-    padding: 6px 0;
+    font-size: 13px;
+    padding: 4px 0;
     border-radius: 4px;
 }
 
 .ncw-wd {
     color: #b8946a;
     font-weight: bold;
-    font-size: 13px;
+    font-size: 11px;
     border-bottom: 1px solid #57503f;
     margin-bottom: 3px;
-    padding-bottom: 5px;
+    padding-bottom: 4px;
 }
 
 .ncw-day {
@@ -263,7 +415,7 @@
 /* ---------- Auknætr (дополнительные дни) ---------- */
 
 .ncw-auk-title {
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 1px;
     color: #b8946a;
     padding: 6px 0 8px;
