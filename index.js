@@ -692,7 +692,7 @@ function buildGrid(grid) {
         return;
     }
 
-    // Строка заголовков дней недели (порядок с понедельника)
+    // Строка заголовков дней недели (порядок с понедельника, Пн–Вс)
     const headRow = $("<div>", { "class": "ncw-row" });
     for (let i = 0; i < WEEKDAYS_SHORT_NORSE.length; i++) {
         const wd = (i + 1) % 7;
@@ -701,26 +701,22 @@ function buildGrid(grid) {
     }
     grid.append(headRow);
 
-    // Собираем дни в массив ячеек: сначала пустые под смещение, затем 1..30
-    const cells = [];
-    const offset = (weekdayOf(year, month, 1) + 6) % 7; // неделя с понедельника
-    for (let i = 0; i < offset; i++) {
-        cells.push($("<div>", { "class": "ncw-cell ncw-empty" }));
+    // Показываем ТОЛЬКО актуальную неделю (Пн–Вс), в которую попадает
+    // текущий день, — без лишних чисел остальных недель месяца.
+    // Границы недели считаем через серийные дни, поэтому неделя может
+    // «выползать» на соседние месяцы (даты из них считаются корректно).
+    const offsetToday = (weekdayOf(year, month, day) + 6) % 7; // 0=Пн..6=Вс
+    const weekRow = $("<div>", { "class": "ncw-row" });
+    for (let i = 0; i < 7; i++) {
+        const d = addDays(year, month, day, i - offsetToday);
+        const isToday = i === offsetToday;
+        const outOfMonth = d.month !== month; // день соседнего месяца — приглушаем
+        let cls = "ncw-cell ncw-day";
+        if (outOfMonth) cls += " ncw-dim";
+        if (isToday) cls += " ncw-today";
+        weekRow.append($("<div>", { "class": cls, text: d.day }));
     }
-    const dim = daysInMonth(year, month);
-    for (let d = 1; d <= dim; d++) {
-        const cls = d === day ? "ncw-cell ncw-day ncw-today" : "ncw-cell ncw-day";
-        cells.push($("<div>", { "class": cls, text: d }));
-    }
-
-    // Раскладываем ячейки по строкам-неделям строго по 7 — сетка не может «разъехаться»
-    for (let i = 0; i < cells.length; i += 7) {
-        const row = $("<div>", { "class": "ncw-row" });
-        for (let j = i; j < i + 7 && j < cells.length; j++) {
-            row.append(cells[j]);
-        }
-        grid.append(row);
-    }
+    grid.append(weekRow);
 }
 
 /** Полный рендер виджета в формате YORNIE. */
@@ -926,11 +922,17 @@ function mountWidget() {
 
     const context = getContext();
     const chat = context?.chat;
-    if (!Array.isArray(chat) || chat.length === 0) return;
+    // На главном экране (приветственный экран ST) или без открытого чата
+    // инфоблок не нужен вовсе — прячем, чтобы он не висел на весь экран.
+    if (!Array.isArray(chat) || chat.length === 0) {
+        widget.style.display = "none";
+        document.body.classList.add("ncw-no-chat");
+        return;
+    }
 
     // Индекс последнего сообщения персонажа (не юзера).
-    // Если сообщений бота нет (пустой чат / только юзер) — цепляем к самому
-    // последнему сообщению, чтобы инфоблок всё равно был виден.
+    // Если сообщений бота ещё нет (только юзер/пустой чат) — инфоблок
+    // не присасываем и прячем: он появится с первым ответом {{char}}.
     let charIdx = -1;
     for (let i = chat.length - 1; i >= 0; i--) {
         if (chat[i] && !chat[i].is_user) {
@@ -938,7 +940,11 @@ function mountWidget() {
             break;
         }
     }
-    if (charIdx === -1) charIdx = chat.length - 1;
+    if (charIdx === -1) {
+        widget.style.display = "none";
+        return;
+    }
+    document.body.classList.remove("ncw-no-chat");
 
     // DOM-элемент этого сообщения. mesId — стандартный атрибут сообщений ST.
     let msgEl = document.querySelector(`#chat .mes[mesId="${charIdx}"]`);
@@ -989,8 +995,9 @@ function buildWidget() {
             $("<div>", { id: "ncw-columns" }).append(
                 // Левая колонка: календарь
                 $("<div>", { id: "ncw-left" }).append(
-                    // Блок 1: время (кликабельно)
+                    // Блок 1: время (кликабельно) + положение солнца
                     $("<div>", { id: "ncw-eykt", "class": "ncw-clickable" }),
+                    $("<div>", { id: "ncw-sun" }),
                     // Блок 2: дата и лор (кликабельно)
                     $("<div>", { id: "ncw-date", "class": "ncw-clickable" }),
                     $("<div>", { id: "ncw-lore", "class": "ncw-clickable" }),
@@ -1040,8 +1047,9 @@ function buildWidget() {
         ),
     );
 
-    $("body").append(widget);
-    widget.toggle(s.enabled);
+    // Не добавляем в body сразу: на главном экране (без чата) виджет
+    // не должен висеть поверх страницы — появится только в сообщении.
+    widget.hide();
     widget.toggleClass("ncw-collapsed", s.collapsed);
     $("#ncw-collapse").text(s.collapsed ? "+" : "–");
 

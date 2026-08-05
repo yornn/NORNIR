@@ -143,6 +143,14 @@
     margin: 2px 0 6px;
 }
 
+#ncw-sun {
+    text-align: center;
+    font-size: 12px;
+    font-style: italic;
+    color: #8a8069;
+    margin-bottom: 8px;
+}
+
 #ncw-date {
     text-align: center;
     font-size: 14px;
@@ -399,6 +407,11 @@
 
 .ncw-day {
     color: #cfc4a8;
+}
+
+/* Дни соседнего месяца внутри актуальной недели — приглушены */
+.ncw-dim {
+    opacity: 0.35;
 }
 
 .ncw-empty {
