@@ -214,6 +214,30 @@
     border-bottom-color: transparent;
 }
 
+/* ---------- Правая колонка: погода ---------- */
+
+.ncw-weather {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #a8b6c9; /* прохладный «погодный» оттенок */
+    background: #201e29;
+    border: 1px solid #57503f;
+    border-radius: 14px;
+}
+
+.ncw-weather-icon {
+    font-size: 12px;
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+#ncw-weather-text {
+    min-width: 0;
+}
+
 /* ---------- Правая колонка: локация ---------- */
 
 .ncw-loc {
@@ -438,6 +462,12 @@
 
 .ncw-aukday {
     border: 1px dashed #57503f;
+}
+
+/* Сырой служебный блок <yorni>...</yorni> внутри текста сообщения —
+   полностью прячем: его заменяет красивый виджет. */
+.ncw-hidden-yorni {
+    display: none !important;
 }
 
 /* ---------- Панель настроек ---------- */

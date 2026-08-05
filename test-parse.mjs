@@ -27,6 +27,7 @@ function monthFromName(name) {
     }
     return null;
 }
+const EYKT_MIDS = [1.5, 4.5, 7.5, 10.5, 13.5, 16.5, 19.5, 22.5];
 const EYKT_ALIASES = [
     ["miðn", "midn", "мидн", "полноч", "midnight"],
     ["ótta", "otta", "отта", "предрассвет", "рассвет"],
@@ -119,7 +120,7 @@ function attachTime(date, zone, allowEyktAliases) {
     if (tm) { const h = +tm[1], min = +tm[2]; if (h <= 24 && min <= 59) { date.hour = h; date.minute = min; return date; } }
     if (allowEyktAliases) {
         const idx = eyktFromText(zone);
-        if (idx !== null) { const mid = [1.5,4.5,7.5,10.5,13.5,16.5,19.5,22.5][idx]; date.hour = Math.floor(mid); date.minute = Math.round((mid % 1) * 60); }
+        if (idx !== null) { const mid = EYKT_MIDS[idx]; date.hour = Math.floor(mid); date.minute = Math.round((mid % 1) * 60); }
     }
     return date;
 }
@@ -132,6 +133,39 @@ function parseMessage(rawText) {
     const d = findDateIn(clean, { allowNoYear: false });
     if (d) return attachTime(d, clean, TIME_KEYWORD_RE.test(clean));
     return null;
+}
+
+// --- Парсер блока <yorni> (копия из index.js) ---
+const YORNI_TAG_RE = /<yorni>([\s\S]{10,800}?)<\/yorni>/i;
+function parseYorniTag(rawText) {
+    const m = rawText.match(YORNI_TAG_RE);
+    if (!m) return null;
+    const inner = m[1];
+    const fields = {};
+    for (const line of inner.split(/\r?\n/)) {
+        const kv = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*$/);
+        if (kv) fields[kv[1].toLowerCase()] = kv[2].trim();
+    }
+    const dateStr = fields.date;
+    if (!dateStr) return null;
+    if (/[<>{}]/.test(dateStr)) return null;
+    const d = findDateIn(dateStr, { allowNoYear: true });
+    if (!d) return null;
+    if (fields.eykt && !/[<>{}]/.test(fields.eykt)) {
+        const idx = eyktFromText(fields.eykt);
+        if (idx !== null) { const mid = EYKT_MIDS[idx]; d.hour = Math.floor(mid); d.minute = Math.round((mid % 1) * 60); }
+    }
+    const clean = (v) => (v && !/[<>{}]/.test(v) ? v : null);
+    return {
+        ...d,
+        timeRaw: clean(fields.eykt),
+        weather: clean(fields.weather),
+        location: clean(fields.location),
+        userAttire: clean(fields.user_attire),
+        charMood: clean(fields.mood),
+        charAttire: clean(fields.char_attire),
+        thought: clean(fields.thought),
+    };
 }
 
 // ============ ТЕСТЫ ============
@@ -147,7 +181,28 @@ const cases = [
     "просто текст без даты вообще",
     "числа 12 45 67 без месяца",
 ];
+console.log("=== parseMessage (свободные даты) ===");
 for (const c of cases) {
     const r = parseMessage(c);
     console.log(r ? `OK  ${JSON.stringify({d:r.day,m:r.month,y:r.year,h:r.hour,mi:r.minute})}  <= ${c.slice(0,40)}` : `-- (нет даты)  <= ${c.slice(0,40)}`);
+}
+
+console.log("\n=== parseYorniTag (<yorni>) ===");
+const yorniCases = [
+    // Полный блок, как в примере промпта
+    `<yorni>\neykt: Dagmál\ndate: 4 Haustmánuður 1014\nweather: Crisp air, strong northern wind\nlocation: Village, Great Hall\nmood: Cheerful, eager, bloodthirsty\nuser_attire: Woolen tunic, fur cloak\nchar_attire: Iron armor, battle axe\nthought: Today is a glorious day for a grand fight!\n</yorni>`,
+    // Русский вариант значений + текст вокруг блока
+    `<yorni>\neykt: Наттмал\ndate: 13 Гормануд 1015\nweather: Мокрый снег\nlocation: Длинный дом\nmood: Задумчивый, усталый\nuser_attire: Платье\nchar_attire: Туника\nthought: «Какой странный человек...»\n</yorni>\nТекст ответа бота...`,
+    // Блок без eykt (время не обязательно)
+    `<yorni>\ndate: 2 Auknætr 875\nlocation: Причал\n</yorni>`,
+    // Литеральные плейсхолдеры — должен отказать (это не догенерировано?)
+    `<yorni>\neykt: <Current Eykt>\ndate: <Day VikingMonth Year>\n</yorni>`,
+    // Урезанный блок — только дата
+    `<yorni>date: 12 Góa 875</yorni>`,
+    // Без блока вообще
+    `обычный текст`,
+];
+for (const c of yorniCases) {
+    const r = parseYorniTag(c);
+    console.log(r ? `OK  ${JSON.stringify({d:r.day,m:r.month,y:r.year,h:r.hour,mi:r.minute,loc:r.location,mo:r.charMood,th:r.thought})}  <= ${c.slice(0,50).replace(/\n/g,"\\n")}` : `-- (нет даты)  <= ${c.slice(0,50).replace(/\n/g,"\\n")}`);
 }
