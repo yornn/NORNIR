@@ -1,6 +1,26 @@
-/* Norse Calendar — стили виджета (скандинавская тема, формат Yorni) */
+/*
+ * Norse Calendar — стили виджета
+ *
+ * ОГЛАВЛЕНИЕ (STRUCTURE):
+ *
+ * 1. Fonts .............. Подключение шрифта Norse
+ * 2. Themes ............. CSS-переменные тем (data-theme на виджете)
+ * 3. Widget Base ........ Основной контейнер виджета
+ * 4. Header ............. Шапка с рунами и кнопкой сворачивания
+ * 5. Body & Columns ..... Сетка колонок (календарь, погода, персонажи)
+ * 6. Left Column ........ Эйкта, солнце, дата, лор
+ * 7. Hints .............. Кликабельные слова-подсказки
+ * 8. Weather & Location . Погода и локация
+ * 9. Details Cards ...... Раскрывающиеся карточки {{char}} / {{user}}
+ * 10. Calendar Grid ..... Сетка дней месяца
+ * 11. Auknætr ........... Дополнительные дни (Sumarauki)
+ * 12. Settings Panel .... Панель настроек в UI SillyTavern
+ */
 
-/* Подключаем фирменный шрифт Norse. Файлы лежат в папке fonts/ рядом со style.css. */
+/* ============================================================
+ * 1. FONTS
+ * ============================================================ */
+
 @font-face {
     font-family: "Norse";
     src: url("fonts/Norse-Regular.ttf") format("truetype");
@@ -16,9 +36,123 @@
     font-display: swap;
 }
 
-/* Виджет живёт внутри потока сообщения (prepend в .mes_text), поэтому
-   по умолчанию блочный и резиновый. Фиксированная позиция переопределяется
-   инлайн-стилями из mountWidget(). */
+/* ============================================================
+ * 2. THEMES (CSS-переменные)
+ *
+ * Тема выбирается в панели настроек расширения (кубики) и
+ * вешается на виджет как атрибут data-theme.
+ * Чтобы добавить новую тему — скопируйте блок [data-theme="..."]
+ * и переопределите переменные.
+ * ============================================================ */
+
+#norse-calendar-widget,
+#norse-calendar-widget[data-theme="default"] {
+    --ncw-bg: #16151d;
+    --ncw-bg-raised: #201e29;
+    --ncw-bg-open: #262330;
+    --ncw-bg-hover: #2c2937;
+    --ncw-border: #57503f;
+    --ncw-border-soft: #3a352a;
+    --ncw-text: #d8cdb4;
+    --ncw-text-bright: #e5d5b0;
+    --ncw-text-dim: #8a8069;
+    --ncw-text-muted: #a89a7d;
+    --ncw-text-lore: #8fa3b8;
+    --ncw-text-panel: #c4b694;
+    --ncw-text-weather: #a8b6c9;
+    --ncw-text-day: #cfc4a8;
+    --ncw-accent: #b8946a;
+    --ncw-accent-contrast: #16151d;
+    --ncw-accent-glow: rgba(184, 148, 106, 0.5);
+    --ncw-accent-glow-strong: rgba(184, 148, 106, 0.8);
+    --ncw-accent-border-dim: rgba(184, 148, 106, 0.4);
+    --ncw-chip-text: #c9a06a;
+    --ncw-chip-bg: rgba(201, 160, 106, 0.08);
+    --ncw-chip-border: rgba(201, 160, 106, 0.25);
+}
+
+/* Светлая тема — выбеленная кость и береста */
+#norse-calendar-widget[data-theme="light"] {
+    --ncw-bg: #efe9db;
+    --ncw-bg-raised: #e3dccb;
+    --ncw-bg-open: #ddd4c0;
+    --ncw-bg-hover: #d4cab4;
+    --ncw-border: #a89a7d;
+    --ncw-border-soft: #c6bba3;
+    --ncw-text: #3d372a;
+    --ncw-text-bright: #2a251b;
+    --ncw-text-dim: #7d7461;
+    --ncw-text-muted: #5d5545;
+    --ncw-text-lore: #4a6076;
+    --ncw-text-panel: #4c4433;
+    --ncw-text-weather: #4a6076;
+    --ncw-text-day: #4c4433;
+    --ncw-accent: #8a6538;
+    --ncw-accent-contrast: #f7f2e6;
+    --ncw-accent-glow: rgba(138, 101, 56, 0.4);
+    --ncw-accent-glow-strong: rgba(138, 101, 56, 0.6);
+    --ncw-accent-border-dim: rgba(138, 101, 56, 0.45);
+    --ncw-chip-text: #7a5526;
+    --ncw-chip-bg: rgba(138, 101, 56, 0.10);
+    --ncw-chip-border: rgba(138, 101, 56, 0.35);
+}
+
+/* Полуночное море — глубокая синева и серебро */
+#norse-calendar-widget[data-theme="midnight"] {
+    --ncw-bg: #0d1420;
+    --ncw-bg-raised: #141d2e;
+    --ncw-bg-open: #18223a;
+    --ncw-bg-hover: #1f2c47;
+    --ncw-border: #33445e;
+    --ncw-border-soft: #24324a;
+    --ncw-text: #c3cfe2;
+    --ncw-text-bright: #e2ecfa;
+    --ncw-text-dim: #66778f;
+    --ncw-text-muted: #8fa0b8;
+    --ncw-text-lore: #9db6d4;
+    --ncw-text-panel: #aebdd3;
+    --ncw-text-weather: #9fc0dd;
+    --ncw-text-day: #b7c6da;
+    --ncw-accent: #6f9fd0;
+    --ncw-accent-contrast: #0d1420;
+    --ncw-accent-glow: rgba(111, 159, 208, 0.5);
+    --ncw-accent-glow-strong: rgba(111, 159, 208, 0.8);
+    --ncw-accent-border-dim: rgba(111, 159, 208, 0.4);
+    --ncw-chip-text: #8ab4de;
+    --ncw-chip-bg: rgba(111, 159, 208, 0.10);
+    --ncw-chip-border: rgba(111, 159, 208, 0.30);
+}
+
+/* Жар очага — тёмное дерево, угли и медь */
+#norse-calendar-widget[data-theme="ember"] {
+    --ncw-bg: #1c100d;
+    --ncw-bg-raised: #281713;
+    --ncw-bg-open: #2e1b16;
+    --ncw-bg-hover: #3a231c;
+    --ncw-border: #5e3a2c;
+    --ncw-border-soft: #402720;
+    --ncw-text: #e0c9b6;
+    --ncw-text-bright: #f2dcc4;
+    --ncw-text-dim: #8f7261;
+    --ncw-text-muted: #b5947f;
+    --ncw-text-lore: #c99f8a;
+    --ncw-text-panel: #d3b49b;
+    --ncw-text-weather: #d0a68e;
+    --ncw-text-day: #d9c0a8;
+    --ncw-accent: #d97b3f;
+    --ncw-accent-contrast: #1c100d;
+    --ncw-accent-glow: rgba(217, 123, 63, 0.5);
+    --ncw-accent-glow-strong: rgba(217, 123, 63, 0.8);
+    --ncw-accent-border-dim: rgba(217, 123, 63, 0.4);
+    --ncw-chip-text: #e0915a;
+    --ncw-chip-bg: rgba(217, 123, 63, 0.10);
+    --ncw-chip-border: rgba(217, 123, 63, 0.30);
+}
+
+/* ============================================================
+ * 3. WIDGET BASE
+ * ============================================================ */
+
 #norse-calendar-widget {
     display: block;
     width: 100%;
@@ -26,147 +160,179 @@
     margin: 0 0 10px 0;
     position: relative;
     box-sizing: border-box;
-    background: #16151d;
-    border: 1px solid #57503f;
+    background: var(--ncw-bg);
+    border: 1px solid var(--ncw-border);
     border-radius: 8px;
-    color: #d8cdb4;
+    color: var(--ncw-text);
     font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
     user-select: none;
     opacity: 0.96;
+    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
 
-/* Чтобы содержимое не разъезжалось и не выталкивало колонки grid */
 #norse-calendar-widget,
 #norse-calendar-widget * {
     box-sizing: border-box;
 }
 
-/* ---------- Шапка ---------- */
+/* ============================================================
+ * 4. HEADER
+ * ============================================================ */
 
 #ncw-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 14px;
-    background: #201e29;
-    border-bottom: 1px solid #57503f;
+    padding: 10px 16px;
+    background: var(--ncw-bg-raised);
+    border-bottom: 1px solid var(--ncw-border);
     border-radius: 7px 7px 0 0;
+    transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 .ncw-runes {
-    font-size: 16px;
+    font-size: 20px;
     letter-spacing: 4px;
-    color: #b8946a;
+    color: var(--ncw-accent);
 }
 
 #ncw-collapse {
     cursor: pointer;
-    font-size: 17px;
+    font-size: 20px;
     line-height: 1;
-    padding: 2px 9px;
-    border: 1px solid #57503f;
+    padding: 3px 11px;
+    border: 1px solid var(--ncw-border);
     border-radius: 4px;
-    color: #b8946a;
+    color: var(--ncw-accent);
 }
 
 #ncw-collapse:hover {
-    background: #2c2937;
-    color: #e5d5b0;
+    background: var(--ncw-bg-hover);
+    color: var(--ncw-text-bright);
 }
 
-/* Свёрнутое состояние — скрыта только сетка дней, шапка и текст видны */
 #norse-calendar-widget.ncw-collapsed #ncw-grid {
     display: none;
 }
 
-/* ---------- Тело: две колонки (слева календарь, справа теги промпта) ---------- */
+/* ============================================================
+ * 5. BODY & COLUMNS
+ * ============================================================ */
 
 #ncw-body {
-    padding: 12px 14px;
+    padding: 14px 16px;
 }
 
 #ncw-columns {
     display: flex;
-    gap: 14px;
+    gap: 16px;
     align-items: stretch;
 }
 
-/* Левая колонка — наш старый календарик YORNIE */
-#ncw-left {
-    flex: 0 0 250px;
+#ncw-left,
+#ncw-right,
+.ncw-col {
+    flex: 1 1 0;
     min-width: 0;
+}
+
+#ncw-left {
     text-align: center;
 }
 
-/* Правая колонка — локация, {{user}}, {{char}}, мысль */
 #ncw-right {
-    flex: 1 1 auto;
-    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    border-left: 1px solid #3a352a;
-    padding-left: 14px;
+    gap: 10px;
+    border-left: 1px solid var(--ncw-border-soft);
+    padding-left: 16px;
 }
 
-/* На узких сообщениях колонки складываются вертикально */
-@media (max-width: 640px) {
+.ncw-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-left: 1px solid var(--ncw-border-soft);
+    padding-left: 16px;
+}
+
+/* На узких экранах колонки складываются вертикально:
+   календарь → погода+локация (в одну строку) → {{char}} → {{user}} */
+@media (max-width: 900px) {
     #ncw-columns {
         flex-direction: column;
+        gap: 12px;
     }
     #ncw-left {
         flex: 1 1 auto;
     }
     #ncw-right {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 8px;
+    }
+    #ncw-right > * {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    #ncw-right,
+    .ncw-col {
         border-left: none;
-        border-top: 1px solid #3a352a;
+        border-top: 1px solid var(--ncw-border-soft);
         padding-left: 0;
-        padding-top: 10px;
+        padding-top: 12px;
     }
 }
 
-/* Заглушка «ожидание инфоблока» — на всю ширину тела */
-#ncw-stub {
-    text-align: center;
-    padding: 6px 0 2px;
-    color: #8a8069;
+@media (max-width: 480px) {
+    #ncw-right {
+        flex-direction: column;
+    }
 }
 
-/* ---------- Левая колонка: эйкта, дата, лор ---------- */
+#ncw-stub {
+    text-align: center;
+    font-size: 15px;
+    padding: 8px 0 4px;
+    color: var(--ncw-text-dim);
+}
+
+/* ============================================================
+ * 6. LEFT COLUMN (эйкта, солнце, дата, лор)
+ * ============================================================ */
 
 #ncw-eykt {
     text-align: center;
-    font-size: 17px;
+    font-size: 24px;
     font-weight: bold;
     letter-spacing: 1px;
-    color: #e5d5b0;
-    margin: 2px 0 6px;
+    color: var(--ncw-text-bright);
+    margin: 2px 0 2px;
 }
 
 #ncw-sun {
     text-align: center;
-    font-size: 12px;
+    font-size: 15px;
     font-style: italic;
-    color: #8a8069;
-    margin-bottom: 8px;
+    color: var(--ncw-text-dim);
+    margin-bottom: 12px;
 }
 
 #ncw-date {
     text-align: center;
-    font-size: 14px;
-    color: #a89a7d;
-    margin: 2px 0 3px;
+    font-size: 19px;
+    color: var(--ncw-text-muted);
+    margin: 2px 0 4px;
 }
 
 #ncw-lore {
     text-align: center;
-    font-size: 13px;
-    color: #8fa3b8; /* холодный «лунный» оттенок */
-    margin-bottom: 4px;
+    font-size: 16px;
+    color: var(--ncw-text-lore);
+    margin-bottom: 6px;
 }
 
-/* Базовый (скандинавский) вид — весь текст эйкты/даты/лора в Norse Bold капсом:
-   и кликабельные слова, и цифры, и сезон, и номер эйкты. Залочено от тем. */
 #norse-calendar-widget #ncw-eykt,
 #norse-calendar-widget #ncw-date,
 #norse-calendar-widget #ncw-lore {
@@ -176,20 +342,11 @@
     letter-spacing: 0.5px;
 }
 
-/* Активная подсказка (по клику) — обычный читабельный шрифт на русском,
-   строчными, чтобы визуально отличать «перевод» от скандинавского оригинала. */
-#norse-calendar-widget .ncw-hintable.ncw-hint {
-    font-family: Georgia, "Times New Roman", serif !important;
-    font-weight: 400 !important;
-    text-transform: none;
-    letter-spacing: normal;
-}
 
-/* ---------- Кликабельные слова (адаптация на 5 секунд) ---------- */
+/* ============================================================
+ * 7. HINTS (кликабельные слова)
+ * ============================================================ */
 
-/* Базовые слова (эйкта, дата, день недели, луна) — шрифт Norse Bold капсом.
-   font-family задан с !important и высокой специфичностью, чтобы темы
-   SillyTavern не перебивали его своими CSS. */
 #norse-calendar-widget .ncw-hintable {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 700 !important;
@@ -200,60 +357,71 @@
 .ncw-hintable {
     cursor: pointer;
     transition: color 0.15s ease;
-    border-bottom: 1px dotted rgba(184, 148, 106, 0.4);
+    border-bottom: 1px dotted var(--ncw-accent-border-dim);
 }
 
 .ncw-hintable:hover {
-    color: #e5d5b0;
+    color: var(--ncw-text-bright);
 }
 
-/* Подсветка слова с активной адаптацией */
 .ncw-hint {
-    color: #b8946a !important;
-    text-shadow: 0 0 8px rgba(184, 148, 106, 0.4);
+    color: var(--ncw-accent) !important;
+    text-shadow: 0 0 8px var(--ncw-accent-glow);
     border-bottom-color: transparent;
 }
 
-/* ---------- Правая колонка: погода ---------- */
+/* ============================================================
+ * 8. WEATHER & LOCATION
+ * ============================================================ */
 
 .ncw-weather {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    font-size: 13px;
-    color: #a8b6c9; /* прохладный «погодный» оттенок */
-    background: #201e29;
-    border: 1px solid #57503f;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 15px;
+    color: var(--ncw-text-weather);
+    background: var(--ncw-bg-raised);
+    border: 1px solid var(--ncw-border);
     border-radius: 14px;
+    transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 .ncw-weather-icon {
-    font-size: 12px;
+    font-size: 15px;
     opacity: 0.8;
     flex-shrink: 0;
+}
+
+#norse-calendar-widget #ncw-weather-text,
+#norse-calendar-widget #ncw-location-text {
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 400 !important;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
 }
 
 #ncw-weather-text {
     min-width: 0;
 }
 
-/* ---------- Правая колонка: локация ---------- */
-
 .ncw-loc {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    font-size: 13px;
-    color: #c4b694;
-    background: #201e29;
-    border: 1px solid #57503f;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 15px;
+    color: var(--ncw-text-panel);
+    background: var(--ncw-bg-raised);
+    border: 1px solid var(--ncw-border);
     border-radius: 14px;
+    transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 .ncw-loc-icon {
-    font-size: 12px;
+    font-size: 15px;
     opacity: 0.8;
     flex-shrink: 0;
 }
@@ -262,33 +430,51 @@
     min-width: 0;
 }
 
-/* ---------- Правая колонка: раскрывающиеся блоки {{user}} / {{char}} ---------- */
+/* ============================================================
+ * 9. DETAILS CARDS ({{char}} / {{user}})
+ * ============================================================ */
 
 .ncw-details {
-    background: #201e29;
-    border: 1px solid #57503f;
+    background: var(--ncw-bg-raised);
+    border: 1px solid var(--ncw-border);
     border-radius: 14px;
     overflow: hidden;
-    transition: background 0.3s ease;
+    transition: background 0.3s ease, border-color 0.25s ease;
 }
 
 .ncw-details[open] {
-    background: #262330;
+    background: var(--ncw-bg-open);
 }
 
 .ncw-summary {
     list-style: none;
-    padding: 8px 12px;
+    padding: 10px 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    justify-content: center;
+    gap: 10px;
+    font-size: 16px;
     font-weight: bold;
     letter-spacing: 0.5px;
-    color: #c4b694;
-    opacity: 0.8;
+    text-align: center;
+    color: var(--ncw-text-panel);
+    opacity: 0.85;
     transition: opacity 0.3s ease;
+}
+
+#norse-calendar-widget .ncw-name {
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.ncw-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .ncw-summary::-webkit-details-marker,
@@ -299,31 +485,30 @@
 
 .ncw-details[open] .ncw-summary {
     opacity: 1;
-    color: #e5d5b0;
-    border-bottom: 1px solid #3a352a;
+    color: var(--ncw-text-bright);
+    border-bottom: 1px solid var(--ncw-border-soft);
 }
 
-/* Индикатор-точка слева от имени (как dot в fwn-виджете) */
 .ncw-dot {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background-color: #b8946a;
-    box-shadow: 0 0 4px 1px rgba(184, 148, 106, 0.5);
+    background-color: var(--ncw-accent);
+    box-shadow: 0 0 4px 1px var(--ncw-accent-glow);
     flex-shrink: 0;
     opacity: 0.7;
 }
 
 .ncw-details[open] .ncw-dot {
     opacity: 1;
-    box-shadow: 0 0 6px 2px rgba(184, 148, 106, 0.8);
+    box-shadow: 0 0 6px 2px var(--ncw-accent-glow-strong);
 }
 
 .ncw-details-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 8px 12px 10px;
+    gap: 8px;
+    padding: 10px 14px 12px;
     animation: ncw-fade-in 0.35s ease forwards;
 }
 
@@ -332,62 +517,57 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Одежда — компактная строка с иконкой */
 .ncw-attire {
     display: flex;
     align-items: baseline;
-    gap: 6px;
-    font-size: 12.5px;
-    line-height: 1.35;
-    color: #c4b694;
+    gap: 8px;
+    font-size: 14.5px;
+    line-height: 1.4;
+    color: var(--ncw-text-panel);
+    overflow-wrap: anywhere;
 }
 
 .ncw-attire-icon {
-    font-size: 11px;
+    font-size: 13px;
     opacity: 0.6;
     flex-shrink: 0;
 }
 
-/* Настроение {{char}} — чипы */
 .ncw-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    justify-content: flex-start;
+    gap: 5px;
+    justify-content: center;
 }
 
 .ncw-chip {
-    font-size: 11px;
-    padding: 2px 9px;
-    border-radius: 10px;
-    color: #c9a06a; /* тёплый оттенок настроения */
-    background: rgba(201, 160, 106, 0.08);
-    border: 1px solid rgba(201, 160, 106, 0.25);
+    font-size: 13px;
+    padding: 3px 11px;
+    border-radius: 11px;
+    color: var(--ncw-chip-text);
+    background: var(--ncw-chip-bg);
+    border: 1px solid var(--ncw-chip-border);
 }
 
 .ncw-chip:empty {
     display: none;
 }
 
-/* ---------- Правая колонка: мысль {{char}} о {{user}} ---------- */
-
 .ncw-thought {
     display: flex;
     align-items: baseline;
-    gap: 6px;
-    padding: 8px 12px;
-    font-size: 12.5px;
+    gap: 8px;
+    padding: 8px 0 0;
+    font-size: 14.5px;
     font-style: italic;
-    line-height: 1.4;
-    color: #8fa3b8; /* приглушённый «лунный» оттенок */
-    background: #201e29;
-    border: 1px solid #57503f;
-    border-radius: 14px;
+    line-height: 1.45;
+    color: var(--ncw-text-lore);
+    border-top: 1px dashed var(--ncw-border-soft);
     animation: ncw-fade-in 0.5s ease forwards;
 }
 
 .ncw-thought-icon {
-    font-size: 12px;
+    font-size: 14px;
     opacity: 0.7;
     flex-shrink: 0;
 }
@@ -396,81 +576,79 @@
     min-width: 0;
 }
 
-/* ---------- Сетка календаря ---------- */
+/* ============================================================
+ * 10. CALENDAR GRID
+ * ============================================================ */
 
 #ncw-grid {
     text-align: center;
-    border-top: 1px solid #3a352a;
-    margin-top: 10px;
-    padding-top: 10px;
+    border-top: 1px solid var(--ncw-border-soft);
+    margin-top: 12px;
+    padding-top: 12px;
 }
 
-/* Каждая неделя — своя flex-строка из 7 равных ячеек: столбец невозможен */
+#ncw-grid.ncw-hidden {
+    display: none;
+}
+
 .ncw-row {
     display: flex;
-    gap: 3px;
-    margin-bottom: 3px;
+    gap: 4px;
+    margin-bottom: 4px;
 }
 
 .ncw-cell {
     flex: 1 1 0;
-    min-width: 0; /* не даём содержимому растянуть колонку */
-    font-size: 13px;
-    padding: 4px 0;
+    min-width: 0;
+    font-size: 15px;
+    padding: 6px 0;
     border-radius: 4px;
 }
 
 .ncw-wd {
-    color: #b8946a;
+    color: var(--ncw-accent);
     font-weight: bold;
-    font-size: 11px;
-    border-bottom: 1px solid #57503f;
+    font-size: 13px;
+    border-bottom: 1px solid var(--ncw-border);
     margin-bottom: 3px;
-    padding-bottom: 4px;
+    padding-bottom: 5px;
 }
 
 .ncw-day {
-    color: #cfc4a8;
+    color: var(--ncw-text-day);
 }
 
-/* Дни соседнего месяца внутри актуальной недели — приглушены */
 .ncw-dim {
     opacity: 0.35;
 }
 
-.ncw-empty {
-    /* пустые ячейки перед 1-м числом месяца */
-}
-
 .ncw-today {
-    background: #b8946a;
-    color: #16151d;
+    background: var(--ncw-accent);
+    color: var(--ncw-accent-contrast);
     font-weight: bold;
-    box-shadow: 0 0 6px rgba(184, 148, 106, 0.5);
+    box-shadow: 0 0 6px var(--ncw-accent-glow);
 }
 
-/* ---------- Auknætr (дополнительные дни) ---------- */
+/* ============================================================
+ * 11. AUKNÆTR (Sumarauki)
+ * ============================================================ */
 
 .ncw-auk-title {
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 1px;
-    color: #b8946a;
-    padding: 6px 0 8px;
-    border-bottom: 1px solid #57503f;
+    color: var(--ncw-accent);
+    padding: 7px 0 9px;
+    border-bottom: 1px solid var(--ncw-border);
     margin-bottom: 4px;
 }
 
 .ncw-aukday {
-    border: 1px dashed #57503f;
+    border: 1px dashed var(--ncw-border);
 }
 
-/* Сырой служебный блок <yorni>...</yorni> внутри текста сообщения —
-   полностью прячем: его заменяет красивый виджет. */
-.ncw-hidden-yorni {
-    display: none !important;
-}
-
-/* ---------- Панель настроек ---------- */
+/* ============================================================
+ * 12. SETTINGS PANEL
+ * ============================================================ */
 
 .norse-calendar-settings .inline-drawer-header {
     width: 100%;
@@ -486,4 +664,16 @@
 .norse-calendar-settings small {
     opacity: 0.65;
     font-style: italic;
+}
+
+.norse-calendar-settings .nc-theme-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.norse-calendar-settings .nc-theme-label select {
+    flex: 1 1 auto;
+    min-width: 0;
 }

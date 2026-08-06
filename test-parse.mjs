@@ -1,7 +1,20 @@
-// Автономный тест логики парсинга Norse Calendar.
-// Копирует функции из index.js и прогоняет реальные сообщения.
+/*
+ * Norse Calendar — автономный тест парсинга блока <yorni>
+ *
+ * Запуск: node test-parse.mjs
+ *
+ * ОГЛАВЛЕНИЕ (STRUCTURE):
+ *
+ * 1. Lore Data .......... Константы месяцев и эйкт (копия из index.js)
+ * 2. Parsing Core ....... Распознавание даты и времени (копия из index.js)
+ * 3. Yorni Parser ....... Парсер блока <yorni> (копия из index.js)
+ * 4. Tests .............. Тестовые кейсы и вывод результатов
+ */
 
-// --- Корни месяцев ---
+/* ============================================================
+ * 1. LORE DATA
+ * ============================================================ */
+
 const AUK_STEMS = ["sumarauki", "aukn", "auk"];
 const MONTH_STEMS = [
     ["jan", "янв", "mörs", "mors", "морс"],
@@ -17,6 +30,7 @@ const MONTH_STEMS = [
     ["nov", "ноя", "ной", "gorm", "горм"],
     ["dec", "дек", "ýl", "ylir", "юлир"],
 ];
+
 function monthFromName(name) {
     if (!name) return null;
     const n = String(name).toLowerCase().trim();
@@ -27,6 +41,7 @@ function monthFromName(name) {
     }
     return null;
 }
+
 const EYKT_MIDS = [1.5, 4.5, 7.5, 10.5, 13.5, 16.5, 19.5, 22.5];
 const EYKT_ALIASES = [
     ["miðn", "midn", "мидн", "полноч", "midnight"],
@@ -38,6 +53,7 @@ const EYKT_ALIASES = [
     ["miðaftan", "midaftan", "мидафтан", "вечер", "evening"],
     ["náttmál", "nattmal", "наттмал", "ужин", "ночь", "night"],
 ];
+
 function eyktFromText(text) {
     const t = text.toLowerCase();
     let best = null, bestPos = Infinity;
@@ -50,11 +66,13 @@ function eyktFromText(text) {
     return best;
 }
 
-const TIME_PATTERN = /\b(\d{1,2}):(\d{2})(?::\d{2})?\b/;
-const DATE_KEYWORD_RE = /(date|дата|day|year|год|calendar|календар|tungl|эйкт|eykt|time|время)/iu;
-const TIME_KEYWORD_RE = /(time|время|эйкт|eykt|час)/iu;
+/* ============================================================
+ * 2. PARSING CORE
+ * ============================================================ */
 
+const TIME_PATTERN = /\b(\d{1,2}):(\d{2})(?::\d{2})?\b/;
 const MWORD = "A-Za-zÀ-ÿÞðþÁ-ž\\u0400-\\u04FF";
+
 const DATE_PATTERNS = [
     { re: new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?([${MWORD}]{2,})\\s*,?\\s*(\\d{3,4})?`, "giu"),
       map: (m) => ({ day: +m[1], month: monthFromName(m[2]), year: m[3] ? +m[3] : null, monthWord: true }) },
@@ -72,6 +90,7 @@ function dateScore(d) {
     if (d.monthWord) return 1;
     return 0;
 }
+
 function isValidDate(d) {
     if (!d) return false;
     if (d.month === "AUK") { if (!d.day || d.day < 1 || d.day > 5) return false; }
@@ -82,22 +101,10 @@ function isValidDate(d) {
     if (d.year !== null && (isNaN(d.year) || d.year < 1 || d.year > 9999)) return false;
     return true;
 }
+
 function finalizeDate(d) { if (d.month !== "AUK" && d.day > 30) d.day = 30; return d; }
 
-function dateZones(cleanText) {
-    const kw = [], bracket = [];
-    let m;
-    const bracketRe = /[{\[<(][^\]>)}]{0,160}[\])>}]/g;
-    while ((m = bracketRe.exec(cleanText)) !== null) {
-        if (DATE_KEYWORD_RE.test(m[0])) kw.push(m[0]); else bracket.push(m[0]);
-    }
-    for (const line of cleanText.split(/\r?\n/)) {
-        if (DATE_KEYWORD_RE.test(line)) kw.push(line);
-    }
-    return { kw, bracket };
-}
-
-function findDateIn(text, { allowNoYear }) {
+function findDateIn(text) {
     let best = null, bestScore = -1;
     for (const { re, map } of DATE_PATTERNS) {
         re.lastIndex = 0;
@@ -107,36 +114,59 @@ function findDateIn(text, { allowNoYear }) {
             if (!isValidDate(c)) continue;
             const s = dateScore(c);
             if (s === 0) continue;
-            if (!allowNoYear && s < 2) continue;
             if (s > bestScore) { best = c; bestScore = s; }
         }
     }
     return best ? finalizeDate(best) : null;
 }
 
-function attachTime(date, zone, allowEyktAliases) {
-    date.hour = null; date.minute = null;
-    const tm = zone.match(TIME_PATTERN);
-    if (tm) { const h = +tm[1], min = +tm[2]; if (h <= 24 && min <= 59) { date.hour = h; date.minute = min; return date; } }
-    if (allowEyktAliases) {
-        const idx = eyktFromText(zone);
-        if (idx !== null) { const mid = EYKT_MIDS[idx]; date.hour = Math.floor(mid); date.minute = Math.round((mid % 1) * 60); }
+function monthFromTextLoose(text) {
+    const t = text.toLowerCase();
+    let best = null, bestPos = Infinity;
+    for (const s of AUK_STEMS) {
+        const p = t.indexOf(s);
+        if (p !== -1 && p < bestPos) { bestPos = p; best = "AUK"; }
     }
-    return date;
+    for (let i = 0; i < MONTH_STEMS.length; i++) {
+        for (const s of MONTH_STEMS[i]) {
+            const p = t.indexOf(s);
+            if (p !== -1 && p < bestPos) { bestPos = p; best = i + 1; }
+        }
+    }
+    return best;
 }
 
-function parseMessage(rawText) {
-    const clean = rawText.replace(/<[^>]*>/g, " ");
-    const { kw, bracket } = dateZones(clean);
-    for (const zone of kw) { const d = findDateIn(zone, { allowNoYear: true }); if (d) return attachTime(d, zone, true); }
-    for (const zone of bracket) { const d = findDateIn(zone, { allowNoYear: true }); if (d) return attachTime(d, zone, true); }
-    const d = findDateIn(clean, { allowNoYear: false });
-    if (d) return attachTime(d, clean, TIME_KEYWORD_RE.test(clean));
-    return null;
+function findDateInYorni(text) {
+    let d = findDateIn(text);
+    if (!d) {
+        const m = text.match(/(?<!\d)(\d{1,2})[./](\d{1,2})[./](\d{2})(?!\d)/);
+        if (m) {
+            const c = finalizeDate({ day: +m[1], month: +m[2], year: 2000 + +m[3] });
+            if (isValidDate(c)) d = c;
+        }
+    }
+    if (!d) {
+        const month = monthFromTextLoose(text);
+        if (month !== null) {
+            const dayM = text.match(/(?<!\d)(\d{1,2})(?!\d)/);
+            const yearM = text.match(/(?<!\d)(\d{3,4})(?!\d)/);
+            const c = finalizeDate({ day: dayM ? +dayM[1] : null, month, year: yearM ? +yearM[1] : null });
+            if (isValidDate(c)) d = c;
+        }
+    }
+    if (d && d.year === null) {
+        const yearM = text.match(/(?<!\d)(\d{3,4})(?!\d)/);
+        if (yearM) d.year = +yearM[1];
+    }
+    return d;
 }
 
-// --- Парсер блока <yorni> (копия из index.js) ---
+/* ============================================================
+ * 3. YORNI PARSER
+ * ============================================================ */
+
 const YORNI_TAG_RE = /<yorni>([\s\S]{10,800}?)<\/yorni>/i;
+
 function parseYorniTag(rawText) {
     const m = rawText.match(YORNI_TAG_RE);
     if (!m) return null;
@@ -146,19 +176,36 @@ function parseYorniTag(rawText) {
         const kv = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*$/);
         if (kv) fields[kv[1].toLowerCase()] = kv[2].trim();
     }
-    const dateStr = fields.date;
-    if (!dateStr) return null;
-    if (/[<>{}]/.test(dateStr)) return null;
-    const d = findDateIn(dateStr, { allowNoYear: true });
+    const candidates = [];
+    if (fields.date) candidates.push(fields.date);
+    candidates.push(inner);
+    let d = null, dateZone = "";
+    for (let cand of candidates) {
+        const jm = cand.match(/"output"\s*:\s*"([^"]+)"/i);
+        if (jm) cand = jm[1].trim();
+        if (/[<>{}]/.test(cand)) continue;
+        const found = findDateInYorni(cand);
+        if (found) { d = found; dateZone = cand; break; }
+    }
     if (!d) return null;
-    if (fields.eykt && !/[<>{}]/.test(fields.eykt)) {
-        const idx = eyktFromText(fields.eykt);
-        if (idx !== null) { const mid = EYKT_MIDS[idx]; d.hour = Math.floor(mid); d.minute = Math.round((mid % 1) * 60); }
+    d.hour = null; d.minute = null;
+    const eyktVal = fields.eykt && !/[<>{}]/.test(fields.eykt) ? fields.eykt : null;
+    if (eyktVal) {
+        const tm = eyktVal.match(TIME_PATTERN);
+        if (tm && +tm[1] <= 24 && +tm[2] <= 59) {
+            d.hour = +tm[1]; d.minute = +tm[2];
+        } else {
+            const idx = eyktFromText(eyktVal);
+            if (idx !== null) { const mid = EYKT_MIDS[idx]; d.hour = Math.floor(mid); d.minute = Math.round((mid % 1) * 60); }
+        }
+    }
+    if (d.hour === null) {
+        const tm = dateZone.match(TIME_PATTERN);
+        if (tm && +tm[1] <= 24 && +tm[2] <= 59) { d.hour = +tm[1]; d.minute = +tm[2]; }
     }
     const clean = (v) => (v && !/[<>{}]/.test(v) ? v : null);
     return {
         ...d,
-        timeRaw: clean(fields.eykt),
         weather: clean(fields.weather),
         location: clean(fields.location),
         userAttire: clean(fields.user_attire),
@@ -168,39 +215,49 @@ function parseYorniTag(rawText) {
     };
 }
 
-// ============ ТЕСТЫ ============
-const cases = [
-    "{Наттмал | 4 Хаустмануд 1015 | За окном сыпет мокрый снег, в квартире зябко | Выборг, Хрущёвка · Гостиная | Блузка | Любопытный | Оливковая туника | Неожиданное сожительство, 1 день | \"текст\"}",
-    "[Date: 12 Góa 875 | Time: Hádegi]",
-    "12 марта 875",
-    "875-03-12",
-    "12.03.875",
-    "2 Auknætr 875",
-    "March 12, 875",
-    "{Хадеги | 13 Гормануд 1015}",
-    "просто текст без даты вообще",
-    "числа 12 45 67 без месяца",
-];
-console.log("=== parseMessage (свободные даты) ===");
-for (const c of cases) {
-    const r = parseMessage(c);
-    console.log(r ? `OK  ${JSON.stringify({d:r.day,m:r.month,y:r.year,h:r.hour,mi:r.minute})}  <= ${c.slice(0,40)}` : `-- (нет даты)  <= ${c.slice(0,40)}`);
-}
+/* ============================================================
+ * 4. TESTS
+ * ============================================================ */
 
-console.log("\n=== parseYorniTag (<yorni>) ===");
+console.log("=== parseYorniTag (<yorni>) ===");
 const yorniCases = [
-    // Полный блок, как в примере промпта
+    // Полный блок из промпта (значения на русском)
+    `<yorni>\neykt: Dagmál\ndate: 4 Хаустмануд 1014\nweather: Прохладный воздух, сильный северный ветер\nlocation: Деревня, Длинный дом\nmood: Весёлый, азартный, воодушевлённый\nuser_attire: Шерстяное платье, меховой плащ\nchar_attire: Волчьи шкуры, льняная рубаха\nthought: Сегодня отличный день для доброй драки!\n</yorni>`,
+    // Полный блок с английскими значениями
     `<yorni>\neykt: Dagmál\ndate: 4 Haustmánuður 1014\nweather: Crisp air, strong northern wind\nlocation: Village, Great Hall\nmood: Cheerful, eager, bloodthirsty\nuser_attire: Woolen tunic, fur cloak\nchar_attire: Iron armor, battle axe\nthought: Today is a glorious day for a grand fight!\n</yorni>`,
     // Русский вариант значений + текст вокруг блока
     `<yorni>\neykt: Наттмал\ndate: 13 Гормануд 1015\nweather: Мокрый снег\nlocation: Длинный дом\nmood: Задумчивый, усталый\nuser_attire: Платье\nchar_attire: Туника\nthought: «Какой странный человек...»\n</yorni>\nТекст ответа бота...`,
     // Блок без eykt (время не обязательно)
     `<yorni>\ndate: 2 Auknætr 875\nlocation: Причал\n</yorni>`,
-    // Литеральные плейсхолдеры — должен отказать (это не догенерировано?)
+    // Литеральные плейсхолдеры — должен отказать
     `<yorni>\neykt: <Current Eykt>\ndate: <Day VikingMonth Year>\n</yorni>`,
     // Урезанный блок — только дата
     `<yorni>date: 12 Góa 875</yorni>`,
     // Без блока вообще
     `обычный текст`,
+    // Время: [norse] - [en] - [ru] — HH:MM
+    `<yorni>\neykt: Miðnætti - Midnatti - Миднатти — 12:46\ndate: 4 Хаустмануд 1014\n</yorni>`,
+    // Дата: составной формат месяца через дефис
+    `<yorni>\neykt: Hádegi\ndate: 14 Gormánaður - Gormanud - Гормануд — Ноябрь 875\n</yorni>`,
+    // Составной формат без дня/года (только перечисление месяца)
+    `<yorni>date: Gormánaður - Gormanud - Гормануд — Ноябрь</yorni>`,
+    // Особые дни: Sumarauki
+    `<yorni>date: 2 Sumarauki 875</yorni>`,
+    // Русский формат "Дата: 21 октября 2023"
+    `<yorni>date: Дата: 21 октября 2023</yorni>`,
+    // Английский формат "Date: 21 October 2023"
+    `<yorni>date: Date: 21 October 2023</yorni>`,
+    // Числовые: ДД.ММ.ГГГГ / ДД/ММ/ГГ
+    `<yorni>date: 21.10.2023</yorni>`,
+    `<yorni>date: 21/10/23</yorni>`,
+    // ISO
+    `<yorni>date: 2023-10-21</yorni>`,
+    // Эмодзи-префикс
+    `<yorni>date: 📅 13/10/23</yorni>`,
+    // JSON-обёртка
+    `<yorni>date:{"output":"21.10.2023"}</yorni>`,
+    // Дата с временем внутри строки
+    `<yorni>date: 21.10.2023 18:30</yorni>`,
 ];
 for (const c of yorniCases) {
     const r = parseYorniTag(c);
