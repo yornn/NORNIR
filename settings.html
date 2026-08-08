@@ -1,10 +1,14 @@
 <!--
   Norse Calendar — панель настроек в UI SillyTavern
 
+  Исходный язык — английский (как в самой SillyTavern); переводы лежат
+  в i18n/<locale>.json и подставляются по ключам data-i18n.
+
   Содержит:
     - Show widget: показывать/скрывать календарный виджет
     - Inject tag prompt: инжектить инструкцию <yorni> в промпт
     - Theme: откидное меню выбора темы оформления виджета
+    - Restore regex scripts: вернуть regex-скрипты к эталонному виду
 -->
 
 <div class="norse-calendar-settings">
@@ -17,21 +21,24 @@
             <div class="nc-block">
                 <label class="checkbox_label" for="nc_enabled">
                     <input id="nc_enabled" type="checkbox" />
-                    <span>Show widget</span>
+                    <span data-i18n="Show widget">Show widget</span>
                 </label>
                 <label class="checkbox_label" for="nc_inject">
                     <input id="nc_inject" type="checkbox" />
-                    <span>Inject tag prompt (infoblock mode)</span>
+                    <span data-i18n="Inject tag prompt (infoblock mode)">Inject tag prompt (infoblock mode)</span>
                 </label>
                 <label class="nc-theme-label" for="nc_theme">
-                    <span>Theme</span>
+                    <span data-i18n="Theme">Theme</span>
                     <select id="nc_theme" class="text_pole">
-                        <option value="default">Default (тёмная)</option>
-                        <option value="light">Light (светлая)</option>
-                        <option value="midnight">Midnight (ночное море)</option>
-                        <option value="ember">Ember (жар очага)</option>
+                        <option value="default" data-i18n="Default (dark)">Default (dark)</option>
+                        <option value="light" data-i18n="Light">Light</option>
+                        <option value="midnight" data-i18n="Midnight">Midnight</option>
+                        <option value="ember" data-i18n="Ember">Ember</option>
                     </select>
                 </label>
+                <input id="nc_regex_restore" class="menu_button nc-regex-restore" type="button"
+                       value="Restore regex scripts"
+                       data-i18n="[value]Restore regex scripts" />
             </div>
         </div>
     </div>

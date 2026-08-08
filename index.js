@@ -6,40 +6,82 @@
  * рендерит из него эйкту, положение солнца, дату, день недели и фазу Луны.
  *
  * Реальное время не используется — только данные из чата.
+ * Лор и разбор блока живут в parser.js (его же импортирует test-parse.mjs).
  *
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
- * 1. Constants .......... Имя расширения, настройки, скан-глубина
+ * 1. Imports & Constants  Импорты, имя расширения, настройки, скан-глубина
  * 2. Regex Scripts ...... Скрытие/вырезание блока <yorni> в чате и промпте
  * 3. Prompt ............. Инструкция <yorni> для модели
- * 4. Lore Data .......... Месяцы, дни недели, эйкты, фазы Луны
- * 5. Date Parsing ....... Парсинг даты и времени из блока <yorni>
- * 6. Calendar Math ...... Серийные дни, дни недели, addDays
- * 7. State & Render ..... Состояние виджета и его отрисовка
- * 8. Widget Mounting .... Встраивание в DOM сообщения
- * 9. Widget Building .... Построение DOM-структуры виджета
+ * 4. State & Lookup ..... Состояние виджета и поиск блока в чате
+ * 5. Render ............. Отрисовка виджета
+ * 6. Widget Mounting .... Встраивание в DOM сообщения
+ * 7. Widget Building .... Построение DOM-структуры виджета
+ * 8. Tímatal ........... Мини-справочник в меню «волшебной палочки»
+ * 9. Slash Commands ..... STscript-команды /norse-*
  * 10. Settings .......... Панель настроек SillyTavern
  * 11. Init .............. Точка входа, подписки на события
  */
 
-import { extension_settings, getContext } from "../../../extensions.js";
-import { saveSettingsDebounced, eventSource, event_types } from "../../../../script.js";
-
 /* ============================================================
- * 1. CONSTANTS
+ * 1. IMPORTS & CONSTANTS
  * ============================================================ */
 
+import { extension_settings, getContext, renderExtensionTemplateAsync } from "../../../extensions.js";
+import { saveSettingsDebounced, eventSource, event_types } from "../../../../script.js";
+import { t } from "../../../i18n.js";
+import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
+import { SlashCommand } from "../../../slash-commands/SlashCommand.js";
+import { Popup, POPUP_TYPE } from "../../../popup.js";
+import { buildReference, SECTION_IDS, COLUMN_KEYS, isPermanent } from "./reference.js";
+
+import {
+    MONTHS_RU_NOM,
+    MONTHS_NORSE_RU,
+    WEEKDAYS_SHORT_NORSE,
+    WEEKDAYS_FULL_RU,
+    WEEKDAY_DESC_RU,
+    EYKTIR,
+    addDays,
+    aukDays,
+    eyktForHour,
+    hasDate,
+    hasDetails,
+    hasTime,
+    isAuk,
+    moonPhase,
+    parseYorniTag,
+    seasonOf,
+    weekdayOf,
+} from "./parser.js";
+
 const extensionName = "Norse-Calendar";
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+const extensionFolderName = `third-party/${extensionName}`;
+
+/* По умолчанию в Tímatal открыты только Эйкты: с телефона незачем листать
+   весь справочник, а нужный раздел разворачивается одним касанием. */
+const DEFAULT_CLOSED_SECTIONS = ["month", "week", "moon", "block"];
+
+/* Постоянные колонки (номер и др.-сканд. написание) здесь не перечисляются —
+   они всегда на месте. Русский включён, чтобы при первом открытии сразу было
+   видно, что есть что; остальное добирается облачками. */
+const DEFAULT_VISIBLE_COLUMNS = ["ru"];
 
 const defaultSettings = {
     enabled: true,
     inject: true,
     collapsed: true,
     theme: "default",
+    timatalClosedSections: DEFAULT_CLOSED_SECTIONS,
+    timatalVisibleColumns: DEFAULT_VISIBLE_COLUMNS,
 };
 
 const SCAN_DEPTH = 25;
+
+/** Настройки расширения (после loadSettings всегда заполнены). */
+function settings() {
+    return extension_settings[extensionName];
+}
 
 /* ============================================================
  * 2. REGEX SCRIPTS (SillyTavern)
@@ -48,15 +90,19 @@ const SCAN_DEPTH = 25;
  *  - display: скрывает блок из отрендеренного текста сообщения
  *  - prompt:  вырезает блок из контекста на глубине >= 1,
  *             оставляя последний (depth 0) как baseline
+ *
+ * markdownOnly и promptOnly в движке ST объединены через OR
+ * (extensions/regex/engine.js), поэтому «только промпт» — это
+ * promptOnly: true ПРИ markdownOnly: false.
  * ============================================================ */
 
-const YORNI_TAG_RE = /<yorni>([\s\S]{10,800}?)<\/yorni>/i;
+const YORNI_FIND_REGEX = "/<yorni>[\\s\\S]*?<\\/yorni>/gim";
 
 const YORNI_REGEX_SCRIPTS = [
     {
         id: "norse_calendar_yorni_display",
         scriptName: "Norse Calendar — скрыть <yorni> в чате",
-        findRegex: "/<yorni>(?:(?!<\\/think(?:ing)?>|<yorni>)[\\s\\S])*?<\\/yorni>/gim",
+        findRegex: YORNI_FIND_REGEX,
         replaceString: "",
         trimStrings: [],
         placement: [2],
@@ -71,12 +117,12 @@ const YORNI_REGEX_SCRIPTS = [
     {
         id: "norse_calendar_yorni_prompt",
         scriptName: "Norse Calendar — вырезать <yorni> из контекста",
-        findRegex: "/<yorni>(?:(?!<\\/think(?:ing)?>|<yorni>)[\\s\\S])*?<\\/yorni>/gim",
+        findRegex: YORNI_FIND_REGEX,
         replaceString: "",
         trimStrings: [],
         placement: [2],
         disabled: false,
-        markdownOnly: true,
+        markdownOnly: false,
         promptOnly: true,
         runOnEdit: true,
         substituteRegex: 0,
@@ -85,9 +131,31 @@ const YORNI_REGEX_SCRIPTS = [
     },
 ];
 
-/** Регистрирует regex-скрипты в настройках ST (без дублей по id). */
+/**
+ * Регистрирует regex-скрипты, которых ещё нет.
+ *
+ * Существующие НЕ трогает: если пользователь отключил или отредактировал
+ * скрипт в UI Regex, его выбор должен пережить перезагрузку страницы.
+ * Для принудительного возврата к эталону есть restoreYorniRegexScripts().
+ *
+ * @returns {number} Сколько скриптов было добавлено
+ */
 function ensureYorniRegexScripts() {
-    if (!extension_settings.regex) extension_settings.regex = [];
+    if (!Array.isArray(extension_settings.regex)) extension_settings.regex = [];
+    let added = 0;
+    for (const script of YORNI_REGEX_SCRIPTS) {
+        if (!extension_settings.regex.some((s) => s.id === script.id)) {
+            extension_settings.regex.push({ ...script });
+            added++;
+        }
+    }
+    if (added > 0) saveSettingsDebounced();
+    return added;
+}
+
+/** Принудительно возвращает оба скрипта к эталонному виду (кнопка в настройках). */
+function restoreYorniRegexScripts() {
+    if (!Array.isArray(extension_settings.regex)) extension_settings.regex = [];
     for (const script of YORNI_REGEX_SCRIPTS) {
         const idx = extension_settings.regex.findIndex((s) => s.id === script.id);
         if (idx === -1) {
@@ -158,331 +226,45 @@ const YORNI_PROMPT = [
     "</yorni>",
 ].join("\n");
 
-/* ============================================================
- * 4. LORE DATA
+/**
+ * Инжектит инструкцию в промпт.
  *
- * Месяцы: 12 × 30 дней, индекс = современный месяц - 1
- * Дни недели: индекс 0 = воскресенье (sunnudagr)
- * Эйкты: 8 × 3 часа
- * Луна: цикл 29.53 дня от 2000-01-06
- * ============================================================ */
-
-const MONTHS_RU_NOM = [
-    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
-];
-
-const MONTHS_NORSE_RU = [
-    "Морсугур", "Торри", "Гоа", "Эйнмануд", "Харпа", "Скерпла",
-    "Сольмануд", "Хейаннир", "Твимануд", "Хаустмануд", "Гормануд", "Юлир",
-];
-
-const WEEKDAYS_SHORT_NORSE = ["Mán", "Týs", "Óðn", "Þór", "Frj", "Lau", "Sun"];
-const WEEKDAYS_FULL_RU = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
-
-const WEEKDAY_DESC_RU = [
-    "День Солнца", "День Луны", "День Тюра", "День Одина",
-    "День Тора", "День Фригг / Фрейи", "«Банный день» — день омовения",
-];
-
-const AUK_STEMS = ["sumarauki", "aukn", "auk"];
-
-function seasonOf(month) {
-    return isAuk(month) || (month >= 5 && month <= 10)
-        ? { norse: "Sumar", ru: "Лето" }
-        : { norse: "Vetr", ru: "Зима" };
-}
-
-const MONTH_STEMS = [
-    ["jan", "янв", "mörs", "mors", "морс"],
-    ["feb", "фев", "þor", "thor", "торр"],
-    ["mar", "мар", "góa", "goa", "гоа"],
-    ["apr", "апр", "einm", "эйн"],
-    ["may", "мая", "май", "harp", "харп"],
-    ["jun", "июн", "skerp", "скерп"],
-    ["jul", "июл", "sólm", "solm", "сольм"],
-    ["aug", "авг", "heyan", "хейан"],
-    ["sep", "сен", "tvím", "tvim", "твим"],
-    ["oct", "окт", "haust", "хауст"],
-    ["nov", "ноя", "ной", "gorm", "горм"],
-    ["dec", "дек", "ýl", "ylir", "юлир"],
-];
-
-/** Номер месяца (1–12) по названию или числу. */
-function monthFromName(name) {
-    if (!name) return null;
-    const n = String(name).toLowerCase().trim();
-    if (AUK_STEMS.some((s) => n.startsWith(s))) return "AUK";
-    if (/^\d{1,2}$/.test(n)) {
-        const v = parseInt(n, 10);
-        return v >= 1 && v <= 12 ? v : null;
-    }
-    for (let i = 0; i < MONTH_STEMS.length; i++) {
-        if (MONTH_STEMS[i].some((s) => n.startsWith(s))) return i + 1;
-    }
-    return null;
-}
-
-const EYKTIR = [
-    { norse: "Miðnætti",  ru: "Миднатти", desc: "Полночь",                dir: "С",  dirText: "Солнце строго на Севере",       start: 0,  mid: 1.5 },
-    { norse: "Ótta",      ru: "Отта",     desc: "Ночь перед рассветом",   dir: "СВ", dirText: "Солнце на Северо-Востоке",      start: 3,  mid: 4.5 },
-    { norse: "Morgun",    ru: "Моргун",   desc: "Утро, подъём",           dir: "В",  dirText: "Солнце строго на Востоке",      start: 6,  mid: 7.5 },
-    { norse: "Dagmál",    ru: "Дагмал",   desc: "Дневное время, завтрак", dir: "ЮВ", dirText: "Солнце на Юго-Востоке",         start: 9,  mid: 10.5 },
-    { norse: "Hádegi",    ru: "Хадеги",   desc: "Полдень",                dir: "Ю",  dirText: "Солнце строго на Юге",          start: 12, mid: 13.5 },
-    { norse: "Undorn",    ru: "Ундорн",   desc: "Полдник",                dir: "ЮЗ", dirText: "Солнце на Юго-Западе",          start: 15, mid: 16.5 },
-    { norse: "Miðaftann", ru: "Мидафтан", desc: "Вечер",                  dir: "З",  dirText: "Солнце строго на Западе",       start: 18, mid: 19.5 },
-    { norse: "Náttmál",   ru: "Наттмал",  desc: "Ужин, ночь",             dir: "СЗ", dirText: "Солнце на Северо-Западе",       start: 21, mid: 22.5 },
-];
-
-const EYKT_ALIASES = [
-    ["miðn", "midn", "мидн", "полноч", "midnight"],
-    ["ótta", "otta", "отта", "предрассвет", "рассвет"],
-    ["morgun", "моргун", "rismál", "rismal", "утро", "morning"],
-    ["dagmál", "dagmal", "дагмал"],
-    ["hádegi", "hadegi", "хадеги", "полдень", "полдня", "midday", "noon"],
-    ["undorn", "ундорн", "полдник", "afternoon"],
-    ["miðaftan", "midaftan", "мидафтан", "вечер", "evening"],
-    ["náttmál", "nattmal", "наттмал", "ужин", "ночь", "night"],
-];
-
-/** Индекс эйкты по часу (0–24). */
-function eyktForHour(hour) {
-    return Math.floor((hour % 24) / 3) % 8;
-}
-
-/** Ищет название эйкты в тексте. Возвращает индекс или null. */
-function eyktFromText(text) {
-    const t = text.toLowerCase();
-    let bestIdx = null;
-    let bestPos = Infinity;
-    for (let i = 0; i < EYKT_ALIASES.length; i++) {
-        for (const alias of EYKT_ALIASES[i]) {
-            const pos = t.indexOf(alias);
-            if (pos !== -1 && pos < bestPos) {
-                bestPos = pos;
-                bestIdx = i;
-            }
-        }
-    }
-    return bestIdx;
-}
-
-const MOON_CYCLE = 29.53;
-
-const MOON_PHASES = [
-    { norse: "Ný",             ru: "Новолуние",      icon: "🌑", from: 0,    to: 1.8,
-      desc: "время зарождения и планов" },
-    { norse: "Vaxandi",        ru: "Растущая луна",  icon: "🌒", from: 1.8,  to: 13.0,
-      desc: "время дел, походов и строительства" },
-    { norse: "Fullt tungl",    ru: "Полнолуние",     icon: "🌕", from: 13.0, to: 16.5,
-      desc: "пик силы, время Блотов и Тинга" },
-    { norse: "Minnandi",       ru: "Убывающая луна", icon: "🌖", from: 16.5, to: 27.7,
-      desc: "время завершать дела и возвращаться домой" },
-    { norse: "Nið",            ru: "Безлуние",       icon: "🌚", from: 27.7, to: 29.53,
-      desc: "ночи волка Хати, время отдыха и осторожности" },
-];
-
-/** Возраст Луны и её фаза для заданной даты. */
-function moonPhase(year, month, day) {
-    const anchor = serialOf(2000, 1, 6);
-    const age = (((serialOf(year, month, day) - anchor) % MOON_CYCLE) + MOON_CYCLE) % MOON_CYCLE;
-    const phase = MOON_PHASES.find((p) => age >= p.from && age < p.to) ?? MOON_PHASES[0];
-    return { age, phase };
+ * Значение живёт в extension_prompts до следующей перезаписи, поэтому
+ * достаточно выставить его на GENERATION_STARTED — до того, как Generate()
+ * соберёт контекст через doChatInject().
+ */
+function injectNorsePrompt() {
+    const context = getContext();
+    if (!context || typeof context.setExtensionPrompt !== "function") return;
+    const value = settings()?.inject ? YORNI_PROMPT : "";
+    context.setExtensionPrompt(extensionName, value, 1, 0);
 }
 
 /* ============================================================
- * 5. DATE PARSING (из блока <yorni>)
+ * 4. STATE & LOOKUP
  * ============================================================ */
 
-const TIME_PATTERN = /\b(\d{1,2}):(\d{2})(?::\d{2})?\b/;
-const MWORD = "A-Za-zÀ-ÿÞðþÁ-ž\\u0400-\\u04FF";
+const state = {
+    year: null,
+    month: null,
+    day: null,
+    hour: null,
+    minute: null,
+    weather: null,
+    location: null,
+    userAttire: null,
+    charMood: null,
+    charAttire: null,
+    thought: null,
+};
 
-const DATE_PATTERNS = [
-    {
-        re: new RegExp(`(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?([${MWORD}]{2,})\\s*,?\\s*(\\d{3,4})?`, "giu"),
-        map: (m) => ({ day: +m[1], month: monthFromName(m[2]), year: m[3] ? +m[3] : null, monthWord: true }),
-    },
-    {
-        re: new RegExp(`([${MWORD}]{2,})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*,?\\s*(\\d{3,4})?`, "giu"),
-        map: (m) => ({ day: +m[2], month: monthFromName(m[1]), year: m[3] ? +m[3] : null, monthWord: true }),
-    },
-    {
-        re: /(\d{3,4})-(\d{1,2})-(\d{1,2})/g,
-        map: (m) => ({ year: +m[1], month: +m[2], day: +m[3], monthWord: false }),
-    },
-    {
-        re: /(\d{1,2})[./](\d{1,2})[./](\d{3,4})/g,
-        map: (m) => ({ day: +m[1], month: +m[2], year: +m[3], monthWord: false }),
-    },
-];
-
-/** Точность даты: 2 = полная с годом, 1 = месяц словом без года, 0 = мусор. */
-function dateScore(d) {
-    if (typeof d.month === "string") return d.year !== null ? 2 : 1;
-    if (d.year !== null) return 2;
-    if (d.monthWord) return 1;
-    return 0;
-}
-
-function isValidDate(d) {
-    if (!d) return false;
-    if (d.month === "AUK") {
-        if (!d.day || d.day < 1 || d.day > 5) return false;
-    } else {
-        if (!d.month || d.month < 1 || d.month > 12) return false;
-        if (!d.day || d.day < 1 || d.day > 31) return false;
-    }
-    if (d.year !== null && (isNaN(d.year) || d.year < 1 || d.year > 9999)) return false;
-    return true;
-}
-
-/** Приводит дату к лорному календарю (в месяце ровно 30 дней). */
-function finalizeDate(d) {
-    if (d.month !== "AUK" && d.day > 30) d.day = 30;
-    return d;
-}
-
-/** Ищет лучшую дату в тексте. */
-function findDateIn(text) {
-    let best = null;
-    let bestScore = -1;
-    for (const { re, map } of DATE_PATTERNS) {
-        re.lastIndex = 0;
-        let m;
-        while ((m = re.exec(text)) !== null) {
-            const c = map(m);
-            if (!isValidDate(c)) continue;
-            const s = dateScore(c);
-            if (s === 0) continue;
-            if (s > bestScore) {
-                best = c;
-                bestScore = s;
-            }
-        }
-    }
-    return best ? finalizeDate(best) : null;
-}
-
-/** Расплывчатый поиск месяца в тексте (для составных форматов). */
-function monthFromTextLoose(text) {
-    const t = text.toLowerCase();
-    let best = null;
-    let bestPos = Infinity;
-    for (const s of AUK_STEMS) {
-        const p = t.indexOf(s);
-        if (p !== -1 && p < bestPos) { bestPos = p; best = "AUK"; }
-    }
-    for (let i = 0; i < MONTH_STEMS.length; i++) {
-        for (const s of MONTH_STEMS[i]) {
-            const p = t.indexOf(s);
-            if (p !== -1 && p < bestPos) { bestPos = p; best = i + 1; }
-        }
-    }
-    return best;
-}
-
-/** Ищет дату внутри поля date блока <yorni>. */
-function findDateInYorni(text) {
-    let d = findDateIn(text);
-
-    if (!d) {
-        const m = text.match(/(?<!\d)(\d{1,2})[./](\d{1,2})[./](\d{2})(?!\d)/);
-        if (m) {
-            const c = finalizeDate({ day: +m[1], month: +m[2], year: 2000 + +m[3] });
-            if (isValidDate(c)) d = c;
-        }
-    }
-
-    if (!d) {
-        const month = monthFromTextLoose(text);
-        if (month !== null) {
-            const dayM = text.match(/(?<!\d)(\d{1,2})(?!\d)/);
-            const yearM = text.match(/(?<!\d)(\d{3,4})(?!\d)/);
-            const c = finalizeDate({
-                day: dayM ? +dayM[1] : null,
-                month,
-                year: yearM ? +yearM[1] : null,
-            });
-            if (isValidDate(c)) d = c;
-        }
-    }
-
-    if (d && d.year === null) {
-        const yearM = text.match(/(?<!\d)(\d{3,4})(?!\d)/);
-        if (yearM) d.year = +yearM[1];
-    }
-
-    return d;
-}
-
-/** Парсит блок <yorni>...</yorni> — единственный источник метаданных. */
-function parseYorniTag(rawText) {
-    const m = rawText.match(YORNI_TAG_RE);
-    if (!m) return null;
-    const inner = m[1];
-
-    const fields = {};
-    for (const line of inner.split(/\r?\n/)) {
-        const kv = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*$/);
-        if (kv) fields[kv[1].toLowerCase()] = kv[2].trim();
-    }
-
-    const candidates = [];
-    if (fields.date) candidates.push(fields.date);
-    candidates.push(inner);
-
-    let d = null;
-    let dateZone = "";
-    for (let cand of candidates) {
-        const jm = cand.match(/"output"\s*:\s*"([^"]+)"/i);
-        if (jm) cand = jm[1].trim();
-        if (/[<>{}]/.test(cand)) continue;
-        const found = findDateInYorni(cand);
-        if (found) { d = found; dateZone = cand; break; }
-    }
-    if (!d) return null;
-
-    d.hour = null;
-    d.minute = null;
-    const eyktVal = fields.eykt && !/[<>{}]/.test(fields.eykt) ? fields.eykt : null;
-    if (eyktVal) {
-        const tm = eyktVal.match(TIME_PATTERN);
-        if (tm && +tm[1] <= 24 && +tm[2] <= 59) {
-            d.hour = +tm[1];
-            d.minute = +tm[2];
-        } else {
-            const idx = eyktFromText(eyktVal);
-            if (idx !== null) {
-                const mid = EYKTIR[idx].mid;
-                d.hour = Math.floor(mid);
-                d.minute = Math.round((mid % 1) * 60);
-            }
-        }
-    }
-    if (d.hour === null) {
-        const tm = dateZone.match(TIME_PATTERN);
-        if (tm && +tm[1] <= 24 && +tm[2] <= 59) {
-            d.hour = +tm[1];
-            d.minute = +tm[2];
-        }
-    }
-
-    const clean = (v) => (v && !/[<>{}]/.test(v) ? v : null);
-    return {
-        ...d,
-        weather: clean(fields.weather),
-        location: clean(fields.location),
-        userAttire: clean(fields.user_attire),
-        charMood: clean(fields.mood),
-        charAttire: clean(fields.char_attire),
-        thought: clean(fields.thought),
-    };
-}
+let lastRenderKey = "";
+let refreshTimer = null;
+const hintTimers = {};
 
 /** Скан сообщений персонажа с конца в поисках блока <yorni>. */
 function findLoreDateTime() {
-    const context = getContext();
-    const chat = context?.chat;
+    const chat = getContext()?.chat;
     if (!Array.isArray(chat) || chat.length === 0) return null;
 
     for (let i = chat.length - 1; i >= 0; i--) {
@@ -496,97 +278,50 @@ function findLoreDateTime() {
     return null;
 }
 
-/** Инжектит инструкцию в промпт перед генерацией. */
-function injectNorsePrompt() {
-    if (!extension_settings[extensionName]?.inject) return;
-    const context = getContext();
-    if (!context || typeof context.setExtensionPrompt !== "function") return;
-    context.setExtensionPrompt(extensionName, YORNI_PROMPT, 1, 0);
+function applyLore(lore) {
+    state.year = lore.year;
+    state.month = lore.month;
+    state.day = lore.day;
+    state.hour = lore.hour;
+    state.minute = lore.minute;
+    state.weather = lore.weather;
+    state.location = lore.location;
+    state.userAttire = lore.userAttire;
+    state.charMood = lore.charMood;
+    state.charAttire = lore.charAttire;
+    state.thought = lore.thought;
 }
 
-/* ============================================================
- * 6. CALENDAR MATH
- * ============================================================ */
-
-function isLeapYear(y) {
-    return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+function resetState() {
+    for (const key of Object.keys(state)) state[key] = null;
 }
 
-/** Дополнительные дни (Sumarauki / Auknætr): 4, в високосный год — 5. */
-function aukDays(year) {
-    return isLeapYear(year) ? 5 : 4;
-}
-
-function isAuk(month) {
-    return month === "AUK";
-}
-
-function leapsBefore(year) {
-    const y = year - 1;
-    return Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400);
-}
-
-/** Серийный номер дня в лорном календаре. */
-function serialOf(year, month, day) {
-    let doy;
-    if (isAuk(month)) {
-        doy = 7 * 30 + day;
+function refresh() {
+    const lore = findLoreDateTime();
+    if (lore) {
+        applyLore(lore);
     } else {
-        doy = (month - 1) * 30 + day + (month > 7 ? aukDays(year) : 0);
+        resetState();
     }
-    return (year - 1) * 364 + leapsBefore(year) + doy - 1;
+    mountWidget();
+    renderAll(true);
 }
 
-function serialToDate(serial) {
-    let y = Math.max(1, Math.floor(serial / 364.25) + 1);
-    while (serial < serialOf(y, 1, 1)) y--;
-    while (serial >= serialOf(y + 1, 1, 1)) y++;
-    const rem = serial - serialOf(y, 1, 1);
-    const auk = aukDays(y);
-    if (rem < 7 * 30) {
-        return { year: y, month: Math.floor(rem / 30) + 1, day: (rem % 30) + 1 };
-    }
-    if (rem < 7 * 30 + auk) {
-        return { year: y, month: "AUK", day: rem - 7 * 30 + 1 };
-    }
-    const rem2 = rem - auk;
-    return { year: y, month: Math.floor(rem2 / 30) + 1, day: (rem2 % 30) + 1 };
-}
-
-/** День недели (0 = воскресенье). 1 Mörsugur года 1 — понедельник. */
-function weekdayOf(year, month, day) {
-    return (serialOf(year, month, day) + 1) % 7;
-}
-
-/** Прибавляет n дней к дате. */
-function addDays(year, month, day, n) {
-    return serialToDate(serialOf(year, month, day) + n);
+function refreshDebounced() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refresh, 200);
 }
 
 /* ============================================================
- * 7. STATE & RENDER
+ * 5. RENDER
  * ============================================================ */
 
-const state = {
-    year: null,
-    month: null,
-    day: null,
-    hour: null,
-    minute: null,
-    lastDateKey: "",
-    weather: null,
-    location: null,
-    userAttire: null,
-    charMood: null,
-    charAttire: null,
-    thought: null,
-};
+/** Ссылка на корневой элемент виджета; он может быть не в DOM. */
+let $widget = null;
 
-let refreshTimer = null;
-const hintTimers = {};
-
-function hasDate() {
-    return state.day !== null && state.month !== null;
+/** Поиск внутри виджета — работает и когда виджет ещё не вставлен в чат. */
+function el(selector) {
+    return $widget ? $widget.find(selector) : $();
 }
 
 /** Меняет текст слова на адаптацию на 5 секунд, затем возвращает. */
@@ -604,7 +339,7 @@ function clearHints() {
         clearTimeout(hintTimers[key]);
         delete hintTimers[key];
     }
-    $(".ncw-hint").removeClass("ncw-hint");
+    el(".ncw-hint").removeClass("ncw-hint");
 }
 
 function hintSpan(key, base, alt) {
@@ -622,18 +357,17 @@ function plainSpan(text) {
 }
 
 /** Сетка календаря (дни 1–30), только когда есть дата из чата. */
-function buildGrid(grid) {
-    grid = grid || $("#ncw-grid");
+function buildGrid() {
+    const grid = el("#ncw-grid");
     grid.empty();
-    grid.toggleClass("ncw-hidden", !hasDate());
-    if (!hasDate()) {
-        return;
-    }
+    grid.toggleClass("ncw-hidden", !hasDate(state));
+    if (!hasDate(state)) return;
+
     const { year, month, day } = state;
 
     if (isAuk(month)) {
         const total = aukDays(year);
-        grid.append($("<div>", { "class": "ncw-auk-title", text: "— Sumarauki · Auknætr —" }));
+        grid.append($("<div>", { "class": "ncw-auk-title", text: `— ${t`Sumarauki · Auknætr`} —` }));
         const row = $("<div>", { "class": "ncw-row" });
         for (let d = 1; d <= total; d++) {
             const cls = d === day ? "ncw-cell ncw-day ncw-aukday ncw-today" : "ncw-cell ncw-day ncw-aukday";
@@ -655,51 +389,75 @@ function buildGrid(grid) {
     const weekRow = $("<div>", { "class": "ncw-row" });
     for (let i = 0; i < 7; i++) {
         const d = addDays(year, month, day, i - offsetToday);
-        const isToday = i === offsetToday;
-        const outOfMonth = d.month !== month;
         let cls = "ncw-cell ncw-day";
-        if (outOfMonth) cls += " ncw-dim";
-        if (isToday) cls += " ncw-today";
+        if (d.month !== month) cls += " ncw-dim";
+        if (i === offsetToday) cls += " ncw-today";
         weekRow.append($("<div>", { "class": cls, text: d.day }));
     }
     grid.append(weekRow);
 }
 
-/** Полный рендер виджета. */
+/** Ключ состояния — чтобы не перерисовывать виджет впустую. */
+function renderKey() {
+    return [
+        state.year, state.month, state.day, state.hour, state.minute,
+        state.weather, state.location, state.userAttire,
+        state.charMood, state.charAttire, state.thought,
+    ].join("|");
+}
+
+/**
+ * Полный рендер виджета.
+ *
+ * Дата, время и поля сцены рисуются независимо друг от друга: если модель
+ * написала дату криво, погода, локация, настроение и мысль всё равно видны.
+ */
 function renderAll(force = false) {
-    if (!extension_settings[extensionName].enabled) return;
+    if (!settings().enabled || !$widget) return;
+
+    const key = renderKey();
+    if (!force && key === lastRenderKey) return;
+    lastRenderKey = key;
+
     clearHints();
 
-    if (!hasDate()) {
-        state.lastDateKey = "";
-        $("#ncw-eykt, #ncw-sun, #ncw-date, #ncw-lore").hide();
-        $("#ncw-grid").addClass("ncw-hidden");
-        $("#ncw-weather, #ncw-location, #ncw-user-details, #ncw-char-details, #ncw-thought").hide();
-        let stub = $("#ncw-stub");
-        if (!stub.length) {
-            stub = $("<div>", { id: "ncw-stub", text: "ᚱ Ожидание инфоблока…" });
-            $("#ncw-body").append(stub);
-        }
+    const showTime = hasTime(state);
+    const showDate = hasDate(state);
+    const showDetails = hasDetails(state);
+
+    const stub = el("#ncw-stub");
+    if (!showTime && !showDate && !showDetails) {
+        // Чистим содержимое, а не только прячем: иначе прошлая сцена остаётся
+        // в DOM и попадает в текст сообщения при копировании или озвучке.
+        el("#ncw-eykt, #ncw-date, #ncw-lore, #ncw-grid, #ncw-mood-chips").empty();
+        el("#ncw-sun, #ncw-weather-text, #ncw-location-text").text("");
+        el("#ncw-attire-user-text, #ncw-attire-char-text, #ncw-thought-text").text("");
+        el("#ncw-left, #ncw-right, #ncw-char-col, #ncw-user-col").hide();
+        el("#ncw-grid").addClass("ncw-hidden");
         stub.show();
         return;
     }
-    $("#ncw-stub").hide();
+    stub.hide();
 
-    const { year, month, day, hour, minute } = state;
-    const dateKey = [year, month, day, hour, minute,
-        state.weather, state.location, state.userAttire, state.charMood, state.charAttire, state.thought].join("|");
-    if (!force && dateKey === state.lastDateKey) return;
-    state.lastDateKey = dateKey;
+    renderTimeAndDate(showTime, showDate);
+    renderExtraFields();
+    buildGrid();
+}
 
-    const eyktEl = $("#ncw-eykt").empty();
-    const sunEl = $("#ncw-sun");
-    if (hour !== null) {
-        const idx = eyktForHour(hour);
+/** Левая колонка: эйкта, положение солнца, дата, день недели и фаза Луны. */
+function renderTimeAndDate(showTime, showDate) {
+    el("#ncw-left").toggle(showTime || showDate);
+
+    const eyktEl = el("#ncw-eykt").empty();
+    const sunEl = el("#ncw-sun");
+    if (showTime) {
+        const idx = eyktForHour(state.hour);
         const e = EYKTIR[idx];
-        const mm = String(minute ?? 0).padStart(2, "0");
+        const hh = String(state.hour).padStart(2, "0");
+        const mm = String(state.minute ?? 0).padStart(2, "0");
         eyktEl.append(
-            hintSpan("eykt", e.ru, `${String(hour).padStart(2, "0")}:${mm}`),
-            plainSpan(` • ${idx + 1}-я эйкта`),
+            hintSpan("eykt", e.ru, `${hh}:${mm}`),
+            plainSpan(` • ${t`eykt ${idx + 1}`}`),
         ).show();
         sunEl.text(e.dirText).show();
     } else {
@@ -707,16 +465,24 @@ function renderAll(force = false) {
         sunEl.hide();
     }
 
+    const dateEl = el("#ncw-date").empty();
+    const loreEl = el("#ncw-lore").empty();
+    if (!showDate) {
+        dateEl.hide();
+        loreEl.hide();
+        return;
+    }
+
+    const { year, month, day } = state;
     const season = seasonOf(month);
     const seasonIcon = season.norse === "Sumar" ? "🌿" : "❄️";
 
-    const dateEl = $("#ncw-date").empty();
     if (isAuk(month)) {
         const total = aukDays(year);
         dateEl.append(
             plainSpan(`${seasonIcon} ${season.norse} • `),
-            hintSpan("date", `Sumarauki ${day} из ${total}, ${year}`,
-                "Особые дни в середине лета перед сенокосом"),
+            hintSpan("date", `Sumarauki ${day} ${t`of`} ${total}, ${year}`,
+                t`Special mid-summer days before the haymaking`),
         );
     } else {
         dateEl.append(
@@ -731,199 +497,147 @@ function renderAll(force = false) {
 
     const wdIdx = weekdayOf(year, month, day);
     const { phase } = moonPhase(year, month, day);
-    $("#ncw-lore").empty().show().append(
+    loreEl.append(
         hintSpan("wd", WEEKDAY_DESC_RU[wdIdx], WEEKDAYS_FULL_RU[wdIdx]),
         plainSpan(` • ${phase.icon} `),
         hintSpan("moon", phase.norse, phase.ru),
         plainSpan(` ${phase.desc}`),
-    );
-
-    const weatherEl = $("#ncw-weather");
-    if (state.weather) {
-        $("#ncw-weather-text").text(state.weather);
-        weatherEl.show();
-    } else {
-        weatherEl.hide();
-    }
-
-    renderExtraFields();
-    buildGrid($("#ncw-grid"));
+    ).show();
 }
 
-/** Рендерит правую колонку: локация, {{user}}, {{char}}, мысль. */
+/** Правые колонки: погода, локация, {{user}}, {{char}}, мысль. */
 function renderExtraFields() {
     const context = getContext();
     const userName = context?.name1 || "{{user}}";
     const charName = context?.name2 || "{{char}}";
 
-    const locEl = $("#ncw-location");
+    const weatherEl = el("#ncw-weather");
+    if (state.weather) {
+        el("#ncw-weather-text").text(state.weather);
+        weatherEl.show();
+    } else {
+        weatherEl.hide();
+    }
+
+    const locEl = el("#ncw-location");
     if (state.location) {
-        $("#ncw-location-text").text(state.location);
+        el("#ncw-location-text").text(state.location);
         locEl.show();
     } else {
         locEl.hide();
     }
 
-    const userDetails = $("#ncw-user-details");
-    $("#ncw-user-name").text(userName);
+    el("#ncw-right").toggle(!!(state.weather || state.location));
+
+    const userDetails = el("#ncw-user-details");
+    el("#ncw-user-name").text(userName);
     if (state.userAttire) {
-        $("#ncw-attire-user-text").text(state.userAttire);
+        el("#ncw-attire-user-text").text(state.userAttire);
         userDetails.show();
     } else {
         userDetails.hide();
     }
+    el("#ncw-user-col").toggle(!!state.userAttire);
 
-    const charDetails = $("#ncw-char-details");
-    $("#ncw-char-name").text(charName);
+    el("#ncw-char-name").text(charName);
     const moods = state.charMood
         ? state.charMood.split(",").map((s) => s.trim()).filter(Boolean)
         : [];
-    const moodEl = $("#ncw-mood-chips").empty();
+    const moodEl = el("#ncw-mood-chips").empty();
     for (const m of moods) {
         moodEl.append($("<span>", { "class": "ncw-chip", text: m }));
     }
     moodEl.toggle(moods.length > 0);
-    const charAttireRow = $("#ncw-attire-char");
+
+    const charAttireRow = el("#ncw-attire-char");
     if (state.charAttire) {
-        $("#ncw-attire-char-text").text(state.charAttire);
+        el("#ncw-attire-char-text").text(state.charAttire);
         charAttireRow.show();
     } else {
         charAttireRow.hide();
     }
-    charDetails.toggle(moods.length > 0 || !!state.charAttire);
 
-    const thoughtEl = $("#ncw-thought");
+    const thoughtEl = el("#ncw-thought");
     if (state.thought) {
-        $("#ncw-thought-text").text(state.thought);
+        el("#ncw-thought-text").text(state.thought);
         thoughtEl.show();
     } else {
         thoughtEl.hide();
     }
+
+    const hasChar = moods.length > 0 || !!state.charAttire || !!state.thought;
+    el("#ncw-char-details").toggle(hasChar);
+    el("#ncw-char-col").toggle(hasChar);
 }
 
 /* ============================================================
- * 8. WIDGET MOUNTING
+ * 6. WIDGET MOUNTING
  *
- * Обновление состояния из чата и встраивание виджета
- * в начало последнего сообщения персонажа.
+ * Виджет живёт в начале последнего сообщения персонажа. Позиционирование
+ * целиком в style.css — здесь только вставка в нужный узел.
  * ============================================================ */
 
-function applyLore(lore) {
-    state.year = lore.year ?? 1;
-    state.month = lore.month;
-    state.day = lore.day;
-    state.hour = lore.hour;
-    state.minute = lore.minute;
-    state.weather = lore.weather ?? null;
-    state.location = lore.location ?? null;
-    state.userAttire = lore.userAttire ?? null;
-    state.charMood = lore.charMood ?? null;
-    state.charAttire = lore.charAttire ?? null;
-    state.thought = lore.thought ?? null;
-}
-
-function resetState() {
-    state.year = null;
-    state.month = null;
-    state.day = null;
-    state.hour = null;
-    state.minute = null;
-    state.weather = null;
-    state.location = null;
-    state.userAttire = null;
-    state.charMood = null;
-    state.charAttire = null;
-    state.thought = null;
-}
-
-function refresh() {
-    const lore = findLoreDateTime();
-    if (lore) {
-        applyLore(lore);
-    } else {
-        resetState();
+/** Последнее сообщение персонажа в DOM, или null. */
+function lastBotMessageEl() {
+    const all = document.querySelectorAll("#chat .mes");
+    for (let i = all.length - 1; i >= 0; i--) {
+        if (all[i].getAttribute("is_user") === "false") return all[i];
     }
-    mountWidget();
-    renderAll(true);
+    return null;
 }
 
 /** Встраивает виджет в начало последнего сообщения от {{char}}. */
 function mountWidget() {
-    let widget = document.getElementById("norse-calendar-widget");
+    if (!$widget) buildWidget();
+    if (!$widget) return;
 
-    if (!widget) {
-        widget = buildWidget();
-    }
-    if (!widget) return;
+    const widget = $widget[0];
 
-    if (!extension_settings[extensionName].enabled) {
-        widget.style.display = "none";
+    if (!settings().enabled) {
+        $widget.detach();
         return;
     }
 
-    const context = getContext();
-    const chat = context?.chat;
+    const chat = getContext()?.chat;
     if (!Array.isArray(chat) || chat.length === 0) {
-        widget.style.display = "none";
+        $widget.detach();
         return;
     }
 
-    let msgEl = null;
-    const all = document.querySelectorAll("#chat .mes");
-    for (let i = all.length - 1; i >= 0; i--) {
-        if (all[i].getAttribute("is_user") === "false") {
-            msgEl = all[i];
-            break;
-        }
-    }
+    const msgEl = lastBotMessageEl();
     if (!msgEl) {
-        widget.style.display = "none";
+        $widget.detach();
         return;
     }
+
+    // Сообщение в режиме правки: .mes_text занят редактором, не лезем туда.
+    if (msgEl.querySelector(".edit_textarea")) return;
 
     const textEl = msgEl.querySelector(".mes_text");
     if (!textEl) return;
 
-    if (widget.parentElement === textEl && widget === textEl.firstElementChild) {
-        widget.style.display = "";
-        return;
-    }
-
-    widget.style.position = "relative";
-    widget.style.right = "auto";
-    widget.style.bottom = "auto";
-    widget.style.left = "auto";
-    widget.style.top = "auto";
-    widget.style.width = "100%";
-    widget.style.minWidth = "0";
-    widget.style.margin = "0 0 10px 0";
+    if (widget.parentElement === textEl && widget === textEl.firstElementChild) return;
 
     textEl.prepend(widget);
-    widget.style.display = "";
-}
-
-function refreshDebounced() {
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refresh, 200);
 }
 
 /* ============================================================
- * 9. WIDGET BUILDING
+ * 7. WIDGET BUILDING
  * ============================================================ */
 
-/** Создаёт DOM-структуру виджета. */
+/** Создаёт DOM-структуру виджета (detached — вставит mountWidget). */
 function buildWidget() {
-    const existing = document.getElementById("norse-calendar-widget");
-    if (existing) return existing;
+    if ($widget) return $widget;
 
-    const s = extension_settings[extensionName];
+    const s = settings();
 
-    const widget = $("<div>", { id: "norse-calendar-widget" }).append(
+    $widget = $("<div>", { id: "norse-calendar-widget", "class": "nc-themed" }).append(
         $("<div>", { id: "ncw-header" }).append(
             $("<span>", { "class": "ncw-runes", text: "ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ" }),
-            $("<span>", { id: "ncw-collapse", title: "Показать / скрыть сетку дней", text: "+" }),
+            $("<span>", { id: "ncw-collapse", title: t`Show / hide the day grid`, text: "+" }),
         ),
         $("<div>", { id: "ncw-body" }).append(
+            $("<div>", { id: "ncw-stub", text: `ᚱ ${t`Waiting for the infoblock…`}` }),
             $("<div>", { id: "ncw-columns" }).append(
                 $("<div>", { id: "ncw-left" }).append(
                     $("<div>", { id: "ncw-eykt" }),
@@ -979,89 +693,298 @@ function buildWidget() {
         ),
     );
 
-    $("body").append(widget);
-    widget.hide();
-    widget.attr("data-theme", extension_settings[extensionName].theme || "default");
-    widget.toggleClass("ncw-collapsed", s.collapsed);
-    $("#ncw-collapse").text(s.collapsed ? "+" : "–");
+    $widget.attr("data-theme", s.theme || "default");
+    $widget.toggleClass("ncw-collapsed", s.collapsed);
+    el("#ncw-collapse").text(s.collapsed ? "+" : "–");
 
-    $("#ncw-collapse").on("click", () => {
-        const collapsed = !widget.hasClass("ncw-collapsed");
-        widget.toggleClass("ncw-collapsed", collapsed);
-        $("#ncw-collapse").text(collapsed ? "+" : "–");
-        extension_settings[extensionName].collapsed = collapsed;
+    bindWidgetHandlers();
+
+    return $widget;
+}
+
+let handlersBound = false;
+
+/**
+ * Вешает обработчики виджета на document.
+ *
+ * Именно на document, а не на сам виджет: SillyTavern пересобирает сообщение
+ * через jQuery .html() / .empty() (script.js, updateMessageElement), а те
+ * вызывают jQuery.cleanData() на всём удаляемом поддереве и снимают все
+ * обработчики с вложенных узлов. Виджет живёт внутри .mes_text, поэтому после
+ * свайпа он возвращался в DOM тем же узлом, но уже без обработчиков: слова
+ * выглядели кликабельными, а клик ничего не делал до перезагрузки страницы.
+ * document же cleanData не трогает никогда.
+ */
+function bindWidgetHandlers() {
+    if (handlersBound) return;
+    handlersBound = true;
+
+    $(document).on("click", "#norse-calendar-widget #ncw-collapse", () => {
+        if (!$widget) return;
+        const collapsed = !$widget.hasClass("ncw-collapsed");
+        $widget.toggleClass("ncw-collapsed", collapsed);
+        el("#ncw-collapse").text(collapsed ? "+" : "–");
+        settings().collapsed = collapsed;
         saveSettingsDebounced();
     });
 
-    widget.on("click", ".ncw-hintable", function () {
+    $(document).on("click", "#norse-calendar-widget .ncw-hintable", function () {
         swapHint($(this));
     });
-
-    return widget[0];
 }
 
 /* ============================================================
- * 10. SETTINGS
+ * 8. TÍMATAL — мини-справочник
+ *
+ * Пункт в меню «волшебной палочки» рядом с полем ввода. Открывает окно
+ * с эйктами, месяцами, днями недели, фазами Луны и форматом блока.
+ * ============================================================ */
+
+/**
+ * Настройки вида справочника: какие разделы свёрнуты и какие колонки скрыты.
+ *
+ * Живут в extension_settings, поэтому переживают перезагрузку — иначе
+ * пришлось бы прятать лишнее при каждом открытии. Списки чистятся от
+ * неизвестных ключей: иначе переименование раздела оставило бы мусор,
+ * из-за которого «Сбросить вид» не считал бы вид исходным.
+ */
+function timatalPrefs() {
+    const s = settings();
+
+    const list = (key, allowed) => {
+        if (!Array.isArray(s[key])) s[key] = [];
+        const clean = s[key].filter((v) => allowed.includes(v));
+        if (clean.length !== s[key].length) s[key] = clean;
+        return s[key];
+    };
+
+    const toggle = (key, allowed, value) => {
+        const arr = list(key, allowed);
+        const idx = arr.indexOf(value);
+        if (idx === -1) arr.push(value);
+        else arr.splice(idx, 1);
+        saveSettingsDebounced();
+        return idx === -1;
+    };
+
+    const sameSet = (a, b) => a.length === b.length && a.every((v) => b.includes(v));
+
+    // Постоянные колонки в списке не хранятся: они видны всегда.
+    const toggleable = COLUMN_KEYS.filter((k) => !isPermanent(k));
+
+    return {
+        isSectionClosed: (id) => list("timatalClosedSections", SECTION_IDS).includes(id),
+        toggleSection: (id) => toggle("timatalClosedSections", SECTION_IDS, id),
+
+        isColumnVisible: (key) =>
+            isPermanent(key) || list("timatalVisibleColumns", toggleable).includes(key),
+        toggleColumn: (key) => toggle("timatalVisibleColumns", toggleable, key),
+
+        isDefaultView: () =>
+            sameSet(list("timatalVisibleColumns", toggleable), DEFAULT_VISIBLE_COLUMNS) &&
+            sameSet(list("timatalClosedSections", SECTION_IDS), DEFAULT_CLOSED_SECTIONS),
+
+        resetView: () => {
+            s.timatalVisibleColumns = [...DEFAULT_VISIBLE_COLUMNS];
+            s.timatalClosedSections = [...DEFAULT_CLOSED_SECTIONS];
+            saveSettingsDebounced();
+        },
+    };
+}
+
+/** Открывает окно Tímatal. */
+async function openTimatal() {
+    const theme = settings().theme || "default";
+    const content = buildReference(state, theme, timatalPrefs());
+
+    // Popup, а не callGenericPopup: нужен доступ к <dialog> ДО показа, чтобы
+    // покрасить подложку своей темой без мигания таверновской.
+    const popup = new Popup(content, POPUP_TYPE.DISPLAY, "", {
+        wide: true,
+        large: true,
+        allowVerticalScrolling: true,
+        leftAlign: true,
+    });
+    popup.dlg.classList.add("nc-popup", "nc-themed");
+    popup.dlg.dataset.theme = theme;
+
+    await popup.show();
+}
+
+/** Добавляет пункт Tímatal в меню «волшебной палочки». */
+function addWandMenuItem() {
+    const menu = document.getElementById("extensionsMenu");
+    if (!menu || document.getElementById("norse_timatal_button")) return;
+
+    const container = document.createElement("div");
+    container.id = "norse_timatal_wand_container";
+    container.className = "extension_container";
+
+    const item = document.createElement("div");
+    item.id = "norse_timatal_button";
+    item.className = "list-group-item flex-container flexGap5 interactable";
+    item.tabIndex = 0;
+    item.title = t`Norse reckoning of time: eykts, months, weekdays, the Moon`;
+
+    const icon = document.createElement("div");
+    icon.className = "fa-solid fa-scroll extensionsMenuExtensionButton";
+
+    const label = document.createElement("span");
+    label.textContent = "Tímatal";
+
+    item.append(icon, label);
+    container.append(item);
+    menu.append(container);
+
+    item.addEventListener("click", openTimatal);
+    item.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openTimatal();
+        }
+    });
+}
+
+/* ============================================================
+ * 9. SLASH COMMANDS (STscript)
+ * ============================================================ */
+
+/** Дата строкой в формате YORNIE, либо пустая строка. */
+function formatDate() {
+    if (!hasDate(state)) return "";
+    const { year, month, day } = state;
+    if (isAuk(month)) return `Sumarauki ${day} из ${aukDays(year)}, ${year}`;
+    return `${day} ${MONTHS_NORSE_RU[month - 1]} ${year}`;
+}
+
+/** Название текущей эйкты, либо пустая строка. */
+function formatEykt() {
+    if (!hasTime(state)) return "";
+    return EYKTIR[eyktForHour(state.hour)].ru;
+}
+
+function registerSlashCommands() {
+    const commands = [
+        {
+            name: "norse-date",
+            callback: () => formatDate(),
+            returns: "текущая дата в формате YORNIE, либо пустая строка",
+            helpString: "Возвращает дату из последнего блока &lt;yorni&gt; (например «13 Гормануд 1015»).",
+        },
+        {
+            name: "norse-eykt",
+            callback: () => formatEykt(),
+            returns: "название текущей эйкты, либо пустая строка",
+            helpString: "Возвращает эйкту из последнего блока &lt;yorni&gt; (например «Хадеги»).",
+        },
+        {
+            name: "norse-state",
+            callback: () => JSON.stringify(state),
+            returns: "весь распознанный инфоблок в JSON",
+            helpString: "Возвращает всё состояние виджета: дату, время, погоду, локацию, настроение, одежду и мысль.",
+        },
+        {
+            name: "norse-refresh",
+            callback: () => {
+                refresh();
+                return "";
+            },
+            returns: "пустую строку",
+            helpString: "Принудительно перечитывает чат и перерисовывает виджет.",
+        },
+        {
+            name: "norse-lore",
+            callback: () => {
+                openTimatal();
+                return "";
+            },
+            aliases: ["timatal"],
+            returns: "пустую строку",
+            helpString: "Открывает Tímatal — справочник по эйктам, месяцам, дням недели и фазам Луны.",
+        },
+    ];
+
+    for (const cmd of commands) {
+        try {
+            // isExtension / isThirdParty / source ST выставляет сам по стеку вызова.
+            SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+                ...cmd,
+                namedArgumentList: [],
+                unnamedArgumentList: [],
+            }));
+        } catch (e) {
+            console.error(`[${extensionName}] Не удалось зарегистрировать /${cmd.name}:`, e);
+        }
+    }
+}
+
+/* ============================================================
+ * 9. SETTINGS
  * ============================================================ */
 
 function loadSettings() {
     extension_settings[extensionName] = extension_settings[extensionName] || {};
     for (const key of Object.keys(defaultSettings)) {
         if (extension_settings[extensionName][key] === undefined) {
-            extension_settings[extensionName][key] = defaultSettings[key];
+            const value = defaultSettings[key];
+            // Массивы копируем: иначе настройки получат ссылку на сам
+            // defaultSettings, и первый же push испортит константу.
+            extension_settings[extensionName][key] = Array.isArray(value) ? [...value] : value;
         }
     }
+    // Наследие прежней схемы, где хранился список скрытых колонок.
+    delete extension_settings[extensionName].timatalHiddenColumns;
 }
 
 function bindCheckbox(selector, key, onChange) {
     const $el = $(selector);
-    $el.prop("checked", extension_settings[extensionName][key]);
+    $el.prop("checked", settings()[key]);
     $el.on("input", function () {
-        extension_settings[extensionName][key] = Boolean($(this).prop("checked"));
+        settings()[key] = Boolean($(this).prop("checked"));
         saveSettingsDebounced();
-        if (onChange) onChange(extension_settings[extensionName][key]);
+        if (onChange) onChange(settings()[key]);
     });
 }
 
 /** Применяет тему оформления к виджету (атрибут data-theme). */
 function applyTheme(theme) {
-    const widget = document.getElementById("norse-calendar-widget");
-    if (widget) widget.setAttribute("data-theme", theme || "default");
+    if ($widget) $widget.attr("data-theme", theme || "default");
 }
 
 function bindSettings() {
     bindCheckbox("#nc_enabled", "enabled", (v) => {
-        $("#norse-calendar-widget").toggle(v);
-        if (v) refresh();
+        if (v) {
+            refresh();
+        } else if ($widget) {
+            $widget.detach();
+        }
     });
+
+    bindCheckbox("#nc_inject", "inject", () => injectNorsePrompt());
 
     const themeSel = $("#nc_theme");
-    themeSel.val(extension_settings[extensionName].theme || "default");
+    themeSel.val(settings().theme || "default");
     themeSel.on("input", function () {
-        extension_settings[extensionName].theme = String($(this).val());
+        settings().theme = String($(this).val());
         saveSettingsDebounced();
-        applyTheme(extension_settings[extensionName].theme);
+        applyTheme(settings().theme);
     });
 
-    bindCheckbox("#nc_inject", "inject", (v) => {
-        const context = getContext();
-        if (v) {
-            injectNorsePrompt();
-        } else if (context && typeof context.setExtensionPrompt === "function") {
-            context.setExtensionPrompt(extensionName, "", 1, 0);
-        }
+    $("#nc_regex_restore").on("click", () => {
+        restoreYorniRegexScripts();
+        toastr.success(t`Norse Calendar regex scripts restored. Reload the page to see them in the list.`);
     });
 }
 
 /* ============================================================
- * 11. INIT
+ * 10. INIT
  * ============================================================ */
 
 jQuery(async () => {
     loadSettings();
 
     try {
-        const settingsHtml = await $.get(`${extensionFolderPath}/settings.html`);
+        const settingsHtml = await renderExtensionTemplateAsync(extensionFolderName, "settings");
         const target = $("#extensions_settings2").length ? "#extensions_settings2" : "#extensions_settings";
         $(target).append(settingsHtml);
         bindSettings();
@@ -1070,20 +993,18 @@ jQuery(async () => {
     }
 
     buildWidget();
-    applyTheme(extension_settings[extensionName].theme);
-    refresh();
-
+    addWandMenuItem();
+    registerSlashCommands();
     ensureYorniRegexScripts();
 
-    if (event_types.GENERATE_AFTER_COMBINE_PROMPTS) {
-        eventSource.on(event_types.GENERATE_AFTER_COMBINE_PROMPTS, injectNorsePrompt);
-    }
     injectNorsePrompt();
+    eventSource.on(event_types.GENERATION_STARTED, injectNorsePrompt);
 
     const events = [
         event_types.CHAT_CHANGED,
         event_types.MESSAGE_RECEIVED,
         event_types.MESSAGE_EDITED,
+        event_types.MESSAGE_UPDATED,
         event_types.MESSAGE_SWIPED,
         event_types.MESSAGE_DELETED,
         event_types.GENERATION_ENDED,
@@ -1092,6 +1013,8 @@ jQuery(async () => {
     for (const ev of events) {
         eventSource.on(ev, refreshDebounced);
     }
+
+    refresh();
 
     // MutationObserver: перемонтирует виджет при rebuild .mes_text
     try {
@@ -1104,19 +1027,13 @@ jQuery(async () => {
                 requestAnimationFrame(() => {
                     pending = false;
                     try {
-                        const all = document.querySelectorAll("#chat .mes");
-                        let lastBot = null;
-                        for (let i = all.length - 1; i >= 0; i--) {
-                            if (all[i].getAttribute("is_user") === "false") {
-                                lastBot = all[i];
-                                break;
-                            }
-                        }
+                        if (!settings().enabled) return;
+                        const lastBot = lastBotMessageEl();
                         if (!lastBot) return;
-                        if (!lastBot.querySelector("#norse-calendar-widget")) {
-                            mountWidget();
-                            renderAll(true);
-                        }
+                        if (lastBot.querySelector(".edit_textarea")) return;
+                        if (lastBot.querySelector("#norse-calendar-widget")) return;
+                        mountWidget();
+                        renderAll(true);
                     } catch (e) { /* ignore */ }
                 });
             };

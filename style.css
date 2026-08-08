@@ -15,6 +15,7 @@
  * 10. Calendar Grid ..... Сетка дней месяца
  * 11. Auknætr ........... Дополнительные дни (Sumarauki)
  * 12. Settings Panel .... Панель настроек в UI SillyTavern
+ * 13. Tímatal ........... Мини-справочник из «волшебной палочки»
  */
 
 /* ============================================================
@@ -39,14 +40,17 @@
 /* ============================================================
  * 2. THEMES (CSS-переменные)
  *
- * Тема выбирается в панели настроек расширения (кубики) и
- * вешается на виджет как атрибут data-theme.
+ * Тема выбирается в панели настроек расширения (кубики) и вешается
+ * атрибутом data-theme на всё, что помечено классом .nc-themed:
+ * виджет, окно Tímatal и его <dialog>-подложку. Благодаря общему
+ * классу подложка красится нашими цветами, а не темой таверны.
+ *
  * Чтобы добавить новую тему — скопируйте блок [data-theme="..."]
  * и переопределите переменные.
  * ============================================================ */
 
-#norse-calendar-widget,
-#norse-calendar-widget[data-theme="default"] {
+.nc-themed,
+.nc-themed[data-theme="default"] {
     --ncw-bg: #16151d;
     --ncw-bg-raised: #201e29;
     --ncw-bg-open: #262330;
@@ -72,7 +76,7 @@
 }
 
 /* Светлая тема — выбеленная кость и береста */
-#norse-calendar-widget[data-theme="light"] {
+.nc-themed[data-theme="light"] {
     --ncw-bg: #efe9db;
     --ncw-bg-raised: #e3dccb;
     --ncw-bg-open: #ddd4c0;
@@ -98,7 +102,7 @@
 }
 
 /* Полуночное море — глубокая синева и серебро */
-#norse-calendar-widget[data-theme="midnight"] {
+.nc-themed[data-theme="midnight"] {
     --ncw-bg: #0d1420;
     --ncw-bg-raised: #141d2e;
     --ncw-bg-open: #18223a;
@@ -124,7 +128,7 @@
 }
 
 /* Жар очага — тёмное дерево, угли и медь */
-#norse-calendar-widget[data-theme="ember"] {
+.nc-themed[data-theme="ember"] {
     --ncw-bg: #1c100d;
     --ncw-bg-raised: #281713;
     --ncw-bg-open: #2e1b16;
@@ -661,11 +665,6 @@
     padding: 8px 0;
 }
 
-.norse-calendar-settings small {
-    opacity: 0.65;
-    font-style: italic;
-}
-
 .norse-calendar-settings .nc-theme-label {
     display: flex;
     align-items: center;
@@ -676,4 +675,472 @@
 .norse-calendar-settings .nc-theme-label select {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+.norse-calendar-settings .nc-regex-restore {
+    margin-top: 8px;
+    width: 100%;
+}
+
+/* ============================================================
+ * 13. TÍMATAL (мини-справочник)
+ *
+ * Окно из меню «волшебной палочки». Наследует те же переменные тем,
+ * что и виджет, поэтому выглядит с ним одинаково.
+ * ============================================================ */
+
+/* --- подложка окна ---
+ *
+ * По умолчанию <dialog> красится переменными таверны
+ * (--SmartThemeBlurTintColor, --SmartThemeBorderColor, --SmartThemeBodyColor),
+ * поэтому при смене темы UI менялась и наша коробка. Класс .nc-popup
+ * перебивает это нашими переменными.
+ *
+ * !important здесь не от лени: штатных правил хватило бы и специфичности
+ * (dialog.popup.nc-popup[open] = 0,3,1 против .popup[open] = 0,2,0), но
+ * пользовательские темы и User CSS таверны сплошь и рядом пишут
+ * `.popup { background-color: … !important }` — без !important окно
+ * снова окрасилось бы чужой темой. Помечены только три свойства,
+ * определяющие принадлежность окна; всё остальное перебивается обычно.
+ */
+
+dialog.popup.nc-popup,
+dialog.popup.nc-popup[open] {
+    color: var(--ncw-text) !important;
+    background-color: var(--ncw-bg) !important;
+    border: 1px solid var(--ncw-border) !important;
+    border-radius: 10px;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.55);
+}
+
+dialog.popup.nc-popup[open]::backdrop {
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+/* Крестик закрытия — в цвет акцента темы */
+dialog.popup.nc-popup .popup-button-close {
+    color: var(--ncw-text-dim);
+    transition: color 0.15s ease;
+}
+
+dialog.popup.nc-popup .popup-button-close:hover {
+    color: var(--ncw-accent);
+}
+
+dialog.popup.nc-popup .popup-controls .menu_button {
+    color: var(--ncw-text);
+    background-color: var(--ncw-bg-raised);
+    border: 1px solid var(--ncw-border);
+}
+
+dialog.popup.nc-popup .popup-controls .menu_button:hover {
+    color: var(--ncw-text-bright);
+    background-color: var(--ncw-bg-hover);
+}
+
+/* --- содержимое --- */
+
+.norse-timatal {
+    color: var(--ncw-text);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px;
+    text-align: left;
+}
+
+.norse-timatal * {
+    box-sizing: border-box;
+}
+
+/* --- шапка --- */
+
+.nct-header {
+    text-align: center;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--ncw-border);
+    margin-bottom: 14px;
+}
+
+.nct-runes {
+    font-size: 18px;
+    letter-spacing: 8px;
+    color: var(--ncw-accent);
+    opacity: 0.75;
+    margin-bottom: 6px;
+}
+
+.norse-timatal .nct-title {
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: 2px;
+    line-height: 1.1;
+    color: var(--ncw-text-bright);
+}
+
+.nct-subtitle {
+    font-size: 14px;
+    font-style: italic;
+    color: var(--ncw-text-dim);
+    margin-top: 2px;
+}
+
+/* Кнопка сброса вида — появляется, только когда что-то свёрнуто или скрыто */
+.norse-timatal .nct-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 5px 13px;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--ncw-text-muted);
+    background: var(--ncw-bg-raised);
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.norse-timatal .nct-reset:hover {
+    color: var(--ncw-accent);
+    background: var(--ncw-bg-hover);
+    border-color: var(--ncw-accent-border-dim);
+}
+
+.nct-reset-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* --- «сейчас в сцене» --- */
+
+.nct-now {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 12px;
+    padding: 9px 14px;
+    margin-bottom: 14px;
+    border: 1px solid var(--ncw-accent-border-dim);
+    border-radius: 14px;
+    background: var(--ncw-bg-raised);
+}
+
+.nct-now-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ncw-text-dim);
+    flex-shrink: 0;
+}
+
+.norse-timatal .nct-now-value {
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ncw-accent);
+}
+
+/* --- подсказка про управление --- */
+
+.nct-hint {
+    margin-bottom: 12px;
+    font-size: 12.5px;
+    font-style: italic;
+    color: var(--ncw-text-dim);
+    opacity: 0.8;
+}
+
+/* --- разделы-аккордеон --- */
+
+.nct-hidden {
+    display: none;
+}
+
+.nct-section {
+    border-top: 1px solid var(--ncw-border-soft);
+}
+
+.nct-section:last-child {
+    border-bottom: 1px solid var(--ncw-border-soft);
+}
+
+/* Заголовок раздела — он же переключатель */
+.norse-timatal .nct-section-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 13px 4px;
+    font-family: inherit;
+    text-align: left;
+    color: var(--ncw-text-bright);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.norse-timatal .nct-section-toggle:hover {
+    color: var(--ncw-accent);
+}
+
+.norse-timatal .nct-section-toggle:focus-visible {
+    outline: 2px solid var(--ncw-accent);
+    outline-offset: -2px;
+    border-radius: 6px;
+}
+
+.nct-chevron {
+    flex-shrink: 0;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--ncw-accent);
+    transition: transform 0.2s ease;
+}
+
+.nct-closed .nct-chevron {
+    transform: rotate(-90deg);
+}
+
+.nct-section-icon {
+    flex-shrink: 0;
+    font-size: 15px;
+}
+
+.norse-timatal .nct-section-title {
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 1px;
+    line-height: 1.25;
+    text-transform: uppercase;
+}
+
+.nct-section-body {
+    padding: 0 0 18px;
+}
+
+.nct-closed .nct-section-body {
+    display: none;
+}
+
+/* Свёрнутый раздел бледнее — сразу видно, что он спрятан, а не пуст */
+.nct-closed .nct-section-toggle {
+    color: var(--ncw-text-dim);
+}
+
+.nct-lead {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--ncw-text-dim);
+}
+
+/* --- облачка выбора колонок ---
+ *
+ * Затемнённое облачко — колонки нет, зажжённое — есть. Постоянных колонок
+ * здесь не бывает: их не выключить, и облачка у них нет.
+ */
+
+.nct-chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.norse-timatal .nct-chip {
+    padding: 5px 14px;
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.25;
+    letter-spacing: 0.3px;
+    color: var(--ncw-text-dim);
+    background: transparent;
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 999px;
+    cursor: pointer;
+    opacity: 0.65;
+    transition: color 0.15s ease, background 0.15s ease,
+                border-color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.norse-timatal .nct-chip:hover {
+    color: var(--ncw-text);
+    border-color: var(--ncw-border);
+    opacity: 0.9;
+}
+
+.norse-timatal .nct-chip:focus-visible {
+    outline: 2px solid var(--ncw-accent);
+    outline-offset: 2px;
+}
+
+/* Зажжённое облачко */
+.norse-timatal .nct-chip-on {
+    color: var(--ncw-chip-text);
+    background: var(--ncw-chip-bg);
+    border-color: var(--ncw-chip-border);
+    opacity: 1;
+    font-weight: bold;
+    box-shadow: 0 0 8px -2px var(--ncw-accent-glow);
+}
+
+.norse-timatal .nct-chip-on:hover {
+    color: var(--ncw-text-bright);
+    border-color: var(--ncw-accent-border-dim);
+}
+
+.norse-timatal .nct-subhead {
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ncw-accent);
+    margin: 16px 0 7px;
+}
+
+.nct-note {
+    margin-top: 12px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ncw-text-muted);
+    background: var(--ncw-bg-raised);
+    border-left: 3px solid var(--ncw-accent-border-dim);
+    border-radius: 0 8px 8px 0;
+}
+
+/* --- таблицы --- */
+
+.nct-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 8px;
+}
+
+.norse-timatal .nct-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.norse-timatal .nct-table th {
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--ncw-accent);
+    background: var(--ncw-bg-raised);
+    border-bottom: 1px solid var(--ncw-border);
+}
+
+/* Выключенная колонка убирается целиком — ни ширины, ни следа */
+.norse-timatal .nct-table .nct-col-off {
+    display: none;
+}
+
+/* Постоянные колонки: номер прижат к древнескандинавскому написанию,
+   чтобы номер и имя читались как одно целое, а не как две колонки. */
+.norse-timatal .nct-table th[data-col="num"],
+.norse-timatal .nct-table td[data-col="num"] {
+    width: 1%;
+    padding-right: 2px;
+    text-align: right;
+    color: var(--ncw-text-dim);
+}
+
+.norse-timatal .nct-table th[data-col="norse"],
+.norse-timatal .nct-table td[data-col="norse"] {
+    padding-left: 7px;
+}
+
+.norse-timatal .nct-table td {
+    padding: 8px 12px;
+    line-height: 1.45;
+    vertical-align: top;
+    color: var(--ncw-text-panel);
+    border-top: 1px solid var(--ncw-border-soft);
+}
+
+.norse-timatal .nct-table tbody tr:first-child td {
+    border-top: none;
+}
+
+.norse-timatal .nct-table tbody tr:hover td {
+    background: var(--ncw-bg-hover);
+}
+
+/* Подсветка строки, соответствующей текущей сцене */
+.norse-timatal .nct-current td {
+    color: var(--ncw-text-bright);
+    background: var(--ncw-chip-bg);
+    font-weight: bold;
+}
+
+.norse-timatal .nct-current td:first-child {
+    box-shadow: inset 3px 0 0 var(--ncw-accent);
+}
+
+.nct-marker {
+    color: var(--ncw-accent);
+    margin-right: 5px;
+}
+
+.nct-moon-icon {
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+.norse-timatal .nct-norse {
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ncw-text-bright);
+    white-space: nowrap;
+}
+
+/* --- пример блока --- */
+
+.norse-timatal .nct-code {
+    margin: 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre;
+    color: var(--ncw-text-day);
+    background: var(--ncw-bg-raised);
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 8px;
+}
+
+/* --- узкие экраны --- */
+
+@media (max-width: 600px) {
+    .norse-timatal { font-size: 14px; }
+    .norse-timatal .nct-title { font-size: 26px; }
+    .norse-timatal .nct-section-title { font-size: 17px; }
+    .norse-timatal .nct-section-toggle { padding: 12px 2px; }
+    .norse-timatal .nct-table th,
+    .norse-timatal .nct-table td { padding: 6px 9px; }
+    .norse-timatal .nct-table th[data-col="num"],
+    .norse-timatal .nct-table td[data-col="num"] { padding-right: 1px; }
+    .norse-timatal .nct-table th[data-col="norse"],
+    .norse-timatal .nct-table td[data-col="norse"] { padding-left: 5px; }
+    .norse-timatal .nct-chip { padding: 5px 11px; font-size: 12px; }
+    .nct-now { flex-direction: column; gap: 3px; }
 }
