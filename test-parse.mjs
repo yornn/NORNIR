@@ -1,5 +1,5 @@
 /*
- * Norse Calendar — автономный тест парсинга блока <yorni>
+ * Norse Calendar — автономный тест парсера и состояния в сообщениях
  *
  * Запуск: node test-parse.mjs
  * Код возврата 0 — все кейсы сошлись, 1 — есть расхождения.
@@ -10,13 +10,17 @@
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
  * 1. Harness ............ Мини-раннер с подсчётом расхождений
- * 2. Yorni Cases ........ Кейсы разбора блока <yorni>
+ * 2. Yorni Cases ........ Кейсы разбора маркера
  * 3. Calendar Cases ..... Проверки календарной математики
- * 4. Summary ............ Итог и код возврата
+ * 3b. Marker & State .... Невидимый маркер, свайпы, удаление сообщений
+ * 4. Lore Tables ........ Согласованность лорных таблиц
+ * 5. Summary ............ Итог и код возврата
  */
 
 import {
     parseYorniTag,
+    hasYorniMarker,
+    stripYorniMarkers,
     isPlaceholder,
     serialOf,
     serialToDate,
@@ -37,6 +41,8 @@ import {
     WEEKDAYS_FULL_RU,
     WEEKDAY_DESC_RU,
 } from "./parser.js";
+
+import { syncMessage, findLatestState, syncWholeChat } from "./chat-state.js";
 
 /* ============================================================
  * 1. HARNESS
@@ -237,6 +243,143 @@ check("сезон Гормануда (11) — Vetr", seasonOf(11).norse, "Vetr")
 check("сезон Хаустмануда (10) — Sumar", seasonOf(10).norse, "Sumar");
 check("сезон Sumarauki — Sumar", seasonOf("AUK").norse, "Sumar");
 check("eyktForHour(0/10/13/23)", [0, 10, 13, 23].map(eyktForHour), [0, 3, 4, 7]);
+
+/* ============================================================
+ * 3b. MARKER & CHAT STATE
+ * ============================================================ */
+
+console.log("\n=== Невидимый маркер ===");
+
+const MARKER = [
+    "<!-- [YORNI:",
+    "eykt: хадеги",
+    "date: 13 гормануд 1015",
+    "weather: Мокрый снег",
+    "location: Старая пристань",
+    "] -->",
+].join("\n");
+
+const REPLY = `Хальвдан опустил точильный камень.\n\n${MARKER}`;
+
+checkYorni(REPLY, { day: 13, month: 11, year: 1015, hour: 13, minute: 30, weather: "Мокрый снег" },
+    "маркер-комментарий в конце ответа");
+check("hasYorniMarker находит маркер", hasYorniMarker(REPLY), true);
+check("stripYorniMarkers оставляет прозу", stripYorniMarkers(REPLY), "Хальвдан опустил точильный камень.");
+check("stripYorniMarkers идемпотентен",
+    stripYorniMarkers(stripYorniMarkers(REPLY)), "Хальвдан опустил точильный камень.");
+check("в чистом тексте маркера нет", hasYorniMarker("Просто проза."), false);
+
+// Оборванная генерация: маркер начался, но не закрылся
+const CUT = "Проза.\n<!-- [YORNI:\neykt: моргун\ndate: 2 харпа 1016";
+checkYorni(CUT, { day: 2, month: 5, year: 1016, hour: 7, minute: 30 }, "обрыв без закрывающего -->");
+check("обрыв тоже вырезается", stripYorniMarkers(CUT), "Проза.");
+
+// Старый видимый формат — миграция
+const LEGACY = "<yorni>\neykt: отта\ndate: 4 хаустмануд 1014\n</yorni>\nТекст ответа.";
+checkYorni(LEGACY, { day: 4, month: 10, year: 1014, hour: 4, minute: 30 }, "легаси-блок <yorni>");
+check("легаси вырезается", stripYorniMarkers(LEGACY), "Текст ответа.");
+
+// Дефисы внутри значения: HTML5-парсеры терпят одиночное `--`, а `-->` закрывает
+// комментарий досрочно — в чате виден хвост. Наш разбор устойчив к обоим.
+const DASHES = [
+    "Проза.",
+    "<!-- [YORNI:",
+    "weather: ветер -- шквалистый",
+    "date: 13 гормануд 1015",
+    "] -->",
+].join("\n");
+const CLOSER = [
+    "Проза.",
+    "<!-- [YORNI:",
+    "weather: ветер --> шквалистый",
+    "date: 13 гормануд 1015",
+    "] -->",
+].join("\n");
+check("`--` внутри значения не мешает разбору", parseYorniTag(DASHES)?.day, 13);
+check("`-->` внутри значения не мешает разбору", parseYorniTag(CLOSER)?.day, 13);
+check("`-->` внутри значения не мешает вырезанию", stripYorniMarkers(CLOSER), "Проза.");
+
+console.log("\n=== Состояние в сообщениях: свайпы и удаление ===");
+
+/* Мини-модель SillyTavern: extra живёт на свайп, gen_finished метит генерацию. */
+function makeMsg(text, stamp) {
+    return {
+        is_user: false, mes: text, gen_finished: stamp, extra: {},
+        swipes: [text], swipe_id: 0, swipe_info: [{ extra: {}, gen_finished: stamp }],
+    };
+}
+
+function markerWith(weather, stamp) {
+    return `Проза ${stamp}.\n\n<!-- [YORNI:\neykt: хадеги\ndate: 13 гормануд 1015\nweather: ${weather}\n] -->`;
+}
+
+/** Уход с текущего свайпа: ST сохраняет его extra (syncMesToSwipe). */
+function saveSwipe(msg) {
+    msg.swipe_info[msg.swipe_id] = {
+        extra: structuredClone(msg.extra),
+        gen_finished: msg.gen_finished,
+    };
+    msg.swipes[msg.swipe_id] = msg.mes;
+}
+
+/** Новая генерация: ST клонирует extra в новый свайп — здесь и рождается залипание. */
+function addSwipe(msg, text, stamp) {
+    saveSwipe(msg);
+    msg.swipes.push(text);
+    msg.swipe_id = msg.swipes.length - 1;
+    msg.swipe_info[msg.swipe_id] = { extra: structuredClone(msg.extra), gen_finished: stamp };
+    msg.mes = text;
+    msg.gen_finished = stamp;
+}
+
+/** Переключение на существующий свайп (syncSwipeToMes). */
+function selectSwipe(msg, id) {
+    saveSwipe(msg);
+    msg.swipe_id = id;
+    msg.mes = msg.swipes[id];
+    msg.extra = structuredClone(msg.swipe_info[id].extra) ?? {};
+    msg.gen_finished = msg.swipe_info[id].gen_finished;
+}
+
+const m = makeMsg(markerWith("Метель", "t1"), "t1");
+syncMessage(m);
+check("снимок попал в extra", m.extra.norseCalendar?.weather, "Метель");
+check("маркер вырезан из текста", m.mes, "Проза t1.");
+check("маркер вырезан и из копии свайпа", m.swipes[0], "Проза t1.");
+
+addSwipe(m, markerWith("Ясно, морозно", "t2"), "t2");
+syncMessage(m);
+check("второй свайп — своя погода", m.extra.norseCalendar?.weather, "Ясно, морозно");
+
+// Модель забыла маркер: чужой снимок висеть не должен
+addSwipe(m, "Проза t3 без маркера.", "t3");
+syncMessage(m);
+check("свайп без маркера не наследует чужой снимок", m.extra.norseCalendar ?? null, null);
+
+selectSwipe(m, 0);
+syncMessage(m);
+check("возврат на первый свайп возвращает его погоду", m.extra.norseCalendar?.weather, "Метель");
+
+selectSwipe(m, 1);
+syncMessage(m);
+check("возврат на второй свайп возвращает его погоду", m.extra.norseCalendar?.weather, "Ясно, морозно");
+
+// Правка прозы руками не должна уносить календарь: gen_finished не меняется
+m.mes = "Отредактированная проза.";
+syncMessage(m);
+check("правка прозы сохраняет снимок", m.extra.norseCalendar?.weather, "Ясно, морозно");
+
+const chat = [
+    { is_user: true, mes: "Реплика." },
+    makeMsg(markerWith("Метель", "a"), "a"),
+    { is_user: true, mes: "Реплика." },
+    makeMsg(markerWith("Знойное марево", "b"), "b"),
+];
+syncWholeChat(chat);
+check("findLatestState берёт последнее сообщение", findLatestState(chat)?.state.weather, "Знойное марево");
+chat.pop();
+check("после удаления берётся предыдущее", findLatestState(chat)?.state.weather, "Метель");
+check("пустой чат — null", findLatestState([]), null);
 
 /* ============================================================
  * 4. LORE TABLES

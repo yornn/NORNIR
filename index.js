@@ -1,26 +1,31 @@
 /*
  * Norse Calendar — расширение-инфоблок для SillyTavern.
  *
- * Модель работы: расширение инжектит в промпт инструкцию, модель отвечает
- * служебным блоком <yorni>...</yorni> с метаданными сцены, а виджет YORNIE
- * рендерит из него эйкту, положение солнца, дату, день недели и фазу Луны.
+ * Модель работы: расширение инжектит в промпт инструкцию, модель заканчивает
+ * ответ невидимым маркером <!-- [YORNI: … ] --> с метаданными сцены, расширение
+ * разбирает его, кладёт снимок в msg.extra и вырезает маркер из текста.
+ * Виджет YORNIE рендерит из снимка эйкту, положение солнца, дату, день недели
+ * и фазу Луны.
  *
- * Реальное время не используется — только данные из чата.
- * Лор и разбор блока живут в parser.js (его же импортирует test-parse.mjs).
+ * Реальное время не используется — только данные из чата. Своего «текущего
+ * состояния» у расширения нет: и виджет, и промпт каждый раз выводятся из
+ * последнего актуального сообщения, поэтому свайпы, удаление и откат работают
+ * сами собой (подробности — в chat-state.js).
+ *
+ * Лор и разбор маркера живут в parser.js (его же импортирует test-parse.mjs).
  *
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
- * 1. Imports & Constants  Импорты, имя расширения, настройки, скан-глубина
- * 2. Regex Scripts ...... Скрытие/вырезание блока <yorni> в чате и промпте
- * 3. Prompt ............. Инструкция <yorni> для модели
- * 4. State & Lookup ..... Состояние виджета и поиск блока в чате
- * 5. Render ............. Отрисовка виджета
- * 6. Widget Mounting .... Встраивание в DOM сообщения
- * 7. Widget Building .... Построение DOM-структуры виджета
- * 8. Tímatal ........... Мини-справочник в меню «волшебной палочки»
- * 9. Slash Commands ..... STscript-команды /norse-*
- * 10. Settings .......... Панель настроек SillyTavern
- * 11. Init .............. Точка входа, подписки на события
+ * 1. Imports & Constants  Импорты, имя расширения, настройки
+ * 2. Prompt ............. Инструкция для модели и инжект
+ * 3. State & Lookup ..... Кэш отрисовки и чтение состояния из чата
+ * 4. Render ............. Отрисовка виджета
+ * 5. Widget Mounting .... Встраивание в DOM сообщения
+ * 6. Widget Building .... Построение DOM-структуры виджета
+ * 7. Tímatal ............ Мини-справочник в меню «волшебной палочки»
+ * 8. Slash Commands ..... STscript-команды /norse-*
+ * 9. Settings ........... Панель настроек SillyTavern
+ * 10. Init .............. Точка входа, подписки на события
  */
 
 /* ============================================================
@@ -28,7 +33,13 @@
  * ============================================================ */
 
 import { extension_settings, getContext, renderExtensionTemplateAsync } from "../../../extensions.js";
-import { saveSettingsDebounced, eventSource, event_types } from "../../../../script.js";
+import {
+    saveSettingsDebounced,
+    eventSource,
+    event_types,
+    extension_prompt_types,
+    extension_prompt_roles,
+} from "../../../../script.js";
 import { t } from "../../../i18n.js";
 import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
 import { SlashCommand } from "../../../slash-commands/SlashCommand.js";
@@ -50,10 +61,16 @@ import {
     hasTime,
     isAuk,
     moonPhase,
-    parseYorniTag,
     seasonOf,
+    stripYorniMarkers,
     weekdayOf,
 } from "./parser.js";
+
+import {
+    chatHasRawMarkers,
+    findLatestState,
+    syncWholeChat,
+} from "./chat-state.js";
 
 const extensionName = "Norse-Calendar";
 const extensionFolderName = `third-party/${extensionName}`;
@@ -74,124 +91,53 @@ const defaultSettings = {
     theme: "default",
     timatalClosedSections: DEFAULT_CLOSED_SECTIONS,
     timatalVisibleColumns: DEFAULT_VISIBLE_COLUMNS,
+    debugKeepMarkers: false,
 };
-
-const SCAN_DEPTH = 25;
 
 /** Настройки расширения (после loadSettings всегда заполнены). */
 function settings() {
     return extension_settings[extensionName];
 }
-
 /* ============================================================
- * 2. REGEX SCRIPTS (SillyTavern)
+ * 2. PROMPT
  *
- * Два скрипта для обработки блока <yorni>:
- *  - display: скрывает блок из отрендеренного текста сообщения
- *  - prompt:  вырезает блок из контекста на глубине >= 1,
- *             оставляя последний (depth 0) как baseline
+ * Инструкция построена по образцу трекеров, которые модели соблюдают
+ * надёжнее всего:
  *
- * markdownOnly и promptOnly в движке ST объединены через OR
- * (extensions/regex/engine.js), поэтому «только промпт» — это
- * promptOnly: true ПРИ markdownOnly: false.
+ *  - маркер ставится в КОНЦЕ ответа. Требование «перед прозой» думающие модели
+ *    роняют первыми: они сначала планируют текст, а служебный блок до текста
+ *    в план не попадает. Виджету это безразлично — он вставляет себя в начало
+ *    сообщения через DOM;
+ *  - маркер — HTML-комментарий, и модели это объясняется: читателю он не виден,
+ *    погружение не ломает. Иначе RP-пресеты «не выходи из роли» его подавляют;
+ *  - есть прямая оговорка, что требование сильнее запретов на OOC, и что ответ
+ *    без маркера считается некорректным;
+ *  - отдельный абзац про думалку: синтаксис маркера нельзя писать внутри
+ *    рассуждений, иначе он попадёт в чат дважды;
+ *  - эталон состояния приходит инжектом ([NORSE CALENDAR STATE]), а не из
+ *    истории: старые маркеры из чата вырезаны, модели их взять неоткуда.
  * ============================================================ */
 
-const YORNI_FIND_REGEX = "/<yorni>[\\s\\S]*?<\\/yorni>/gim";
-
-const YORNI_REGEX_SCRIPTS = [
-    {
-        id: "norse_calendar_yorni_display",
-        scriptName: "Norse Calendar — скрыть <yorni> в чате",
-        findRegex: YORNI_FIND_REGEX,
-        replaceString: "",
-        trimStrings: [],
-        placement: [2],
-        disabled: false,
-        markdownOnly: true,
-        promptOnly: false,
-        runOnEdit: true,
-        substituteRegex: 0,
-        minDepth: null,
-        maxDepth: null,
-    },
-    {
-        id: "norse_calendar_yorni_prompt",
-        scriptName: "Norse Calendar — вырезать <yorni> из контекста",
-        findRegex: YORNI_FIND_REGEX,
-        replaceString: "",
-        trimStrings: [],
-        placement: [2],
-        disabled: false,
-        markdownOnly: false,
-        promptOnly: true,
-        runOnEdit: true,
-        substituteRegex: 0,
-        minDepth: 1,
-        maxDepth: null,
-    },
-];
-
-/**
- * Регистрирует regex-скрипты, которых ещё нет.
- *
- * Существующие НЕ трогает: если пользователь отключил или отредактировал
- * скрипт в UI Regex, его выбор должен пережить перезагрузку страницы.
- * Для принудительного возврата к эталону есть restoreYorniRegexScripts().
- *
- * @returns {number} Сколько скриптов было добавлено
- */
-function ensureYorniRegexScripts() {
-    if (!Array.isArray(extension_settings.regex)) extension_settings.regex = [];
-    let added = 0;
-    for (const script of YORNI_REGEX_SCRIPTS) {
-        if (!extension_settings.regex.some((s) => s.id === script.id)) {
-            extension_settings.regex.push({ ...script });
-            added++;
-        }
-    }
-    if (added > 0) saveSettingsDebounced();
-    return added;
-}
-
-/** Принудительно возвращает оба скрипта к эталонному виду (кнопка в настройках). */
-function restoreYorniRegexScripts() {
-    if (!Array.isArray(extension_settings.regex)) extension_settings.regex = [];
-    for (const script of YORNI_REGEX_SCRIPTS) {
-        const idx = extension_settings.regex.findIndex((s) => s.id === script.id);
-        if (idx === -1) {
-            extension_settings.regex.push({ ...script });
-        } else {
-            extension_settings.regex[idx] = { ...script };
-        }
-    }
-    saveSettingsDebounced();
-}
-
-/* ============================================================
- * 3. PROMPT (инструкция <yorni> для модели)
- * ============================================================ */
-
-const YORNI_PROMPT = [
-    "[Norse Calendar — System Metadata Instruction]",
-    "At the VERY BEGINNING of every response, before writing any narrative prose, output exactly one metadata block enclosed strictly within <yorni> and </yorni> tags.",
+const PROMPT_HEAD = [
+    "<yorni_directive>",
+    "[SYSTEM CHANNEL — Norse Calendar. This configures a UI panel and stands outside the fiction. Characters cannot perceive it, and nothing written here happens in the scene.]",
     "",
-    "STRICT CONTINUITY & STATE TRACKING (CRITICAL):",
-    "- Look at the MOST RECENT <yorni> block in the chat history as your baseline state.",
-    "- DO NOT jump backward in time, reset dates, or hallucinate unrelated months. Time moves strictly forward or stays the same.",
-    "- If a scene continues seamlessly, keep the same date and advance the eykt/time logically.",
-    "- Dynamically update attire, location, weather, and mood based on the CURRENT events in the RP.",
+    "Alongside the roleplay you keep a calendar panel up to date for the reader. It refreshes from a single hidden block that you place after your prose, every single time.",
+    "Wrapped in <!-- and -->, the block is a comment: the chat renders nothing for it, so not one word of it reaches the reader. Treat it as machine-readable output that sits apart from the narrative — do not restate its contents in prose and do not turn it into a visible status header.",
     "",
-    "Use the following key-value format inside the tag (write all field values in Russian):",
-    "<yorni>",
-    "eykt: <Current Eykt>",
-    "date: <Day VikingMonth Year>",
-    "weather: <Current weather>",
-    "location: <Current precise location>",
+    "[MARKER — REQUIRED at the very END of every reply, after all the prose]",
+    "<!-- [YORNI:",
+    "eykt: <current eykt>",
+    "date: <day VikingMonth year>",
+    "weather: <current weather>",
+    "location: <current precise location>",
     "mood: <{{char}}'s current mood(s)>",
     "user_attire: <{{user}}'s current attire>",
     "char_attire: <{{char}}'s current attire>",
     "thought: <{{char}}'s inner thought about {{user}}>",
-    "</yorni>",
+    "] -->",
+    "",
+    "Write all field values in Russian. Never write the sequence --> inside a field value: it closes the HTML comment early and leaks the rest of the marker into the visible chat.",
     "",
     "RULES FOR EYKT (Old Norse 3-hour time divisions):",
     "- миднатти (00:00–03:00 / Midnight)",
@@ -207,109 +153,179 @@ const YORNI_PROMPT = [
     "- Winter months (Vetr): 11.гормануд, 12.юлир, 1.морсугур, 2.торри, 3.гоа, 4.эйнмануд",
     "- Summer months (Sumar): 5.харпа, 6.скерпла, 7.сольмануд, 8.хейаннир, 9.твимануд, 10.хаустмануд",
     "",
-    "CRITICAL MANDATES:",
-    "1. Place the <yorni> block at the VERY TOP of your output before any narrative text.",
-    "2. Inherit state strictly from the previous turn — continuous story progression only.",
-    "3. Fill all field values in Russian.",
-    "4. Never mention or react to the <yorni> tags inside the actual roleplay content.",
+    "EXAMPLE (end of a reply):",
+    "…и он опустил точильный камень, не отводя от неё взгляда.",
     "",
-    "EXAMPLE OUTPUT:",
-    "<yorni>",
-    "eykt: дагмал",
-    "date: 4 хаустмануд 1014",
-    "weather: Прохладный воздух, сильный северный ветер",
-    "location: Деревня, Длинный дом",
-    "mood: весёлый, азартный, воодушевлённый",
+    "<!-- [YORNI:",
+    "eykt: хадеги",
+    "date: 13 гормануд 1015",
+    "weather: Мокрый снег, порывистый северный ветер",
+    "location: Побережье фьорда, старая пристань",
+    "mood: задумчивый, усталый",
     "user_attire: Шерстяное платье, меховой плащ",
     "char_attire: Волчьи шкуры, льняная рубаха",
-    "thought: Сегодня отличный день для доброй драки!",
-    "</yorni>",
+    "thought: Она снова смотрит так, будто знает больше.",
+    "] -->",
+].join("\n");
+
+const PROMPT_TAIL = [
+    "",
+    "WHILE REASONING: refer to this block in ordinary words only. Spelling out its opening sequence anywhere other than the finished answer makes it get picked up twice and corrupts the panel. Emit it once, and only in the reply itself.",
+    "",
+    "PRIORITY: this block outranks any style rule that forbids out-of-character or technical output. Such rules exist to protect immersion, and a comment the reader never sees cannot break it. An answer that ends without the block is unfinished, not complete.",
+    "",
+    "[FINAL CHECK — every reply]",
+    "✅ the marker is the LAST thing in the reply, after all the prose",
+    "✅ eykt, date, weather, location, mood, user_attire, char_attire, thought — all filled, in Russian",
+    "✅ time moves forward or stays the same, never backward",
+    "✅ exactly one marker, and none inside the reasoning",
+    "</yorni_directive>",
 ].join("\n");
 
 /**
- * Инжектит инструкцию в промпт.
+ * Строка эталонного состояния для модели.
  *
- * Значение живёт в extension_prompts до следующей перезаписи, поэтому
- * достаточно выставить его на GENERATION_STARTED — до того, как Generate()
- * соберёт контекст через doChatInject().
+ * Старые маркеры вырезаны из истории, поэтому «посмотри на предыдущий блок»
+ * больше не работает — базовое состояние приходит отсюда.
+ */
+function baselinePrompt() {
+    const found = findLatestState(getContext()?.chat, { keepMarker: settings().debugKeepMarkers });
+    const s = found?.state;
+    if (!s) {
+        return [
+            "",
+            "[NORSE CALENDAR STATE] Пока пусто — это первый ход. Выберите дату и время, подходящие сцене, и заполните все поля.",
+        ].join("\n");
+    }
+
+    const parts = [];
+    if (hasTime(s)) {
+        parts.push(`eykt: ${EYKTIR[eyktForHour(s.hour)].ru.toLowerCase()}`);
+    }
+    if (hasDate(s)) {
+        parts.push(`date: ${isAuk(s.month)
+            ? `${s.day} auknætr ${s.year}`
+            : `${s.day} ${MONTHS_NORSE_RU[s.month - 1].toLowerCase()} ${s.year}`}`);
+    }
+    for (const [key, value] of [
+        ["weather", s.weather], ["location", s.location], ["mood", s.charMood],
+        ["user_attire", s.userAttire], ["char_attire", s.charAttire],
+    ]) {
+        if (value) parts.push(`${key}: ${value}`);
+    }
+
+    return [
+        "",
+        `[NORSE CALENDAR STATE — state at the end of the previous scene]`,
+        parts.join(" | "),
+        "Continue from this state. Carry values over unless the scene changed them; time moves forward or stays the same, never backward.",
+    ].join("\n");
+}
+
+/** Полный текст инструкции со свежим эталоном состояния. */
+function buildPrompt() {
+    return PROMPT_HEAD + "\n" + baselinePrompt() + "\n" + PROMPT_TAIL;
+}
+
+/**
+ * Инжектит инструкцию в промпт — в два слота.
+ *
+ * Основной слот: IN_CHAT на нулевой глубине с ролью USER. Служебная вставка
+ * с ролью system посреди переписки для модели выглядит фоном и легко теряется
+ * под RP-пресетами; то же самое, пришедшее последней репликой пользователя,
+ * воспринимается как обращение и выполняется охотнее.
+ *
+ * Запасной слот: IN_PROMPT, чтобы инструкция была видна и через prompt-manager.
+ * Ключи обязаны различаться — на один ключ setExtensionPrompt хранит ровно
+ * одну запись, и второй вызов затёр бы первый.
  */
 function injectNorsePrompt() {
     const context = getContext();
     if (!context || typeof context.setExtensionPrompt !== "function") return;
-    const value = settings()?.inject ? YORNI_PROMPT : "";
-    context.setExtensionPrompt(extensionName, value, 1, 0);
+
+    const chatKey = extensionName;
+    const sysKey = `${extensionName}_sys`;
+    const value = settings()?.inject ? buildPrompt() : "";
+
+    context.setExtensionPrompt(chatKey, value, extension_prompt_types.IN_CHAT, 0, false, extension_prompt_roles.USER);
+    context.setExtensionPrompt(sysKey, value, extension_prompt_types.IN_PROMPT, 0);
 }
 
 /* ============================================================
- * 4. STATE & LOOKUP
+ * 3. STATE & LOOKUP
+ *
+ * `state` — НЕ источник правды, а только кэш последнего отрисованного
+ * снимка. Правда лежит в сообщениях (chat-state.js), и refresh() каждый раз
+ * перечитывает её заново. Поэтому свайп, удаление сообщения и откат назад
+ * работают сами собой: показывается то, что реально есть в чате сейчас.
  * ============================================================ */
 
-const state = {
-    year: null,
-    month: null,
-    day: null,
-    hour: null,
-    minute: null,
-    weather: null,
-    location: null,
-    userAttire: null,
-    charMood: null,
-    charAttire: null,
-    thought: null,
+const EMPTY_STATE = {
+    year: null, month: null, day: null, hour: null, minute: null,
+    weather: null, location: null, userAttire: null,
+    charMood: null, charAttire: null, thought: null,
 };
 
+/** Кэш отрисовки: копия снимка, который сейчас на экране. */
+const state = { ...EMPTY_STATE };
+
 let lastRenderKey = "";
-let refreshTimer = null;
 const hintTimers = {};
 
-/** Скан сообщений персонажа с конца в поисках блока <yorni>. */
-function findLoreDateTime() {
-    const chat = getContext()?.chat;
-    if (!Array.isArray(chat) || chat.length === 0) return null;
-
-    for (let i = chat.length - 1; i >= 0; i--) {
-        const msg = chat[i];
-        if (!msg || typeof msg.mes !== "string") continue;
-        if (msg.is_user) continue;
-        const fromTag = parseYorniTag(msg.mes);
-        if (fromTag) return fromTag;
-        if (chat.length - 1 - i >= SCAN_DEPTH) break;
-    }
-    return null;
+/**
+ * Собирает частые вызовы в один.
+ *
+ * И события чата, и перестройка DOM приходят пачками: за одну перерисовку
+ * сообщения набегают десятки уведомлений. Обёртка откладывает работу и
+ * сбрасывает отсчёт на каждом новом вызове, поэтому вся пачка выполняется
+ * ровно один раз — в конце.
+ */
+function coalesced(fn, delay) {
+    let timer = null;
+    return () => {
+        clearTimeout(timer);
+        timer = setTimeout(fn, delay);
+    };
 }
 
-function applyLore(lore) {
-    state.year = lore.year;
-    state.month = lore.month;
-    state.day = lore.day;
-    state.hour = lore.hour;
-    state.minute = lore.minute;
-    state.weather = lore.weather;
-    state.location = lore.location;
-    state.userAttire = lore.userAttire;
-    state.charMood = lore.charMood;
-    state.charAttire = lore.charAttire;
-    state.thought = lore.thought;
-}
-
-function resetState() {
-    for (const key of Object.keys(state)) state[key] = null;
-}
-
+/** Перечитывает состояние из чата и перерисовывает виджет. */
 function refresh() {
-    const lore = findLoreDateTime();
-    if (lore) {
-        applyLore(lore);
-    } else {
-        resetState();
+    const context = getContext();
+    const found = findLatestState(context?.chat, { keepMarker: settings().debugKeepMarkers });
+
+    Object.assign(state, EMPTY_STATE, found?.state ?? {});
+
+    // Маркеры вырезаны из текста — изменение надо сохранить в файл чата.
+    if (found?.changed && typeof context?.saveChat === "function") {
+        try { context.saveChat(); } catch (e) { /* ignore */ }
     }
+
     mountWidget();
     renderAll(true);
+    stripMarkersFromDom();
 }
 
-function refreshDebounced() {
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refresh, 200);
+/** События чата приходят залпом — перечитываем состояние один раз в конце. */
+const refreshDebounced = coalesced(refresh, 200);
+
+/**
+ * Подчищает маркер в уже отрисованном сообщении.
+ *
+ * Обычно он и так невидим — HTML-комментарий не рендерится. Но если в настройках
+ * SillyTavern включён Encode Tags, «<» превращается в «&lt;» и маркер становится
+ * видимым текстом; сюда же попадает хвост стриминга до перерисовки.
+ */
+function stripMarkersFromDom() {
+    if (settings().debugKeepMarkers) return;
+    try {
+        for (const el of document.querySelectorAll("#chat .mes .mes_text")) {
+            const html = el.innerHTML;
+            // Регистр важен: новый маркер пишется как YORNI, старый блок — <yorni>.
+            if (!/yorni/i.test(html)) continue;
+            const clean = stripYorniMarkers(html.replace(/&lt;!--/g, "<!--").replace(/--&gt;/g, "-->"));
+            if (clean !== html) el.innerHTML = clean;
+        }
+    } catch (e) { /* ignore */ }
 }
 
 /* ============================================================
@@ -579,11 +595,25 @@ function renderExtraFields() {
 
 /** Последнее сообщение персонажа в DOM, или null. */
 function lastBotMessageEl() {
-    const all = document.querySelectorAll("#chat .mes");
-    for (let i = all.length - 1; i >= 0; i--) {
-        if (all[i].getAttribute("is_user") === "false") return all[i];
-    }
-    return null;
+    // Отбор по атрибуту отдаёт селектору сам браузер — перебирать вручную незачем.
+    const messages = document.querySelectorAll('#chat .mes[is_user="false"]');
+    return messages[messages.length - 1] ?? null;
+}
+
+/**
+ * Возвращает виджет на место, если SillyTavern затёрла его при перерисовке.
+ *
+ * Проверка дешёвая и идемпотентная: когда виджет и так на месте, выходим сразу.
+ * Поэтому её можно звать на любое изменение в чате, не разбирая, какое именно.
+ */
+function remountIfWiped() {
+    if (!settings().enabled) return;
+    const lastBot = lastBotMessageEl();
+    if (!lastBot) return;
+    if (lastBot.querySelector(".edit_textarea")) return;      // сообщение правят
+    if (lastBot.querySelector("#norse-calendar-widget")) return; // уже на месте
+    mountWidget();
+    renderAll(true);
 }
 
 /** Встраивает виджет в начало последнего сообщения от {{char}}. */
@@ -970,9 +1000,16 @@ function bindSettings() {
         applyTheme(settings().theme);
     });
 
-    $("#nc_regex_restore").on("click", () => {
-        restoreYorniRegexScripts();
-        toastr.success(t`Norse Calendar regex scripts restored. Reload the page to see them in the list.`);
+    bindCheckbox("#nc_debug_markers", "debugKeepMarkers", () => refresh());
+
+    $("#nc_purge_markers").on("click", () => {
+        const context = getContext();
+        const n = syncWholeChat(context?.chat, { keepMarker: false });
+        if (n && typeof context?.saveChat === "function") {
+            try { context.saveChat(); } catch (e) { /* ignore */ }
+        }
+        refresh();
+        toastr.success(t`Markers cleaned from ${n} message(s).`);
     });
 }
 
@@ -995,10 +1032,21 @@ jQuery(async () => {
     buildWidget();
     addWandMenuItem();
     registerSlashCommands();
-    ensureYorniRegexScripts();
 
     injectNorsePrompt();
     eventSource.on(event_types.GENERATION_STARTED, injectNorsePrompt);
+
+    // Миграция: в старых чатах маркеры лежат видимым блоком <yorni> прямо
+    // в тексте. Разбираем их в extra и вырезаем — молча, один раз на чат.
+    eventSource.on(event_types.CHAT_CHANGED, () => {
+        const context = getContext();
+        if (!chatHasRawMarkers(context?.chat)) return;
+        const n = syncWholeChat(context?.chat, { keepMarker: settings().debugKeepMarkers });
+        if (n && typeof context?.saveChat === "function") {
+            try { context.saveChat(); } catch (e) { /* ignore */ }
+        }
+        console.log(`[${extensionName}] перенесено маркеров из текста в extra: ${n}`);
+    });
 
     const events = [
         event_types.CHAT_CHANGED,
@@ -1016,44 +1064,24 @@ jQuery(async () => {
 
     refresh();
 
-    // MutationObserver: перемонтирует виджет при rebuild .mes_text
+    /*
+     * SillyTavern пересобирает .mes_text при правке, свайпе и «продолжить»,
+     * унося наш виджет вместе с содержимым. Событиями это не покрыть: часть
+     * перерисовок происходит без них.
+     *
+     * Разбирать, какая именно мутация нам интересна, не нужно — проверка
+     * remountIfWiped() дешёвая и сама решает, надо ли что-то делать. Достаточно
+     * прогонять её один раз на пачку изменений.
+     */
     try {
-        const chatEl = document.getElementById("chat");
-        if (chatEl) {
-            let pending = false;
-            const reinsert = () => {
-                if (pending) return;
-                pending = true;
-                requestAnimationFrame(() => {
-                    pending = false;
-                    try {
-                        if (!settings().enabled) return;
-                        const lastBot = lastBotMessageEl();
-                        if (!lastBot) return;
-                        if (lastBot.querySelector(".edit_textarea")) return;
-                        if (lastBot.querySelector("#norse-calendar-widget")) return;
-                        mountWidget();
-                        renderAll(true);
-                    } catch (e) { /* ignore */ }
-                });
-            };
-            const observer = new MutationObserver((mutations) => {
-                for (const m of mutations) {
-                    if (m.target && (m.target.classList?.contains("mes_text") || m.target.classList?.contains("mes"))) {
-                        reinsert();
-                        return;
-                    }
-                    for (const n of m.removedNodes || []) {
-                        if (n.id === "norse-calendar-widget" || n.querySelector?.("#norse-calendar-widget")) {
-                            reinsert();
-                            return;
-                        }
-                    }
-                }
-            });
-            observer.observe(chatEl, { childList: true, subtree: true });
+        const chat = document.getElementById("chat");
+        if (chat) {
+            const watcher = new MutationObserver(coalesced(remountIfWiped, 0));
+            watcher.observe(chat, { childList: true, subtree: true });
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+        console.error(`[${extensionName}] не удалось следить за чатом:`, e);
+    }
 
     console.log(`[${extensionName}] loaded`);
 });

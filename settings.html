@@ -8,7 +8,8 @@
     - Show widget: показывать/скрывать календарный виджет
     - Inject tag prompt: инжектить инструкцию <yorni> в промпт
     - Theme: откидное меню выбора темы оформления виджета
-    - Restore regex scripts: вернуть regex-скрипты к эталонному виду
+    - Keep markers visible: не вырезать маркер из сообщений (отладка)
+    - Clean markers: разобрать и вырезать маркеры из всей истории чата
 -->
 
 <div class="norse-calendar-settings">
@@ -36,9 +37,13 @@
                         <option value="ember" data-i18n="Ember">Ember</option>
                     </select>
                 </label>
-                <input id="nc_regex_restore" class="menu_button nc-regex-restore" type="button"
-                       value="Restore regex scripts"
-                       data-i18n="[value]Restore regex scripts" />
+                <label class="checkbox_label" for="nc_debug_markers">
+                    <input id="nc_debug_markers" type="checkbox" />
+                    <span data-i18n="Keep markers visible (debug)">Keep markers visible (debug)</span>
+                </label>
+                <input id="nc_purge_markers" class="menu_button nc-regex-restore" type="button"
+                       value="Clean markers from this chat"
+                       data-i18n="[value]Clean markers from this chat" />
             </div>
         </div>
     </div>

@@ -6,8 +6,6 @@
     "Light": "Світла (кістка й береста)",
     "Midnight": "Опівнічне море",
     "Ember": "Жар вогнища",
-    "Restore regex scripts": "Відновити regex-скрипти",
-    "Norse Calendar regex scripts restored. Reload the page to see them in the list.": "Regex-скрипти Norse Calendar відновлено. Перезавантажте сторінку, щоб побачити їх у списку.",
     "Show / hide the day grid": "Показати / приховати сітку днів",
     "Waiting for the infoblock…": "Очікування інфоблоку…",
     "eykt ${0}": "${0}-а ейкта",
@@ -39,10 +37,13 @@
     "Six days carry the names of gods and heavenly bodies, and the seventh is bath day: Laugardagr is literally \"washing day\".": "Шість днів носять імена богів і світил, а сьомий — банний: Laugardagr буквально «день омовіння».",
     "Tungl — phases of the Moon": "Tungl — фази Місяця",
     "The cycle runs 29.53 days. The phase is counted from the date of the scene, not from real time.": "Цикл триває 29,53 дня. Фаза рахується від дати сцени, а не від реального часу.",
-    "The <yorni> block": "Блок <yorni>",
-    "This is what the model returns at the top of every reply. The widget reads it; the raw block is hidden from the chat by the regex scripts.": "Це те, що модель виводить на самому початку кожної відповіді. Віджет читає його, а сирий блок ховають із чату regex-скрипти.",
+    "The <yorni> block": "Маркер календаря",
+    "This is what the model returns at the top of every reply. The widget reads it; the raw block is hidden from the chat by the regex scripts.": "Це те, чим модель завершує кожну відповідь. Маркер — HTML-коментар: у чаті він не видно, а після розбору вирізається з повідомлення.",
     "The date field is read loosely: \"12 Góa 875\", \"875-03-12\", \"12.03.875\" and \"14 Gormánaður — Гормануд — Ноябрь 875\" all work. If the date cannot be read, the remaining fields still reach the widget.": "Поле date розбирається лояльно: підійдуть і «12 Góa 875», і «875-03-12», і «12.03.875», і «14 Gormánaður — Гормануд — Ноябрь 875». Якщо дату розібрати не вдалося, решта полів усе одно потраплять у віджет.",
     "Reset view": "Скинути вигляд",
     "Restore all sections and columns": "Повернути всі розділи та колонки",
-    "Tap a heading to fold a section. Pick the chips to add columns.": "Натисніть на заголовок, щоб згорнути розділ. Хмаринками додаються колонки."
+    "Tap a heading to fold a section. Pick the chips to add columns.": "Натисніть на заголовок, щоб згорнути розділ. Хмаринками додаються колонки.",
+    "Keep markers visible (debug)": "Не ховати маркери (налагодження)",
+    "Clean markers from this chat": "Очистити маркери в цьому чаті",
+    "Markers cleaned from ${0} message(s).": "Маркери вичищено з повідомлень: ${0}."
 }

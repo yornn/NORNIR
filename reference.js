@@ -317,7 +317,7 @@ function blockSection(body) {
     body.append(lead(t`This is what the model returns at the top of every reply. The widget reads it; the raw block is hidden from the chat by the regex scripts.`));
 
     const sample = [
-        "<yorni>",
+        "<!-- [YORNI:",
         "eykt: хадеги",
         "date: 13 гормануд 1015",
         "weather: Мокрый снег, порывистый северный ветер",
@@ -326,7 +326,7 @@ function blockSection(body) {
         "user_attire: Шерстяное платье, меховой плащ",
         "char_attire: Волчьи шкуры, льняная рубаха",
         "thought: Она снова смотрит так, будто знает больше.",
-        "</yorni>",
+        "] -->",
     ].join("\n");
 
     body.append(h("pre", "nct-code", sample));

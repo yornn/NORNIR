@@ -377,9 +377,60 @@ export function findDateInYorni(text) {
  * 5. YORNI PARSER
  * ============================================================ */
 
-/* Верхняя граница щедрая: восемь полей на русском (погода, локация,
-   два комплекта одежды, настроение, мысль) легко занимают >1000 символов. */
-export const YORNI_TAG_RE = /<yorni>([\s\S]{10,4000}?)<\/yorni>/i;
+/*
+ * Маркер — HTML-комментарий. Комментарий браузер не рисует, поэтому прятать
+ * его регексами не нужно: он невидим сам по себе.
+ *
+ *   <!-- [YORNI:
+ *   eykt: хадеги
+ *   date: 13 гормануд 1015
+ *   ] -->
+ *
+ * Внутри значений нельзя писать `-->`: браузер закроет комментарий на нём,
+ * и хвост маркера станет виден в чате до того, как мы его вырежем. Промпт это
+ * запрещает; сам разбор к таким значениям устойчив (проверено тестом).
+ */
+export const YORNI_MARKER_RE = /<!--\s*\[YORNI:([\s\S]*?)\]\s*-->/i;
+
+/* Оборванная генерация: маркер начался, но закрыться не успел. */
+const YORNI_MARKER_OPEN_RE = /<!--\s*\[YORNI:([\s\S]{10,4000})$/i;
+
+/* Прежний видимый формат — нужен для миграции старых чатов. */
+export const YORNI_LEGACY_RE = /<yorni>([\s\S]{10,4000}?)<\/yorni>/i;
+
+/** Все формы маркера — для вырезания из текста сообщения. */
+const YORNI_STRIP_RES = [
+    /<!--\s*\[YORNI:[\s\S]*?\]\s*-->/gi,
+    /<!--\s*\[YORNI:[\s\S]*$/i,
+    /<yorni>[\s\S]*?<\/yorni>/gi,
+];
+
+/** Внутренности маркера в любом из форматов, либо null. */
+function extractMarker(text) {
+    const s = String(text ?? "");
+    return (s.match(YORNI_MARKER_RE)
+        ?? s.match(YORNI_MARKER_OPEN_RE)
+        ?? s.match(YORNI_LEGACY_RE))?.[1] ?? null;
+}
+
+/** Есть ли в тексте маркер календаря (в любом из форматов). */
+export function hasYorniMarker(text) {
+    return extractMarker(text) !== null;
+}
+
+/**
+ * Вырезает маркер из текста сообщения.
+ *
+ * Убирает только дыру, оставшуюся на месте маркера: если он стоял между
+ * абзацами, там повисает лишняя пустая строка. Пробелы внутри самой прозы
+ * не трогаем — они не наши, и подчищать чужой текст расширение не должно.
+ */
+export function stripYorniMarkers(text) {
+    if (!text) return text;
+    let out = String(text);
+    for (const re of YORNI_STRIP_RES) out = out.replace(re, "");
+    return out.replace(/\n[ \t]*\n[ \t]*\n+/g, "\n\n").trim();
+}
 
 /** Пустой результат разбора: все поля null. */
 function emptyResult() {
@@ -435,19 +486,21 @@ function parseFields(inner) {
 }
 
 /**
- * Парсит блок <yorni>...</yorni> — единственный источник метаданных.
+ * Разбирает маркер календаря — единственный источник метаданных.
+ *
+ * Понимает и невидимый `<!-- [YORNI: … ] -->`, и прежний видимый
+ * `<yorni>…</yorni>`, чтобы старые чаты читались без миграции.
  *
  * Возвращает объект, даже если дата не распозналась: поля сцены (погода,
  * локация, настроение, одежда, мысль) отдаются отдельно от даты, чтобы
  * одна кривая строка `date:` не обнуляла весь инфоблок.
  *
  * @param {string} rawText Текст сообщения
- * @returns {object|null} Результат разбора или null, если блока нет либо он пуст
+ * @returns {object|null} Результат разбора или null, если маркера нет либо он пуст
  */
 export function parseYorniTag(rawText) {
-    const m = String(rawText ?? "").match(YORNI_TAG_RE);
-    if (!m) return null;
-    const inner = m[1];
+    const inner = extractMarker(rawText);
+    if (inner === null) return null;
 
     const { fields, cleanInner } = parseFields(inner);
     const result = emptyResult();
