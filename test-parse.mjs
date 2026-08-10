@@ -40,6 +40,15 @@ import {
     WEEKDAYS_SHORT_NORSE,
     WEEKDAYS_FULL_RU,
     WEEKDAY_DESC_RU,
+    YEAR_STARTS_ON,
+    COMMON_YEAR_DAYS,
+    AUKNAETR_DAYS,
+    SUMARAUKI_DAYS,
+    dayOfYear,
+    vikaOf,
+    weeksInYear,
+    yearLength,
+    isSumaraukiYear,
 } from "./parser.js";
 
 import { syncMessage, findLatestState, syncWholeChat } from "./chat-state.js";
@@ -113,7 +122,7 @@ checkYorni(
     "user_attire: Шерстяное платье, меховой плащ\nchar_attire: Волчьи шкуры, льняная рубаха\n" +
     "thought: Сегодня отличный день для доброй драки!\n</yorni>",
     {
-        day: 4, month: 10, year: 1014, hour: 10, minute: 30,
+        day: 4, month: 12, year: 1014, hour: 10, minute: 30,
         weather: "Прохладный воздух, сильный северный ветер",
         location: "Деревня, Длинный дом",
         charMood: "Весёлый, азартный, воодушевлённый",
@@ -128,31 +137,31 @@ checkYorni(
     "<yorni>\neykt: Dagmál\ndate: 4 Haustmánuður 1014\nweather: Crisp air, strong northern wind\n" +
     "location: Village, Great Hall\nmood: Cheerful, eager\nuser_attire: Woolen tunic\n" +
     "char_attire: Iron armor\nthought: A glorious day for a fight!\n</yorni>",
-    { day: 4, month: 10, year: 1014, hour: 10, minute: 30, location: "Village, Great Hall" },
+    { day: 4, month: 12, year: 1014, hour: 10, minute: 30, location: "Village, Great Hall" },
     "полный блок, значения на английском",
 );
 
 checkYorni(
     "<yorni>\neykt: Наттмал\ndate: 13 Гормануд 1015\nweather: Мокрый снег\nlocation: Длинный дом\n" +
     "mood: Задумчивый, усталый\n</yorni>\nТекст ответа бота...",
-    { day: 13, month: 11, year: 1015, hour: 22, minute: 30, weather: "Мокрый снег" },
+    { day: 13, month: 1, year: 1015, hour: 22, minute: 30, weather: "Мокрый снег" },
     "блок + проза после него",
 );
 
 console.log("\n=== parseYorniTag: форматы даты ===");
 
-checkYorni("<yorni>date: 12 Góa 875</yorni>", { day: 12, month: 3, year: 875 }, "день + месяц словом");
-checkYorni("<yorni>date: Дата: 21 октября 2023</yorni>", { day: 21, month: 10, year: 2023 }, "русский «Дата: …»");
-checkYorni("<yorni>date: Date: 21 October 2023</yorni>", { day: 21, month: 10, year: 2023 }, "английский «Date: …»");
-checkYorni("<yorni>date: 21.10.2023</yorni>", { day: 21, month: 10, year: 2023 }, "ДД.ММ.ГГГГ");
-checkYorni("<yorni>date: 21/10/23</yorni>", { day: 21, month: 10, year: 2023 }, "ДД/ММ/ГГ → 20xx");
-checkYorni("<yorni>date: 2023-10-21</yorni>", { day: 21, month: 10, year: 2023 }, "ISO");
-checkYorni("<yorni>date: 📅 13/10/23</yorni>", { day: 13, month: 10, year: 2023 }, "эмодзи-префикс");
-checkYorni('<yorni>date:{"output":"21.10.2023"}</yorni>', { day: 21, month: 10, year: 2023 }, "JSON-обёртка");
-checkYorni("<yorni>date: 21.10.2023 18:30</yorni>", { day: 21, month: 10, year: 2023, hour: 18, minute: 30 }, "дата + время в одной строке");
+checkYorni("<yorni>date: 12 Góa 875</yorni>", { day: 12, month: 5, year: 875 }, "день + месяц словом");
+checkYorni("<yorni>date: Дата: 21 октября 2023</yorni>", { day: 21, month: 12, year: 2023 }, "русский «Дата: …»");
+checkYorni("<yorni>date: Date: 21 October 2023</yorni>", { day: 21, month: 12, year: 2023 }, "английский «Date: …»");
+checkYorni("<yorni>date: 21.10.2023</yorni>", { day: 21, month: 12, year: 2023 }, "ДД.ММ.ГГГГ");
+checkYorni("<yorni>date: 21/10/23</yorni>", { day: 21, month: 12, year: 2023 }, "ДД/ММ/ГГ → 20xx");
+checkYorni("<yorni>date: 2023-10-21</yorni>", { day: 21, month: 12, year: 2023 }, "ISO");
+checkYorni("<yorni>date: 📅 13/10/23</yorni>", { day: 13, month: 12, year: 2023 }, "эмодзи-префикс");
+checkYorni('<yorni>date:{"output":"21.10.2023"}</yorni>', { day: 21, month: 12, year: 2023 }, "JSON-обёртка");
+checkYorni("<yorni>date: 21.10.2023 18:30</yorni>", { day: 21, month: 12, year: 2023, hour: 18, minute: 30 }, "дата + время в одной строке");
 checkYorni(
     "<yorni>\neykt: Hádegi\ndate: 14 Gormánaður - Gormanud - Гормануд — Ноябрь 875\n</yorni>",
-    { day: 14, month: 11, year: 875, hour: 13, minute: 30 },
+    { day: 14, month: 1, year: 875, hour: 13, minute: 30 },
     "составной формат месяца",
 );
 
@@ -161,6 +170,16 @@ console.log("\n=== parseYorniTag: Sumarauki ===");
 checkYorni("<yorni>\ndate: 2 Auknætr 875\nlocation: Причал\n</yorni>",
     { day: 2, month: "AUK", year: 875, hour: null, location: "Причал" }, "Auknætr");
 checkYorni("<yorni>date: 2 Sumarauki 875</yorni>", { day: 2, month: "AUK", year: 875 }, "Sumarauki");
+checkYorni("<yorni>date: 2 аукнэтр 1015</yorni>", { day: 2, month: "AUK", year: 1015 },
+    "аукнэтр по-русски — так их пишет модель");
+checkYorni("<yorni>date: 2 сумарауки 998</yorni>", { day: 2, month: "AUK", year: 998 },
+    "сумарауки по-русски");
+checkYorni("<yorni>date: 9 аукнэтр 998</yorni>", { day: 9, month: "AUK", year: 998 },
+    "9-й вставной день бывает — в год сумарауки их 11");
+checkYorni("<yorni>date: 9 аукнэтр 999</yorni>", { day: 4, month: "AUK", year: 999 },
+    "в обычный год 9-й день поджимается до 4-го");
+checkYorni("<yorni>date: 99 аукнэтр 998</yorni>", { day: 11, month: "AUK", year: 998 },
+    "перебор поджимается к длине вставки — как 31-е число к 30-му");
 
 console.log("\n=== parseYorniTag: время ===");
 
@@ -191,7 +210,7 @@ const longBlock =
     "char_attire: " + "Волчьи шкуры поверх льняной рубахи, широкий пояс, топор у бедра. ".repeat(3) + "\n" +
     "thought: " + "Она снова смотрит так, будто знает про меня больше, чем следовало бы. ".repeat(3) + "\n</yorni>";
 console.log(`     (длина блока: ${longBlock.length} символов)`);
-checkYorni(longBlock, { day: 13, month: 11, year: 1015, hour: 13, minute: 30 },
+checkYorni(longBlock, { day: 13, month: 1, year: 1015, hour: 13, minute: 30 },
     "B4: блок >800 символов разбирается");
 
 // B5: сцена сохраняется, даже если дата не распозналась
@@ -229,19 +248,68 @@ check("isPlaceholder('Деревня, Длинный дом')", isPlaceholder("�
 
 console.log("\n=== Календарная математика ===");
 
-check("1 Морсугур года 1 — понедельник", weekdayOf(1, 1, 1), 1);
-check("serialOf(1,1,1)", serialOf(1, 1, 1), 0);
-check("Sumarauki идёт после 7-го месяца", serialOf(875, "AUK", 1) - serialOf(875, 7, 30), 1);
-check("длина обычного года", serialOf(1002, 1, 1) - serialOf(1001, 1, 1), 364);
-check("длина високосного года", serialOf(1005, 1, 1) - serialOf(1004, 1, 1), 365);
-check("aukDays(1015) / aukDays(1016)", [aukDays(1015), aukDays(1016)], [4, 5]);
-check("serialToDate обратим", serialToDate(serialOf(1015, 11, 13)), { year: 1015, month: 11, day: 13 });
-check("serialToDate обратим для AUK", serialToDate(serialOf(1016, "AUK", 5)), { year: 1016, month: "AUK", day: 5 });
-check("addDays через границу месяца", addDays(1015, 11, 30, 1), { year: 1015, month: 12, day: 1 });
+check("serialOf(1,1,1) — начало отсчёта", serialOf(1, 1, 1), 0);
+check("год начинается с Laugardagr", weekdayOf(1, 1, 1), YEAR_STARTS_ON);
+check("Laugardagr — это суббота", WEEKDAYS_LORE[YEAR_STARTS_ON].en, "Saturday");
+
+// Целые недели — то, ради чего вся конструкция
+const YEARS = Array.from({ length: 40 }, (_, i) => 990 + i);
+check("длина любого года делится на 7",
+    YEARS.filter((y) => yearLength(y) % 7 !== 0), []);
+check("обычный год — 364 дня, 52 недели",
+    [yearLength(999), weeksInYear(999)], [COMMON_YEAR_DAYS, 52]);
+check("год сумарауки — 371 день, 53 недели",
+    [yearLength(998), weeksInYear(998)], [COMMON_YEAR_DAYS + SUMARAUKI_DAYS, 53]);
+check("длина года = расстояние между началами",
+    YEARS.filter((y) => serialOf(y + 1, 1, 1) - serialOf(y, 1, 1) !== yearLength(y)), []);
+
+// Раз все годы из целых недель — все начинаются с одного дня
+check("все годы начинаются с одного дня недели",
+    [...new Set(YEARS.map((y) => weekdayOf(y, 1, 1)))], [YEAR_STARTS_ON]);
+
+// Вставная неделя приходит раз в пять-шесть лет
+const sumarauki = YEARS.filter(isSumaraukiYear);
+check("шаг между годами сумарауки — 5 или 6",
+    [...new Set(sumarauki.slice(1).map((y, i) => y - sumarauki[i]))].sort(), [5, 6]);
+check("аукнэтр без сумарауки / с сумарауки",
+    [aukDays(999), aukDays(998)], [AUKNAETR_DAYS, AUKNAETR_DAYS + SUMARAUKI_DAYS]);
+
+/* Главная проверка достоверности: если модель верна, лето обязано начинаться
+   с четверга (sumardagurinn fyrsti). Нигде не задано — должно вывестись само. */
+check("лето всегда начинается с Þórsdagr",
+    [...new Set(YEARS.map((y) => WEEKDAYS_LORE[weekdayOf(y, 7, 1)].en))], ["Thursday"]);
+check("зима — первые шесть месяцев",
+    [seasonOf(1).norse, seasonOf(6).norse, seasonOf(7).norse, seasonOf(12).norse],
+    ["Vetr", "Vetr", "Sumar", "Sumar"]);
+check("аукнэтр относятся к лету", seasonOf("AUK").norse, "Sumar");
+
+// День года и номер недели
+check("1 Гормануд — первый день года", dayOfYear(1015, 1, 1), 1);
+check("1 Харпа — 181-й день (после шести зимних месяцев)", dayOfYear(1015, 7, 1), 181);
+check("vika первого дня года", vikaOf(1015, 1, 1), 1);
+check("vika седьмого дня года", vikaOf(1015, 1, 7), 1);
+check("vika восьмого дня года", vikaOf(1015, 1, 8), 2);
+check("последний день года — последняя неделя",
+    vikaOf(999, 12, 30), weeksInYear(999));
+
+// Аукнэтр вставлены после Sólmánuður и попадают в счёт дней
+check("аукнэтр идут сразу за 9-м месяцем",
+    dayOfYear(1015, "AUK", 1) - dayOfYear(1015, 9, 30), 1);
+check("10-й месяц начинается после аукнэтр",
+    dayOfYear(1015, 10, 1) - dayOfYear(1015, "AUK", aukDays(1015)), 1);
+
+// Обратимость по всем дням нескольких лет
+const roundTripErrors = [];
+for (const y of [997, 998, 999, 1000, 1001]) {
+    for (let doy = 1; doy <= yearLength(y); doy++) {
+        const d = serialToDate(serialOf(y, 1, 1) + doy - 1);
+        if (d.year !== y || dayOfYear(d.year, d.month, d.day) !== doy) roundTripErrors.push(`${y}:${doy}`);
+    }
+}
+check("все дни 997-1001 сходятся туда-обратно", roundTripErrors, []);
+
+check("addDays через границу месяца", addDays(1015, 1, 30, 1), { year: 1015, month: 2, day: 1 });
 check("addDays назад через границу года", addDays(1015, 1, 1, -1), { year: 1014, month: 12, day: 30 });
-check("сезон Гормануда (11) — Vetr", seasonOf(11).norse, "Vetr");
-check("сезон Хаустмануда (10) — Sumar", seasonOf(10).norse, "Sumar");
-check("сезон Sumarauki — Sumar", seasonOf("AUK").norse, "Sumar");
 check("eyktForHour(0/10/13/23)", [0, 10, 13, 23].map(eyktForHour), [0, 3, 4, 7]);
 
 /* ============================================================
@@ -261,7 +329,7 @@ const MARKER = [
 
 const REPLY = `Хальвдан опустил точильный камень.\n\n${MARKER}`;
 
-checkYorni(REPLY, { day: 13, month: 11, year: 1015, hour: 13, minute: 30, weather: "Мокрый снег" },
+checkYorni(REPLY, { day: 13, month: 1, year: 1015, hour: 13, minute: 30, weather: "Мокрый снег" },
     "маркер-комментарий в конце ответа");
 check("hasYorniMarker находит маркер", hasYorniMarker(REPLY), true);
 check("stripYorniMarkers оставляет прозу", stripYorniMarkers(REPLY), "Хальвдан опустил точильный камень.");
@@ -271,12 +339,12 @@ check("в чистом тексте маркера нет", hasYorniMarker("Пр
 
 // Оборванная генерация: маркер начался, но не закрылся
 const CUT = "Проза.\n<!-- [YORNI:\neykt: моргун\ndate: 2 харпа 1016";
-checkYorni(CUT, { day: 2, month: 5, year: 1016, hour: 7, minute: 30 }, "обрыв без закрывающего -->");
+checkYorni(CUT, { day: 2, month: 7, year: 1016, hour: 7, minute: 30 }, "обрыв без закрывающего -->");
 check("обрыв тоже вырезается", stripYorniMarkers(CUT), "Проза.");
 
 // Старый видимый формат — миграция
 const LEGACY = "<yorni>\neykt: отта\ndate: 4 хаустмануд 1014\n</yorni>\nТекст ответа.";
-checkYorni(LEGACY, { day: 4, month: 10, year: 1014, hour: 4, minute: 30 }, "легаси-блок <yorni>");
+checkYorni(LEGACY, { day: 4, month: 12, year: 1014, hour: 4, minute: 30 }, "легаси-блок <yorni>");
 check("легаси вырезается", stripYorniMarkers(LEGACY), "Текст ответа.");
 
 // Дефисы внутри значения: HTML5-парсеры терпят одиночное `--`, а `-->` закрывает
@@ -395,11 +463,11 @@ check("дней недели ровно 7", WEEKDAYS_LORE.length, 7);
 check("эйкт ровно 8", EYKTIR.length, 8);
 check("фаз Луны ровно 5", MOON_PHASES.length, 5);
 
-check("MONTHS_NORSE_RU выведен из MONTHS_LORE", MONTHS_NORSE_RU[10], "Гормануд");
-check("MONTHS_RU_NOM выведен из MONTHS_LORE", MONTHS_RU_NOM[10], "Ноябрь");
-check("WEEKDAYS_FULL_RU[0] — воскресенье", WEEKDAYS_FULL_RU[0], "Воскресенье");
-check("WEEKDAY_DESC_RU[0] — День Солнца", WEEKDAY_DESC_RU[0], "День Солнца");
-check("шапка сетки начинается с понедельника", WEEKDAYS_SHORT_NORSE, ["Mán", "Týs", "Óðn", "Þór", "Frj", "Lau", "Sun"]);
+check("MONTHS_NORSE_RU выведен из MONTHS_LORE", MONTHS_NORSE_RU[0], "Гормануд");
+check("MONTHS_RU_NOM выведен из MONTHS_LORE", MONTHS_RU_NOM[0], "Ноябрь");
+check("WEEKDAYS_FULL_RU[0] — понедельник", WEEKDAYS_FULL_RU[0], "Понедельник");
+check("WEEKDAY_DESC_RU[0] — День Луны", WEEKDAY_DESC_RU[0], "День Луны");
+check("дни недели идут с понедельника", WEEKDAYS_SHORT_NORSE, ["Mán", "Týs", "Óðn", "Þór", "Frj", "Lau", "Sun"]);
 
 // Каждое написание месяца из справочника должно распознаваться парсером
 const badMonths = [];

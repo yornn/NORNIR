@@ -17,67 +17,116 @@
 /* ============================================================
  * 1. LORE DATA
  *
- * Месяцы: 12 × 30 дней, индекс = современный месяц - 1
- * Дни недели: индекс 0 = воскресенье (sunnudagr)
- * Эйкты: 8 × 3 часа
- * Луна: цикл 29.53 дня от 2000-01-06
+ * Год исландского счёта времени (misseri) начинается с зимы, с Gormánaður,
+ * поэтому индекс месяца здесь — порядковый номер в ЛОРНОМ году, а не в
+ * григорианском: 1 = Gormánaður, 12 = Haustmánuður.
+ *
+ * Устройство года:
+ *   12 месяцев × 30 дней                     = 360
+ *   + 4 аукнэтр в середине лета              = 364 = ровно 52 недели
+ *   + вставная неделя сумарауки раз в 5–6 лет = 371 = ровно 53 недели
+ *
+ * Обе вставки дают целое число недель, поэтому год всегда начинается с одного
+ * и того же дня — с Laugardagr, первого дня зимы. Оттуда же само собой выходит,
+ * что лето (1 Harpa) всегда приходится на Þórsdagr — тот самый sumardagurinn
+ * fyrsti. Это проверяется тестом, а не задано вручную.
+ *
+ * Дни недели: индекс 0 = понедельник.
+ * Эйкты: 8 × 3 часа.
  * ============================================================ */
 
 /**
- * Месяцы лорного календаря. Индекс = номер месяца − 1.
- * Зима (Vetr): 11, 12, 1–4. Лето (Sumar): 5–10.
- * `gloss` — перевод самого названия, для справочника Tímatal.
+ * Месяцы лорного года по порядку. Зима (Vetr) — 1–6, лето (Sumar) — 7–12.
+ *
+ * `modern` — примерное соответствие григорианскому месяцу, только для справки
+ * и для разбора числовых дат. `stems` — по чему месяц узнаётся в тексте;
+ * они лежат здесь же, чтобы порядок и распознавание не могли разъехаться.
  */
 export const MONTHS_LORE = [
-    { norse: "Mörsugur",     translit: "Morsugur",   ru: "Морсугур",   modern: "Январь",    gloss: "«сосущий жир» — время жить запасами" },
-    { norse: "Þorri",        translit: "Thorri",     ru: "Торри",      modern: "Февраль",   gloss: "по имени зимнего духа Торри; месяц самых злых холодов" },
-    { norse: "Góa",          translit: "Goa",        ru: "Гоа",        modern: "Март",      gloss: "по имени Гои, дочери Торри" },
-    { norse: "Einmánuður",   translit: "Einmanud",   ru: "Эйнмануд",   modern: "Апрель",    gloss: "«одинокий месяц» — последний месяц зимы" },
-    { norse: "Harpa",        translit: "Harpa",      ru: "Харпа",      modern: "Май",       gloss: "по имени Харпы; первый день — начало лета" },
-    { norse: "Skerpla",      translit: "Skerpla",    ru: "Скерпла",    modern: "Июнь",      gloss: "происхождение названия неясно" },
-    { norse: "Sólmánuður",   translit: "Solmanud",   ru: "Сольмануд",  modern: "Июль",      gloss: "«солнечный месяц» — самые длинные дни" },
-    { norse: "Heyannir",     translit: "Heyannir",   ru: "Хейаннир",   modern: "Август",    gloss: "«сенокосные хлопоты» — время косить и сушить сено" },
-    { norse: "Tvímánuður",   translit: "Tvimanud",   ru: "Твимануд",   modern: "Сентябрь",  gloss: "«второй месяц» — второй месяц жатвы" },
-    { norse: "Haustmánuður", translit: "Haustmanud", ru: "Хаустмануд", modern: "Октябрь",   gloss: "«осенний месяц» — последний месяц лета" },
-    { norse: "Gormánaður",   translit: "Gormanud",   ru: "Гормануд",   modern: "Ноябрь",    gloss: "«месяц забоя» — время резать скот на зиму" },
-    { norse: "Ýlir",         translit: "Ylir",       ru: "Юлир",       modern: "Декабрь",   gloss: "«месяц Юля» — время середины зимы" },
+    { norse: "Gormánaður",   translit: "Gormanud",   ru: "Гормануд",   modern: "Ноябрь",   modernNum: 11,
+      stems: ["nov", "ноя", "ной", "gorm", "горм"],
+      gloss: "«месяц забоя» — время резать скот на зиму" },
+    { norse: "Ýlir",         translit: "Ylir",       ru: "Юлир",       modern: "Декабрь",  modernNum: 12,
+      stems: ["dec", "дек", "ýl", "ylir", "юлир"],
+      gloss: "«месяц Юля» — время середины зимы" },
+    { norse: "Mörsugur",     translit: "Morsugur",   ru: "Морсугур",   modern: "Январь",   modernNum: 1,
+      stems: ["jan", "янв", "mörs", "mors", "морс"],
+      gloss: "«сосущий жир» — время жить запасами" },
+    { norse: "Þorri",        translit: "Thorri",     ru: "Торри",      modern: "Февраль",  modernNum: 2,
+      stems: ["feb", "фев", "þor", "thor", "торр"],
+      gloss: "по имени зимнего духа Торри; месяц самых злых холодов" },
+    { norse: "Góa",          translit: "Goa",        ru: "Гоа",        modern: "Март",     modernNum: 3,
+      stems: ["mar", "мар", "góa", "goa", "гоа"],
+      gloss: "по имени Гои, дочери Торри" },
+    { norse: "Einmánuður",   translit: "Einmanud",   ru: "Эйнмануд",   modern: "Апрель",   modernNum: 4,
+      stems: ["apr", "апр", "einm", "эйн"],
+      gloss: "«одинокий месяц» — последний месяц зимы" },
+    { norse: "Harpa",        translit: "Harpa",      ru: "Харпа",      modern: "Май",      modernNum: 5,
+      stems: ["may", "мая", "май", "harp", "харп"],
+      gloss: "по имени Харпы; первый день — начало лета" },
+    { norse: "Skerpla",      translit: "Skerpla",    ru: "Скерпла",    modern: "Июнь",     modernNum: 6,
+      stems: ["jun", "июн", "skerp", "скерп"],
+      gloss: "происхождение названия неясно" },
+    { norse: "Sólmánuður",   translit: "Solmanud",   ru: "Сольмануд",  modern: "Июль",     modernNum: 7,
+      stems: ["jul", "июл", "sólm", "solm", "сольм"],
+      gloss: "«солнечный месяц» — самые длинные дни" },
+    { norse: "Heyannir",     translit: "Heyannir",   ru: "Хейаннир",   modern: "Август",   modernNum: 8,
+      stems: ["aug", "авг", "heyan", "хейан"],
+      gloss: "«сенокосные хлопоты» — время косить и сушить сено" },
+    { norse: "Tvímánuður",   translit: "Tvimanud",   ru: "Твимануд",   modern: "Сентябрь", modernNum: 9,
+      stems: ["sep", "сен", "tvím", "tvim", "твим"],
+      gloss: "«второй месяц» — второй месяц жатвы" },
+    { norse: "Haustmánuður", translit: "Haustmanud", ru: "Хаустмануд", modern: "Октябрь",  modernNum: 10,
+      stems: ["oct", "окт", "haust", "хауст"],
+      gloss: "«осенний месяц» — последний месяц лета" },
 ];
 
 export const MONTHS_NORSE_RU = MONTHS_LORE.map((m) => m.ru);
 export const MONTHS_RU_NOM = MONTHS_LORE.map((m) => m.modern);
+export const MONTH_STEMS = MONTHS_LORE.map((m) => m.stems);
 
-/** Дни недели. Индекс 0 = воскресенье, как у weekdayOf(). */
+/** Григорианский номер месяца → номер в лорном году. */
+const MONTH_BY_MODERN = new Map(MONTHS_LORE.map((m, i) => [m.modernNum, i + 1]));
+
+/**
+ * Число из числовой даты («21.10.2023») — это григорианский месяц, а не номер
+ * в лорном году: модель, скатившаяся на цифры, думает привычным календарём.
+ */
+export function monthFromModernNumber(n) {
+    return MONTH_BY_MODERN.get(n) ?? null;
+}
+
+/** Зима — первая половина года, лето — вторая. Ровно по шесть месяцев. */
+export const WINTER_MONTHS = 6;
+
+/**
+ * Дни недели, начиная с понедельника.
+ * Индекс совпадает с тем, что возвращает weekdayOf().
+ */
 export const WEEKDAYS_LORE = [
-    { norse: "Sunnudagr",  en: "Sunday",    ru: "Воскресенье",  short: "Sun", desc: "День Солнца" },
     { norse: "Mánadagr",   en: "Monday",    ru: "Понедельник",  short: "Mán", desc: "День Луны" },
     { norse: "Týsdagr",    en: "Tuesday",   ru: "Вторник",      short: "Týs", desc: "День Тюра" },
     { norse: "Óðinsdagr",  en: "Wednesday", ru: "Среда",        short: "Óðn", desc: "День Одина" },
     { norse: "Þórsdagr",   en: "Thursday",  ru: "Четверг",      short: "Þór", desc: "День Тора" },
     { norse: "Frjádagr",   en: "Friday",    ru: "Пятница",      short: "Frj", desc: "День Фригг / Фрейи" },
     { norse: "Laugardagr", en: "Saturday",  ru: "Суббота",      short: "Lau", desc: "«Банный день» — день омовения" },
+    { norse: "Sunnudagr",  en: "Sunday",    ru: "Воскресенье",  short: "Sun", desc: "День Солнца" },
 ];
 
 export const WEEKDAYS_FULL_RU = WEEKDAYS_LORE.map((w) => w.ru);
 export const WEEKDAY_DESC_RU = WEEKDAYS_LORE.map((w) => w.desc);
+export const WEEKDAYS_SHORT_NORSE = WEEKDAYS_LORE.map((w) => w.short);
 
-/** Шапка сетки недели — порядок с понедельника, а не с воскресенья. */
-export const WEEKDAYS_SHORT_NORSE = [1, 2, 3, 4, 5, 6, 0].map((i) => WEEKDAYS_LORE[i].short);
+/** Первый день зимы, а значит и года, — суббота (fyrsti vetrardagur). */
+export const YEAR_STARTS_ON = WEEKDAYS_LORE.findIndex((w) => w.en === "Saturday");
 
-export const AUK_STEMS = ["sumarauki", "aukn", "auk"];
-
-export const MONTH_STEMS = [
-    ["jan", "янв", "mörs", "mors", "морс"],
-    ["feb", "фев", "þor", "thor", "торр"],
-    ["mar", "мар", "góa", "goa", "гоа"],
-    ["apr", "апр", "einm", "эйн"],
-    ["may", "мая", "май", "harp", "харп"],
-    ["jun", "июн", "skerp", "скерп"],
-    ["jul", "июл", "sólm", "solm", "сольм"],
-    ["aug", "авг", "heyan", "хейан"],
-    ["sep", "сен", "tvím", "tvim", "твим"],
-    ["oct", "окт", "haust", "хауст"],
-    ["nov", "ноя", "ной", "gorm", "горм"],
-    ["dec", "дек", "ýl", "ylir", "юлир"],
+/*
+ * Основы для распознавания вставных дней. Кириллица здесь обязательна:
+ * промпт просит модель писать по-русски, и она пишет «2 аукнэтр 1015».
+ */
+export const AUK_STEMS = [
+    "sumarauki", "aukn", "auk",
+    "сумараук", "аукн", "аук",
 ];
 
 export const EYKTIR = [
@@ -104,16 +153,23 @@ export const EYKT_ALIASES = [
 
 export const MOON_CYCLE = 29.53;
 
+/*
+ * `icon` — эмодзи, `iconName` — имя файла в `icons/`.
+ *
+ * Два поля, а не одно: виджет рисует луну своим знаком через CSS-маску, а
+ * Tímatal и текстовые сводки остаются на эмодзи — там знак идёт внутри
+ * обычной строки, и подменять его элементом незачем.
+ */
 export const MOON_PHASES = [
-    { norse: "Ný",          en: "New Moon",    ru: "Новолуние",      icon: "🌑", from: 0,    to: 1.8,
+    { norse: "Ný",          en: "New Moon",    ru: "Новолуние",      icon: "🌑", iconName: "moon-ny",       from: 0,    to: 1.8,
       desc: "время зарождения и планов" },
-    { norse: "Vaxandi",     en: "Waxing Moon", ru: "Растущая луна",  icon: "🌒", from: 1.8,  to: 13.0,
+    { norse: "Vaxandi",     en: "Waxing Moon", ru: "Растущая луна",  icon: "🌒", iconName: "moon-vaxandi",  from: 1.8,  to: 13.0,
       desc: "время дел, походов и строительства" },
-    { norse: "Fullt tungl", en: "Full Moon",   ru: "Полнолуние",     icon: "🌕", from: 13.0, to: 16.5,
+    { norse: "Fullt tungl", en: "Full Moon",   ru: "Полнолуние",     icon: "🌕", iconName: "moon-fullt",    from: 13.0, to: 16.5,
       desc: "пик силы, время Блотов и Тинга" },
-    { norse: "Minnandi",    en: "Waning Moon", ru: "Убывающая луна", icon: "🌖", from: 16.5, to: 27.7,
+    { norse: "Minnandi",    en: "Waning Moon", ru: "Убывающая луна", icon: "🌖", iconName: "moon-minnandi", from: 16.5, to: 27.7,
       desc: "время завершать дела и возвращаться домой" },
-    { norse: "Nið",         en: "Dark Moon",   ru: "Безлуние",       icon: "🌚", from: 27.7, to: 29.53,
+    { norse: "Nið",         en: "Dark Moon",   ru: "Безлуние",       icon: "🌚", iconName: "moon-nid",      from: 27.7, to: 29.53,
       desc: "ночи волка Хати, время отдыха и осторожности" },
 ];
 
@@ -122,9 +178,10 @@ export function monthFromName(name) {
     if (!name) return null;
     const n = String(name).toLowerCase().trim();
     if (AUK_STEMS.some((s) => n.startsWith(s))) return "AUK";
+    // Голое число — это почти наверняка григорианский месяц из «21.10.2023»,
+    // а не порядковый номер в лорном году. Переводим.
     if (/^\d{1,2}$/.test(n)) {
-        const v = parseInt(n, 10);
-        return v >= 1 && v <= 12 ? v : null;
+        return MONTH_BY_MODERN.get(parseInt(n, 10)) ?? null;
     }
     for (let i = 0; i < MONTH_STEMS.length; i++) {
         if (MONTH_STEMS[i].some((s) => n.startsWith(s))) return i + 1;
@@ -136,8 +193,11 @@ export function isAuk(month) {
     return month === "AUK";
 }
 
+/**
+ * Полугодие. Аукнэтр приходятся на середину лета, поэтому тоже Sumar.
+ */
 export function seasonOf(month) {
-    return isAuk(month) || (month >= 5 && month <= 10)
+    return isAuk(month) || month > WINTER_MONTHS
         ? { norse: "Sumar", ru: "Лето" }
         : { norse: "Vetr", ru: "Зима" };
 }
@@ -168,50 +228,86 @@ export function eyktFromText(text) {
  * 2. CALENDAR MATH
  * ============================================================ */
 
-export function isLeapYear(y) {
-    return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+/** Обычный год — ровно 52 недели. */
+export const COMMON_YEAR_DAYS = 364;
+/** Аукнэтр: четыре дня в середине лета, каждый год. */
+export const AUKNAETR_DAYS = 4;
+/** Сумарауки: вставная неделя, туда же, раз в 5–6 лет. */
+export const SUMARAUKI_DAYS = 7;
+/** После какого месяца стоит вставка. Sólmánuður — девятый месяц лорного года. */
+export const AUK_AFTER_MONTH = 9;
+
+/* Год из 364 дней короче солнечного примерно на 1.2425 суток. Как только
+   накопленное отставание дотягивает до недели, её вставляют — отсюда и
+   выходит шаг «раз в пять-шесть лет», без таблицы исключений. */
+const YEAR_DRIFT = 365.2425 - COMMON_YEAR_DAYS;
+const weeksInsertedBefore = (year) => Math.floor(((year - 1) * YEAR_DRIFT) / SUMARAUKI_DAYS);
+
+/** Год со вставной неделей сумарауки. */
+export function isSumaraukiYear(year) {
+    return weeksInsertedBefore(year + 1) > weeksInsertedBefore(year);
 }
 
-/** Дополнительные дни (Sumarauki / Auknætr): 4, в високосный год — 5. */
+/** Длина вставки в середине лета: аукнэтр, а в год сумарауки — вместе с неделей. */
 export function aukDays(year) {
-    return isLeapYear(year) ? 5 : 4;
+    return AUKNAETR_DAYS + (isSumaraukiYear(year) ? SUMARAUKI_DAYS : 0);
 }
 
-export function leapsBefore(year) {
-    const y = year - 1;
-    return Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400);
+/** Длина года в днях — всегда кратна семи. */
+export function yearLength(year) {
+    return COMMON_YEAR_DAYS + (isSumaraukiYear(year) ? SUMARAUKI_DAYS : 0);
 }
 
-/** Серийный номер дня в лорном календаре. */
+/** Сколько недель в году: 52 или 53. */
+export function weeksInYear(year) {
+    return yearLength(year) / 7;
+}
+
+/** Порядковый номер дня в году, 1 … yearLength(). */
+export function dayOfYear(year, month, day) {
+    if (isAuk(month)) return AUK_AFTER_MONTH * 30 + day;
+    const auk = month > AUK_AFTER_MONTH ? aukDays(year) : 0;
+    return (month - 1) * 30 + day + auk;
+}
+
+/** Номер недели (vika) в году, 1 … weeksInYear(). */
+export function vikaOf(year, month, day) {
+    return Math.ceil(dayOfYear(year, month, day) / 7);
+}
+
+/** Серийный номер дня, сквозной через все годы. */
 export function serialOf(year, month, day) {
-    let doy;
-    if (isAuk(month)) {
-        doy = 7 * 30 + day;
-    } else {
-        doy = (month - 1) * 30 + day + (month > 7 ? aukDays(year) : 0);
-    }
-    return (year - 1) * 364 + leapsBefore(year) + doy - 1;
+    let daysBefore = (year - 1) * COMMON_YEAR_DAYS + weeksInsertedBefore(year) * SUMARAUKI_DAYS;
+    return daysBefore + dayOfYear(year, month, day) - 1;
 }
 
 export function serialToDate(serial) {
-    let y = Math.max(1, Math.floor(serial / 364.25) + 1);
+    let y = Math.max(1, Math.floor(serial / 365.2425) + 1);
     while (serial < serialOf(y, 1, 1)) y--;
     while (serial >= serialOf(y + 1, 1, 1)) y++;
-    const rem = serial - serialOf(y, 1, 1);
+
+    const rem = serial - serialOf(y, 1, 1);          // 0-based день года
+    const beforeAuk = AUK_AFTER_MONTH * 30;
     const auk = aukDays(y);
-    if (rem < 7 * 30) {
+
+    if (rem < beforeAuk) {
         return { year: y, month: Math.floor(rem / 30) + 1, day: (rem % 30) + 1 };
     }
-    if (rem < 7 * 30 + auk) {
-        return { year: y, month: "AUK", day: rem - 7 * 30 + 1 };
+    if (rem < beforeAuk + auk) {
+        return { year: y, month: "AUK", day: rem - beforeAuk + 1 };
     }
-    const rem2 = rem - auk;
-    return { year: y, month: Math.floor(rem2 / 30) + 1, day: (rem2 % 30) + 1 };
+    const rest = rem - auk;
+    return { year: y, month: Math.floor(rest / 30) + 1, day: (rest % 30) + 1 };
 }
 
-/** День недели (0 = воскресенье). 1 Mörsugur года 1 — понедельник. */
+/**
+ * День недели, 0 = понедельник.
+ *
+ * Все годы состоят из целых недель, поэтому достаточно отсчитать от первого
+ * дня года — а он всегда Laugardagr, первый день зимы.
+ */
 export function weekdayOf(year, month, day) {
-    return (serialOf(year, month, day) + 1) % 7;
+    return (dayOfYear(year, month, day) - 1 + YEAR_STARTS_ON) % 7;
 }
 
 /** Прибавляет n дней к дате. */
@@ -266,11 +362,11 @@ const DATE_PATTERNS = [
     },
     {
         re: /(\d{3,4})-(\d{1,2})-(\d{1,2})/g,
-        map: (m) => ({ year: +m[1], month: +m[2], day: +m[3], monthWord: false }),
+        map: (m) => ({ year: +m[1], month: monthFromModernNumber(+m[2]), day: +m[3], monthWord: false }),
     },
     {
         re: /(\d{1,2})[./](\d{1,2})[./](\d{3,4})/g,
-        map: (m) => ({ day: +m[1], month: +m[2], year: +m[3], monthWord: false }),
+        map: (m) => ({ day: +m[1], month: monthFromModernNumber(+m[2]), year: +m[3], monthWord: false }),
     },
 ];
 
@@ -282,10 +378,15 @@ function dateScore(d) {
     return 0;
 }
 
+/** Самая длинная возможная вставка: аукнэтр плюс неделя сумарауки. */
+const MAX_AUK_DAY = AUKNAETR_DAYS + SUMARAUKI_DAYS;
+
 export function isValidDate(d) {
     if (!d) return false;
     if (d.month === "AUK") {
-        if (!d.day || d.day < 1 || d.day > 5) return false;
+        // Верхняя граница — по самой длинной вставке: год может быть ещё неизвестен,
+        // а в год сумарауки вставных дней одиннадцать, а не четыре.
+        if (!d.day || d.day < 1 || d.day > MAX_AUK_DAY) return false;
     } else {
         if (!d.month || d.month < 1 || d.month > 12) return false;
         if (!d.day || d.day < 1 || d.day > 31) return false;
@@ -294,9 +395,17 @@ export function isValidDate(d) {
     return true;
 }
 
-/** Приводит дату к лорному календарю (в месяце ровно 30 дней). */
+/** Приводит дату к лорному календарю: в месяце ровно 30 дней, вставка короче. */
 function finalizeDate(d) {
-    if (d.month !== "AUK" && d.day > 30) d.day = 30;
+    if (d.month === "AUK") {
+        // Год известен — можно поджать до настоящей длины вставки этого года.
+        if (d.year !== null && d.year !== undefined) {
+            const limit = aukDays(d.year);
+            if (d.day > limit) d.day = limit;
+        }
+    } else if (d.day > 30) {
+        d.day = 30;
+    }
     return d;
 }
 
@@ -346,7 +455,7 @@ export function findDateInYorni(text) {
     if (!d) {
         const m = text.match(/(?<!\d)(\d{1,2})[./](\d{1,2})[./](\d{2})(?!\d)/);
         if (m) {
-            const c = finalizeDate({ day: +m[1], month: +m[2], year: 2000 + +m[3] });
+            const c = finalizeDate({ day: +m[1], month: monthFromModernNumber(+m[2]), year: 2000 + +m[3] });
             if (isValidDate(c)) d = c;
         }
     }
@@ -437,14 +546,213 @@ function emptyResult() {
     return {
         year: null, month: null, day: null, hour: null, minute: null,
         weather: null, location: null, userAttire: null,
-        charMood: null, charAttire: null, thought: null,
+        charMood: null, charAttire: null, thought: null, passed: null, body: null,
+        charState: null, userState: null, advice: null,
+        midwife: null, women: null, charms: null, gear: null,
+        faderni: null, childRank: null, childName: null,
+        sex: null, internal: null,
     };
 }
 
-/** true, если в результате нет ни даты, ни времени, ни одного текстового поля. */
+/**
+ * «да» / «нет» / молчание.
+ *
+ * Третье значение — не лень, а часть смысла: `internal: неизвестно` говорит,
+ * что близость была, а куда пролилось семя, сцена не уточнила. Движок тогда
+ * считает по меньшему шансу, а не выдумывает за неё.
+ */
+export function parseYesNo(value) {
+    if (value === null || value === undefined) return null;
+    const text = String(value).toLowerCase().replace(/ё/g, "е").trim();
+    /* Границу слова ищем отрицательным просмотром вперёд, а не \b: в JS \b
+       считает словом только латиницу, и на кириллице просто не срабатывает.
+       Заодно «неизвестно» не принимается за «нет». */
+    if (/^(да|был|была|было|есть|yes|true|1)(?![а-яa-z])/i.test(text)) return true;
+    if (/^(нет|no|false|0)(?![а-яa-z])/i.test(text)) return false;
+    return null;
+}
+
+/*
+ * События тела — закрытый список.
+ *
+ * Модель называет только то, что случилось в сцене; день цикла, срок и прочую
+ * арифметику считает расширение. Список закрыт нарочно: свободную формулировку
+ * пришлось бы разбирать догадками, а ошибка тут сдвигает не строчку в панели,
+ * а весь дальнейший счёт.
+ */
+const BODY_EVENTS = [
+    ["seedWithheld", /семя\s+не\s+пролилось/i],
+    ["seedSpilled", /семя\s+пролилось/i],
+    ["bleedStart", /кровь\s+(?:пришла|началась|пошла)|нача(?:лись|лась)\s+(?:месячные|кровь)/i],
+    ["bleedEnd", /кровь\s+(?:кончилась|прекратилась|ушла)|месячные\s+кончились/i],
+    ["oddBleeding", /кровь\s+не\s+в\s+срок/i],
+    ["quickened", /дитя\s+шевельнулось|шевеление/i],
+    ["labour", /схватки\s+начались/i],
+    ["birth", /родила|дитя\s+родилось/i],
+    ["lost", /выкидыш|дитя\s+не\s+выжило/i],
+    /* Прямое объявление из сцены. Нужно потому, что бросок может промахнуться,
+       а ролевая — уже поехать дальше: «а если я понесу от тебя?» и OOC
+       «пометь, что беременность случилась». Без такого события движок и проза
+       расходятся навсегда, и починить это изнутри игры нечем. */
+    /* Сбои цикла: тидир задерживаются не только от дитяти. */
+    ["hungr", /голодала|голодали/i],
+    ["sott", /хворала|занемогла|слегла/i],
+    ["ferd", /была\s+в\s+дороге|дорога\s+измотала/i],
+    ["ugg", /извелась|истерзалась/i],
+    /* Шевеления — единственное, чем в этом веке узнавали, жив ли ребёнок.
+       Отсюда и тревога, когда их нет второй день. */
+    ["kick", /дитя\s+(?:бьется|бьётся|толкается|шевелится)/i],
+    ["quiet", /дитя\s+(?:затихло|притихло)|дитя\s+не\s+слыхать/i],
+    ["conceived", /понесла|дитя\s+зачалось|зачатие/i],
+    ["realized", /поняла,?\s+что\s+тяжела|поняла,?\s+что\s+беременна/i],
+    ["nursingStart", /дитя\s+у\s+груди/i],
+    ["nursingEnd", /отняли\s+от\s+груди/i],
+    /* Вехи первых двух лет. Возраст и нужды панель считает сама, а вот эти
+       четыре вещи она увидеть не может — они случаются в сцене и больше
+       нигде. Зубок стоит отдельной строкой не для красоты: за первый зуб
+       дитяти полагался таннфе, подарок, и это событие рода, а не медицина. */
+    ["childTooth", /зубок\s+прорезался|первый\s+зуб/i],
+    ["childWalks", /дитя\s+пошло|первые\s+шаги/i],
+    ["childSpeaks", /дитя\s+заговорило|первое\s+слово/i],
+    ["childSick", /дитя\s+занемогло|дитя\s+захворало/i],
+    ["childWell", /дитя\s+поправилось/i],
+    ["childDied", /дитя\s+померло|дитя\s+умерло/i],
+    /*
+     * Тяготы. Названы отдельными словами, а не выведены из вольного описания
+     * состояния: догадка тут стоит не строчки в панели, а ребёнка. Голод,
+     * хворь и дорога уже есть выше — они и сбивают цикл, и давят на утробу.
+     */
+    ["heavy", /подняла\s+тяж[её]лое|таскала\s+тяж[её]лое|надсаживалась\s+над/i],
+    ["strained", /надорвалась|надсадилась/i],
+    ["fell", /упала|оступилась/i],
+    ["beaten", /побили|избили|ударили\s+её/i],
+    /* Единственный способ ответить на угрозу. «Слегла» тут не годится — оно
+       уже занято хворью, и одно слово на два смысла не годится вовсе. */
+    ["rest", /легла\s+пластом|не\s+вста[её]т\s+с\s+постели|лежит\s+пластом/i],
+    ["stillborn", /дитя\s+родилось\s+м[её]ртвым|мертворожд[её]нн/i],
+];
+
+/**
+ * Список опознанных событий тела в том порядке, в каком они стоят в тексте.
+ *
+ * Порядок не косметика: «родила; кровь пришла» и «кровь пришла; родила» —
+ * разные истории, а разбор по порядку правил дал бы одну и ту же. Сортируем
+ * по месту совпадения, то есть по тому, как это случилось в сцене.
+ */
+export function parseBodyEvents(value) {
+    if (!value) return null;
+    const raw = String(value).toLowerCase();
+    /* Регулярки писаны с «ё», в тексте её может не быть — сверяем обе формы. */
+    const flat = raw.replace(/ё/g, "е");
+    const found = [];
+    for (const [id, re] of BODY_EVENTS) {
+        const at = Math.max(raw.search(re), flat.search(re));
+        if (at >= 0) found.push({ id, at });
+    }
+    if (!found.length) return null;
+    return found.sort((a, b) => a.at - b.at).map((e) => e.id);
+}
+
+/**
+ * Сколько времени прошло со сцены — в днях.
+ *
+ * Обычный ход даты не двигает вовсе, а смену суток ловит перелистывание по
+ * эйкте. Но таймскип так не поймать: «прошло два месяца» с точки зрения эйкт
+ * выглядит как обычное утро. Поэтому у скачков есть своё поле, и заполняется
+ * оно только в тот ход, когда скачок случился.
+ *
+ * Модель пишет наблюдение — «2 месяца», — а не вычисленную дату. Считать мы
+ * умеем сами, и считаем одинаково от свайпа к свайпу; модель же на одну и ту
+ * же арифметику каждый раз отвечает по-своему, это уже проверено.
+ */
+/*
+ * Числительные словами. Порядок важен: длинные стемы идут первыми, иначе
+ * «полторы» съест правило для «пол». Границу слова ищем вручную — \b в JS
+ * считает словом только латиницу, и на кириллице просто не срабатывает.
+ */
+const PASSED_WORDS = [
+    ["полторы", 1.5], ["полтора", 1.5],
+    /* «сутки» и «суток» тут не числительные, а единица — они ниже. */
+    ["один", 1], ["одна", 1], ["одну", 1],
+    ["двое", 2], ["два", 2], ["две", 2], ["пара", 2], ["пару", 2], ["парой", 2],
+    ["трое", 3], ["три", 3], ["четверо", 4], ["четыре", 4],
+    ["пять", 5], ["шесть", 6], ["семь", 7], ["восемь", 8], ["девять", 9],
+    ["десять", 10], ["одиннадцать", 11], ["двенадцать", 12],
+];
+
+/** Единица → сколько в ней дней. Длинные проверяем первыми. */
+const PASSED_UNITS = [
+    /* Год берём обычный, 364 дня: год сумарауки на неделю длиннее, но какой
+       именно год пересечёт скачок, здесь ещё неизвестно. Неделя погрешности
+       на скачке в годы роли не играет, а точную дату правят в Tímatal. */
+    [/(?:^|[^а-я])(?:год|года|году|лет)(?:$|[^а-я])/i, COMMON_YEAR_DAYS],
+    [/(?:^|[^а-я])(?:месяц|месяца|месяцев|луна|луны|лун)(?:$|[^а-я])/i, 30],
+    [/недел/i, 7],
+    [/(?:^|[^а-я])(?:день|дня|дней|сутки|суток)(?:$|[^а-я])/i, 1],
+];
+
+export function parsePassed(value) {
+    if (!value) return null;
+    const text = ` ${String(value).toLowerCase().replace(/ё/g, "е").trim()} `;
+
+    /* Слитные «полдня», «полгода» — отдельно: иначе пришлось бы вписывать
+       приставку в каждый стем единицы. */
+    if (/полдня|пол дня/.test(text)) return 0;
+    if (/полгода|пол года/.test(text)) return 180;
+    if (/полмесяца|пол месяца|поллуны/.test(text)) return 15;
+    if (/полнедели|пол недели/.test(text)) return 3;
+
+    let count = null;
+    const digits = text.match(/(\d+(?:[.,]\d+)?)/);
+    if (digits) {
+        count = Number(digits[1].replace(",", "."));
+    } else {
+        for (const [word, n] of PASSED_WORDS) {
+            if (text.includes(word)) { count = n; break; }
+        }
+    }
+    if (count === null) count = 1;
+
+    /* «Три с половиной месяца» — счёт и добавка стоят порознь, и без этой
+       строки половина просто терялась: скачок выходил ровно на три месяца. */
+    if (/ с половиной | и половиной /.test(text)) count += 0.5;
+
+    for (const [re, days] of PASSED_UNITS) {
+        if (re.test(text)) return Math.max(0, Math.round(count * days));
+    }
+
+    /* Единицу не узнали — молчим. Догадка тут дороже пропуска: ошибочный
+       скачок уводит календарь на месяцы, а пропущенный правится в Tímatal. */
+    return null;
+}
+
+/**
+ * true, если в маркере не оказалось вообще ничего полезного.
+ *
+ * Проверять одни лишь поля сцены нельзя: маркер, где стоит только
+ * `body: кровь пришла`, полями сцены пуст — и раньше отбрасывался целиком
+ * вместе с событием. Обрыв генерации и скупой ответ выглядят именно так.
+ */
 export function isEmptyResult(r) {
     if (!r) return true;
-    return !hasDate(r) && !hasTime(r) && !hasDetails(r);
+    return !hasDate(r) && !hasTime(r) && !hasDetails(r) && !hasEvents(r) && !hasTold(r);
+}
+
+/** Есть ли в маркере событие тела, близость или скачок времени. */
+export function hasEvents(r) {
+    if (!r) return false;
+    return !!(r.body?.length) || r.sex !== null || r.internal !== null || r.passed !== null;
+}
+
+/**
+ * Поля, которые модель сообщает один раз, а действуют они дальше:
+ * имя дитяти, признание отцовства, готовность к родам.
+ */
+export const TOLD_FIELDS = ["midwife", "women", "charms", "gear", "faderni", "childRank", "childName"];
+
+/** Есть ли в маркере хоть одно такое поле. */
+export function hasTold(r) {
+    return !!r && TOLD_FIELDS.some((key) => r[key]);
 }
 
 /** Дата распознана (день + месяц — минимум для календаря). */
@@ -460,7 +768,8 @@ export function hasTime(r) {
 /** Есть хотя бы одно текстовое поле сцены. */
 export function hasDetails(r) {
     if (!r) return false;
-    return !!(r.weather || r.location || r.userAttire || r.charMood || r.charAttire || r.thought);
+    return !!(r.weather || r.location || r.userAttire || r.charMood || r.charAttire || r.thought
+        || r.charState || r.userState || r.advice);
 }
 
 const FIELD_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*$/;
@@ -557,6 +866,22 @@ export function parseYorniTag(rawText) {
     result.charMood = clean(fields.mood);
     result.charAttire = clean(fields.char_attire);
     result.thought = clean(fields.thought);
+    result.charState = clean(fields.char_state);
+    result.userState = clean(fields.user_state);
+    result.advice = clean(fields.advice);
+    /* Готовность к родам и правовой слой. Спрашиваются не всегда, а только
+       когда к месту, — поля просто отсутствуют в остальное время. */
+    result.midwife = clean(fields.midwife);
+    result.women = clean(fields.women);
+    result.charms = clean(fields.charms);
+    result.gear = clean(fields.gear);
+    result.faderni = clean(fields.faderni);
+    result.childRank = clean(fields.child_rank);
+    result.childName = clean(fields.child_name);
+    result.passed = parsePassed(clean(fields.passed));
+    result.body = parseBodyEvents(clean(fields.body));
+    result.sex = parseYesNo(clean(fields.sex));
+    result.internal = parseYesNo(clean(fields.internal));
 
     return isEmptyResult(result) ? null : result;
 }

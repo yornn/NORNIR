@@ -16,6 +16,7 @@
  * 11. Auknætr ........... Дополнительные дни (Sumarauki)
  * 12. Settings Panel .... Панель настроек в UI SillyTavern
  * 13. Tímatal ........... Мини-справочник из «волшебной палочки»
+ * 14. Icons ............. Знаки полей из папки icons/ и строки фактов
  */
 
 /* ============================================================
@@ -201,23 +202,28 @@
     color: var(--ncw-accent);
 }
 
-#ncw-collapse {
-    cursor: pointer;
-    font-size: 20px;
-    line-height: 1;
-    padding: 3px 11px;
-    border: 1px solid var(--ncw-border);
-    border-radius: 4px;
-    color: var(--ncw-accent);
+/* Кнопки сворачивания больше нет: блок всегда развёрнут, а место в шапке
+   отдано обстановке сцены — погоде и локации. */
+.ncw-scene {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 4px 14px;
+    font-size: 13px;
+    color: var(--ncw-text-weather);
 }
 
-#ncw-collapse:hover {
-    background: var(--ncw-bg-hover);
-    color: var(--ncw-text-bright);
+.ncw-weather,
+.ncw-loc {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
 }
 
-#norse-calendar-widget.ncw-collapsed #ncw-grid {
-    display: none;
+/* Третья колонка — сводка, а не собеседник: без карточки и рамки. */
+.ncw-plain {
+    padding-top: 2px;
 }
 
 /* ============================================================
@@ -323,6 +329,16 @@
     margin-bottom: 12px;
 }
 
+/* Строка недели: день недели · vika N · полугодие.
+   Стоит над датой и набрана мельче — это «где мы в году», а не сама дата. */
+#ncw-week {
+    text-align: center;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    color: var(--ncw-text-lore);
+    margin: 2px 0 2px;
+}
+
 #ncw-date {
     text-align: center;
     font-size: 19px;
@@ -338,6 +354,7 @@
 }
 
 #norse-calendar-widget #ncw-eykt,
+#norse-calendar-widget #ncw-week,
 #norse-calendar-widget #ncw-date,
 #norse-calendar-widget #ncw-lore {
     font-family: "Norse", Georgia, serif !important;
@@ -393,9 +410,8 @@
 }
 
 .ncw-weather-icon {
-    font-size: 15px;
-    opacity: 0.8;
-    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
 }
 
 #norse-calendar-widget #ncw-weather-text,
@@ -425,9 +441,8 @@
 }
 
 .ncw-loc-icon {
-    font-size: 15px;
-    opacity: 0.8;
-    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
 }
 
 #ncw-location-text {
@@ -532,9 +547,9 @@
 }
 
 .ncw-attire-icon {
-    font-size: 13px;
-    opacity: 0.6;
-    flex-shrink: 0;
+    width: 13px;
+    height: 13px;
+    opacity: 0.65;
 }
 
 .ncw-chips {
@@ -571,9 +586,7 @@
 }
 
 .ncw-thought-icon {
-    font-size: 14px;
     opacity: 0.7;
-    flex-shrink: 0;
 }
 
 #ncw-thought-text {
@@ -843,6 +856,334 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--ncw-accent);
+}
+
+/* Обстановка сцены в шапке: погода и локация одной строкой. */
+.ncw-scene {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 14px;
+    justify-content: flex-end;
+    font-size: 13px;
+    color: var(--ncw-text-weather);
+}
+
+.ncw-weather,
+.ncw-loc {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+}
+
+/* Третья колонка — сводка, а не собеседник: без карточки и рамки. */
+.ncw-plain {
+    padding-top: 2px;
+}
+
+/* --- состояние тела и совет --- */
+
+.ncw-state,
+.ncw-advice {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.ncw-state-icon,
+.ncw-advice-icon {
+    width: 13px;
+    height: 13px;
+}
+
+#ncw-char-state-text,
+#ncw-user-state-text {
+    color: var(--ncw-text);
+}
+
+/* Совет — не факт сцены, а слово со стороны, потому и курсивом. */
+#ncw-advice-text {
+    font-style: italic;
+    color: var(--ncw-text-lore);
+}
+
+/* --- цикл: строка в колонке {{user}} --- */
+
+.ncw-cycle {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ncw-border-soft);
+}
+
+/* Строк в колонке стало больше — дозор и приметы разъехались по фактам, —
+   поэтому интерлиньяж тише прежнего: иначе сводка вырастает вдвое. */
+.ncw-cycle-line {
+    font-size: 15px;
+    line-height: 1.4;
+    letter-spacing: 0.3px;
+    color: var(--ncw-text);
+}
+
+/* Счёт дня — тем же кеглем, но приглушённо: он справочный. */
+#ncw-cycle-text {
+    color: var(--ncw-text-muted);
+}
+
+/* Скрытый слой отладки — моноширинным, он для сверки, а не для чтения. */
+.ncw-cycle-debug {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--ncw-text-dim);
+    opacity: 0.75;
+}
+
+/* Затишье дитяти — единственное, что должно бросаться в глаза. */
+.ncw-alarm {
+    color: var(--ncw-accent) !important;
+    font-style: normal !important;
+}
+
+/* Приметы и гадание — ещё тише: их читают, когда захотят. */
+.ncw-cycle-dim {
+    font-size: 13.5px;
+    font-style: italic;
+    color: var(--ncw-text-dim);
+}
+
+/* Название фазы — тем же шрифтом, что и остальная скандинавская латиница. */
+#ncw-cycle-text .ncw-hint {
+    font-family: "Norse", Georgia, serif;
+    font-size: 16px;
+    letter-spacing: 0.8px;
+    color: var(--ncw-accent);
+}
+
+/* --- женское питьё: плашка отката --- */
+
+.ncw-draught {
+    margin-top: 8px;
+    padding-left: 8px;
+    border-left: 2px solid var(--ncw-border-soft);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ncw-text);
+}
+
+/* Плашка отвара и плашка дитяти не flex — знак отбиваем полем, не gap'ом. */
+.ncw-draught-icon {
+    margin-right: 5px;
+    opacity: 0.85;
+}
+
+/* Название травы — той же скандинавской латиницей, что фазы и имена. */
+.ncw-draught .ncw-hintable {
+    font-family: "Norse", Georgia, serif;
+    font-size: 15px;
+    letter-spacing: 0.6px;
+    color: var(--ncw-accent);
+}
+
+.ncw-draught-text {
+    display: block;
+    font-style: italic;
+    color: var(--ncw-text-lore);
+}
+
+/* Кнопка отвара: тише призыва Фригг — это дело обыденное, не обряд. */
+.nct-picker-herb {
+    border-color: var(--ncw-border-soft);
+}
+
+/* --- дитя: своя плашка под сводкой об утробе ---
+   Отдельно от матери нарочно: она может уже снова носить, а первенцу всё так
+   же нужна грудь. Плашку отбиваем слева чертой, чтобы взгляд не путал две
+   сводки в одной колонке. */
+
+.ncw-children {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ncw-child {
+    padding-left: 8px;
+    border-left: 2px solid var(--ncw-border-soft);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ncw-text);
+}
+
+.ncw-child-icon {
+    margin-right: 5px;
+    opacity: 0.85;
+}
+
+/* Имя дитяти — той же скандинавской латиницей, что и названия фаз. */
+.ncw-child .ncw-hintable {
+    font-family: "Norse", Georgia, serif;
+    font-size: 15px;
+    letter-spacing: 0.6px;
+    color: var(--ncw-accent);
+}
+
+/* Нужда — то, ради чего плашка и заведена: читается с одного взгляда. */
+.ncw-child-need .ncw-fact-value {
+    font-style: italic;
+    color: var(--ncw-text-lore);
+}
+
+/* Веха — новость на три дня, потом уходит. */
+.ncw-child-mark .ncw-fact-value {
+    font-size: 13px;
+    color: var(--ncw-text-dim);
+}
+
+/* Призыв Фригг — кнопка, которую не отменить. Выделяем акцентом, но не
+   красным: это не ошибка и не опасность, это решение автора. */
+.nct-picker-summon {
+    border-color: var(--ncw-accent-border-dim);
+    color: var(--ncw-accent);
+}
+
+.nct-picker-summon:disabled {
+    opacity: 0.45;
+    cursor: default;
+    border-color: var(--ncw-border-soft);
+    color: var(--ncw-text-muted);
+}
+
+/* Оговорка под кнопкой: набрана тише самой кнопки, но не прячется. */
+.nct-picker-warn {
+    margin-top: 4px;
+    font-style: italic;
+    color: var(--ncw-text-muted);
+}
+
+/* Подзаголовок внутри блока: «Носит» отделяет ручную беременность от дня
+   цикла. Полей стало много, и без отбивки они читались одной кашей. */
+.nct-picker-sub {
+    margin-top: 12px;
+    margin-bottom: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ncw-border-soft);
+    font-size: 12.5px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--ncw-text-muted);
+}
+
+/* Подпись перед списком в календарике цикла. */
+.nct-picker-label {
+    font-size: 12.5px;
+    color: var(--ncw-text-muted);
+}
+
+/* --- календарик: выбор даты сцены --- */
+
+.nct-picker {
+    padding: 11px 14px 12px;
+    margin-bottom: 14px;
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 14px;
+    background: var(--ncw-bg-raised);
+    transition: border-color 0.2s ease;
+}
+
+.nct-picker-done {
+    border-color: var(--ncw-accent-border-dim);
+}
+
+.nct-picker-title {
+    margin-bottom: 8px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ncw-text-dim);
+}
+
+.nct-picker-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+}
+
+.norse-timatal .nct-picker-select,
+.norse-timatal .nct-picker-year {
+    padding: 5px 9px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ncw-text);
+    background: var(--ncw-bg);
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 9px;
+}
+
+/* Год — свободный ввод, но поле не должно растягиваться на всю строку. */
+.norse-timatal .nct-picker-year {
+    width: 5.5em;
+}
+
+.norse-timatal .nct-picker-apply {
+    padding: 5px 14px;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--ncw-accent);
+    background: var(--ncw-bg);
+    border: 1px solid var(--ncw-accent-border-dim);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.norse-timatal .nct-picker-apply:hover {
+    background: var(--ncw-bg-raised);
+}
+
+/* Сводка «что сейчас» над формой: то же, что в панели, чтобы править от неё. */
+.nct-picker-now {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ncw-border-soft);
+}
+
+.nct-picker-now-line {
+    font-family: "Norse", Georgia, serif;
+    font-size: 15px;
+    letter-spacing: 0.6px;
+    color: var(--ncw-accent);
+}
+
+.norse-timatal .nct-picker-text {
+    flex: 1 1 8em;
+    min-width: 7em;
+    padding: 5px 9px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ncw-text);
+    background: var(--ncw-bg);
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 9px;
+}
+
+/* Сброс — действие разрушительное, и выглядеть должно иначе. */
+.norse-timatal .nct-picker-clear {
+    color: var(--ncw-text-muted);
+    border-color: var(--ncw-border-soft);
+}
+
+/* Эхо: что получится из выбранного — день недели, вика, полугодие, Луна. */
+.nct-picker-echo {
+    margin-top: 8px;
+    font-family: "Norse", Georgia, serif;
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    color: var(--ncw-text-muted);
+    min-height: 1.2em;
 }
 
 /* --- подсказка про управление --- */
@@ -1143,4 +1484,211 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     .norse-timatal .nct-table td[data-col="norse"] { padding-left: 5px; }
     .norse-timatal .nct-chip { padding: 5px 11px; font-size: 12px; }
     .nct-now { flex-direction: column; gap: 3px; }
+}
+
+/* ============================================================
+ * 14. ICONS (знаки полей)
+ *
+ * Знак — пустой элемент, которому CSS подкладывает файл из icons/ маской,
+ * а не картинкой. Из этого следует всё остальное:
+ *
+ *  - `background-color: currentColor` — знак красится цветом своей строки,
+ *    поэтому все четыре темы работают без отдельных файлов, а `.ncw-alarm`
+ *    красит иконку вместе с текстом, ничего для этого не зная;
+ *  - путь живёт здесь, а не в JS: `url()` считается от этого файла, ровно
+ *    как в @font-face выше. В JS папку расширения так просто не достать;
+ *  - имени нет в списке — покажется `_fallback.svg`, и вёрстка этого
+ *    не заметит. Значит, иконки можно доносить в папку по одной.
+ *
+ * Файлы — квадратные SVG (viewBox 0 0 24 24), одноцветный силуэт.
+ * Цвет внутри файла не важен вовсе: маска берёт только альфу.
+ * ============================================================ */
+
+.ncw-icon {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    vertical-align: -0.12em;
+    opacity: 0.8;
+    background-color: currentColor;
+    --ncw-icon: url("icons/_fallback.svg");
+    -webkit-mask: var(--ncw-icon) center / contain no-repeat;
+    mask: var(--ncw-icon) center / contain no-repeat;
+}
+
+/* --- сцена --- */
+.ncw-icon[data-icon="scene-weather"]   { --ncw-icon: url("icons/scene-weather.svg"); }
+.ncw-icon[data-icon="scene-location"]  { --ncw-icon: url("icons/scene-location.svg"); }
+
+/* --- время и календарь --- */
+.ncw-icon[data-icon="time-eykt"]       { --ncw-icon: url("icons/time-eykt.svg"); }
+.ncw-icon[data-icon="time-sun"]        { --ncw-icon: url("icons/time-sun.svg"); }
+.ncw-icon[data-icon="cal-weekday"]     { --ncw-icon: url("icons/cal-weekday.svg"); }
+.ncw-icon[data-icon="cal-vika"]        { --ncw-icon: url("icons/cal-vika.svg"); }
+.ncw-icon[data-icon="cal-date"]        { --ncw-icon: url("icons/cal-date.svg"); }
+.ncw-icon[data-icon="cal-auknaetr"]    { --ncw-icon: url("icons/cal-auknaetr.svg"); }
+.ncw-icon[data-icon="season-sumar"]    { --ncw-icon: url("icons/season-sumar.svg"); }
+.ncw-icon[data-icon="season-vetr"]     { --ncw-icon: url("icons/season-vetr.svg"); }
+.ncw-icon[data-icon="moon-ny"]         { --ncw-icon: url("icons/moon-ny.svg"); }
+.ncw-icon[data-icon="moon-vaxandi"]    { --ncw-icon: url("icons/moon-vaxandi.svg"); }
+.ncw-icon[data-icon="moon-fullt"]      { --ncw-icon: url("icons/moon-fullt.svg"); }
+.ncw-icon[data-icon="moon-minnandi"]   { --ncw-icon: url("icons/moon-minnandi.svg"); }
+.ncw-icon[data-icon="moon-nid"]        { --ncw-icon: url("icons/moon-nid.svg"); }
+
+/* --- карточки {{char}} / {{user}} --- */
+.ncw-icon[data-icon="char-attire"]     { --ncw-icon: url("icons/char-attire.svg"); }
+.ncw-icon[data-icon="char-state"]      { --ncw-icon: url("icons/char-state.svg"); }
+.ncw-icon[data-icon="char-thought"]    { --ncw-icon: url("icons/char-thought.svg"); }
+
+/* --- фазы тела: один знак на всё состояние героини --- */
+.ncw-icon[data-icon="phase-tidir"]      { --ncw-icon: url("icons/phase-tidir.svg"); }
+.ncw-icon[data-icon="phase-hreinsun"]   { --ncw-icon: url("icons/phase-hreinsun.svg"); }
+.ncw-icon[data-icon="phase-opit"]       { --ncw-icon: url("icons/phase-opit.svg"); }
+.ncw-icon[data-icon="phase-thverrandi"] { --ncw-icon: url("icons/phase-thverrandi.svg"); }
+.ncw-icon[data-icon="phase-late"]       { --ncw-icon: url("icons/phase-late.svg"); }
+.ncw-icon[data-icon="phase-unknown"]    { --ncw-icon: url("icons/phase-unknown.svg"); }
+.ncw-icon[data-icon="phase-dulid"]      { --ncw-icon: url("icons/phase-dulid.svg"); }
+.ncw-icon[data-icon="phase-kviknat"]    { --ncw-icon: url("icons/phase-kviknat.svg"); }
+.ncw-icon[data-icon="phase-falli"]      { --ncw-icon: url("icons/phase-falli.svg"); }
+.ncw-icon[data-icon="phase-hridir"]     { --ncw-icon: url("icons/phase-hridir.svg"); }
+.ncw-icon[data-icon="phase-threat"]     { --ncw-icon: url("icons/phase-threat.svg"); }
+.ncw-icon[data-icon="phase-loss"]       { --ncw-icon: url("icons/phase-loss.svg"); }
+.ncw-icon[data-icon="phase-saeng"]      { --ncw-icon: url("icons/phase-saeng.svg"); }
+.ncw-icon[data-icon="phase-hreinsan"]   { --ncw-icon: url("icons/phase-hreinsan.svg"); }
+.ncw-icon[data-icon="phase-brjost"]     { --ncw-icon: url("icons/phase-brjost.svg"); }
+.ncw-icon[data-icon="phase-vending"]    { --ncw-icon: url("icons/phase-vending.svg"); }
+
+/* --- сводка об утробе --- */
+.ncw-icon[data-icon="body-due"]        { --ncw-icon: url("icons/body-due.svg"); }
+.ncw-icon[data-icon="body-rest"]       { --ncw-icon: url("icons/body-rest.svg"); }
+.ncw-icon[data-icon="body-father"]     { --ncw-icon: url("icons/body-father.svg"); }
+.ncw-icon[data-icon="body-divination"] { --ncw-icon: url("icons/body-divination.svg"); }
+
+/* --- приметы --- */
+.ncw-icon[data-icon="sign-breast"]       { --ncw-icon: url("icons/sign-breast.svg"); }
+.ncw-icon[data-icon="sign-nausea"]       { --ncw-icon: url("icons/sign-nausea.svg"); }
+.ncw-icon[data-icon="sign-false-hridir"] { --ncw-icon: url("icons/sign-false-hridir.svg"); }
+.ncw-icon[data-icon="sign-kicks-night"]  { --ncw-icon: url("icons/sign-kicks-night.svg"); }
+.ncw-icon[data-icon="sign-blood"]        { --ncw-icon: url("icons/sign-blood.svg"); }
+.ncw-icon[data-icon="sign-lettari"]      { --ncw-icon: url("icons/sign-lettari.svg"); }
+.ncw-icon[data-icon="sign-strain"]       { --ncw-icon: url("icons/sign-strain.svg"); }
+.ncw-icon[data-icon="sign-odd-blood"]    { --ncw-icon: url("icons/sign-odd-blood.svg"); }
+.ncw-icon[data-icon="sign-weather-toll"] { --ncw-icon: url("icons/sign-weather-toll.svg"); }
+
+/* --- дозор --- */
+.ncw-icon[data-icon="watch-kicks"]     { --ncw-icon: url("icons/watch-kicks.svg"); }
+.ncw-icon[data-icon="watch-midwife"]   { --ncw-icon: url("icons/watch-midwife.svg"); }
+.ncw-icon[data-icon="watch-women"]     { --ncw-icon: url("icons/watch-women.svg"); }
+.ncw-icon[data-icon="watch-charms"]    { --ncw-icon: url("icons/watch-charms.svg"); }
+.ncw-icon[data-icon="watch-gear"]      { --ncw-icon: url("icons/watch-gear.svg"); }
+.ncw-icon[data-icon="watch-faderni"]   { --ncw-icon: url("icons/watch-faderni.svg"); }
+.ncw-icon[data-icon="watch-rank"]      { --ncw-icon: url("icons/watch-rank.svg"); }
+.ncw-icon[data-icon="watch-name"]      { --ncw-icon: url("icons/watch-name.svg"); }
+
+/* --- отвар, дети, совет --- */
+.ncw-icon[data-icon="draught"]         { --ncw-icon: url("icons/draught.svg"); }
+.ncw-icon[data-icon="child"]           { --ncw-icon: url("icons/child.svg"); }
+.ncw-icon[data-icon="child-need"]      { --ncw-icon: url("icons/child-need.svg"); }
+.ncw-icon[data-icon="child-mark"]      { --ncw-icon: url("icons/child-mark.svg"); }
+.ncw-icon[data-icon="advice"]          { --ncw-icon: url("icons/advice.svg"); }
+
+/* --- строка факта: знак, подпись, значение ---
+   Заведена ради дозора и примет: раньше это были два текстовых узла, куда
+   через « · » сваливалось до одиннадцати разнородных фактов. */
+
+.ncw-fact {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+
+.ncw-fact-label {
+    flex-shrink: 0;
+    color: var(--ncw-text-dim);
+}
+
+.ncw-fact-value {
+    min-width: 0;
+    color: var(--ncw-text);
+}
+
+/* Строки-свалки стали столбцами фактов.
+
+   Раскладывать дозор в две колонки пробовали — не стоит того: «Наготове:
+   вода греется, верёвка с балки» в узком столбце переносится втрое, и вся
+   выгода съедается. В один столбец почти каждый факт умещается в строку. */
+#ncw-cycle-extra,
+#ncw-cycle-guess,
+#ncw-cycle-signs,
+#ncw-cycle-watch {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Приметы остаются присказкой и держат курсив от .ncw-cycle-dim; дозор
+   и гадание — нет: там теперь факты, а не лирика. */
+#ncw-cycle-watch .ncw-fact-value,
+#ncw-cycle-guess .ncw-fact-value {
+    font-style: normal;
+}
+
+/* Тревога красит строку целиком — и значение, и знак вместе с ним. */
+.ncw-fact.ncw-alarm .ncw-fact-value {
+    color: var(--ncw-accent);
+}
+
+.ncw-fact.ncw-alarm .ncw-icon {
+    opacity: 1;
+}
+
+/* --- знаки в левой колонке ---
+   Кегль там разный (эйкта 24px, дата 19px, луна 16px), поэтому знак меряем
+   в em: он растёт вместе со строкой, в которой стоит. Колонка набрана
+   по центру, и знаки нарочно оставлены строчными — flex сломал бы центровку. */
+
+#ncw-eykt .ncw-icon,
+#ncw-sun .ncw-icon,
+#ncw-week .ncw-icon,
+#ncw-date .ncw-icon,
+#ncw-lore .ncw-icon,
+.ncw-auk-title .ncw-icon {
+    width: 0.85em;
+    height: 0.85em;
+    margin-right: 5px;
+}
+
+/* В строке недели три разных факта подряд, и разводит их теперь не серая
+   точка, а отступ перед знаком. */
+#ncw-week .ncw-icon {
+    margin-left: 9px;
+}
+
+#ncw-week .ncw-icon:first-child {
+    margin-left: 0;
+}
+
+/* Солнце: восемь эйкт — восемь румбов ровно по кругу. Файл один, стрелкой
+   на север, остальное докручивается здесь. */
+#ncw-sun .ncw-icon[data-dir] {
+    transition: transform 0.3s ease;
+}
+#ncw-sun .ncw-icon[data-dir="0"] { transform: rotate(0deg); }
+#ncw-sun .ncw-icon[data-dir="1"] { transform: rotate(45deg); }
+#ncw-sun .ncw-icon[data-dir="2"] { transform: rotate(90deg); }
+#ncw-sun .ncw-icon[data-dir="3"] { transform: rotate(135deg); }
+#ncw-sun .ncw-icon[data-dir="4"] { transform: rotate(180deg); }
+#ncw-sun .ncw-icon[data-dir="5"] { transform: rotate(225deg); }
+#ncw-sun .ncw-icon[data-dir="6"] { transform: rotate(270deg); }
+#ncw-sun .ncw-icon[data-dir="7"] { transform: rotate(315deg); }
+
+/* Знак фазы тела — крупнее прочих: он один отвечает за всю колонку. */
+#ncw-cycle-text .ncw-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    opacity: 0.9;
 }

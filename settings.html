@@ -7,6 +7,8 @@
   Содержит:
     - Show widget: показывать/скрывать календарный виджет
     - Inject tag prompt: инжектить инструкцию <yorni> в промпт
+    - Tell the model the week and moon phase: добавлять в инжект то, что
+      посчитала панель, — день недели, номер недели, полугодие, фазу Луны
     - Theme: откидное меню выбора темы оформления виджета
     - Keep markers visible: не вырезать маркер из сообщений (отладка)
     - Clean markers: разобрать и вырезать маркеры из всей истории чата
@@ -28,6 +30,14 @@
                     <input id="nc_inject" type="checkbox" />
                     <span data-i18n="Inject tag prompt (infoblock mode)">Inject tag prompt (infoblock mode)</span>
                 </label>
+                <label class="checkbox_label" for="nc_lore_hints">
+                    <input id="nc_lore_hints" type="checkbox" />
+                    <span data-i18n="Tell the model the week and moon phase">Tell the model the week and moon phase</span>
+                </label>
+                <label class="checkbox_label" for="nc_body">
+                    <input id="nc_body" type="checkbox" />
+                    <span data-i18n="Track the woman's cycle">Track the woman's cycle</span>
+                </label>
                 <label class="nc-theme-label" for="nc_theme">
                     <span data-i18n="Theme">Theme</span>
                     <select id="nc_theme" class="text_pole">
@@ -36,6 +46,14 @@
                         <option value="midnight" data-i18n="Midnight">Midnight</option>
                         <option value="ember" data-i18n="Ember">Ember</option>
                     </select>
+                </label>
+                <label class="checkbox_label" for="nc_herb_death">
+                    <input id="nc_herb_death" type="checkbox" />
+                    <span data-i18n="Women's draught can kill">Women's draught can kill</span>
+                </label>
+                <label class="checkbox_label" for="nc_body_debug">
+                    <input id="nc_body_debug" type="checkbox" />
+                    <span data-i18n="Show the hidden layer (debug)">Show the hidden layer (debug)</span>
                 </label>
                 <label class="checkbox_label" for="nc_debug_markers">
                     <input id="nc_debug_markers" type="checkbox" />
