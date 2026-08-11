@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- пелёнка-свёрток -->
+  <ellipse cx="24" cy="26" rx="14" ry="15" fill="#f0e4c8" stroke="#33261c" stroke-width="2"/>
+  <!-- личико -->
+  <circle cx="24" cy="17" r="7" fill="#e8b48a" stroke="#33261c" stroke-width="1.7"/>
+  <path d="M20.5 15.5c.8-.8 1.8-1 2.8-.6M24.7 14.9c1-.4 2-.2 2.8.6" stroke="#a06a42" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M21 18c.6.5 1.4.5 2 0M25 18c.6.5 1.4.5 2 0" fill="none" stroke="#33261c" stroke-width="1.1" stroke-linecap="round"/>
+  <path d="M22.8 20.6c.8.5 1.6.5 2.4 0" fill="none" stroke="#8f2f24" stroke-width="1.1" stroke-linecap="round"/>
+  <!-- чубчик -->
+  <path d="M24 10.5c.8-1 2-1.2 2.8-.6-.4 1-1.4 1.6-2.8.6z" fill="#8a5a33" stroke="#33261c" stroke-width="0.9"/>
+  <!-- крест-накрест пелёнки -->
+  <path d="M12 24l24 10M36 24L12 34" stroke="#d9c9a3" stroke-width="1.6"/>
+  <path d="M12 24l24 10" stroke="#a86f3e" stroke-width="1" stroke-dasharray="2 2"/>
+  <!-- завязка -->
+  <path d="M21 32.5c1-1.2 2-1.2 3 0 1 1.2 2 1.2 3 0" fill="none" stroke="#8f2f24" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="24" cy="33" r="1.6" fill="#8f2f24" stroke="#33261c" stroke-width="1"/>
+  <!-- оберег-бусина на пелёнке -->
+  <circle cx="24" cy="37.5" r="2" fill="#e0a832" stroke="#33261c" stroke-width="1.2"/>
+  <path d="M24 36.2v2.6M22.9 36.9l1.1.8 1.1-.8" stroke="#5d4028" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+  <!-- вышитая кайма -->
+  <path d="M13.5 30c2 3 5 5.5 8.5 6.5M34.5 30c-2 3-5 5.5-8.5 6.5" fill="none" stroke="#7d94a8" stroke-width="1.4" stroke-dasharray="2 1.6"/>
+</svg>

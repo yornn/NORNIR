@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- носит, но не знает: круг утробы под покрывалом-вопросом -->
+  <circle cx="24" cy="25" r="18" fill="#f6e7bd" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="25" r="14.5" fill="none" stroke="#e0a832" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- спящее дитя -->
+  <path d="M29 22c-2-2-5.5-2.5-8-1-2.2 1.3-3.4 3.7-3 6 .4 2.2 1.9 4 4.2 4.6 2.7.7 5.7-.3 6.8-2.5 1-1.9.8-5 0-7.1z" fill="#c98d5f" stroke="#33261c" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="27.5" cy="21.5" r="2.7" fill="#c98d5f" stroke="#33261c" stroke-width="1.4"/>
+  <path d="M26.3 21.2c.5.4 1.1.4 1.6 0" fill="none" stroke="#33261c" stroke-width="0.9" stroke-linecap="round"/>
+  <!-- покрывало тайны сверху -->
+  <path d="M6 14c6-4 12-5.5 18-5.5S36 10 42 14c-2 1-4 1.5-6 1.5-3-2-7-3-12-3s-9 1-12 3c-2 0-4-.5-6-1.5z" fill="#5d4a7a" stroke="#33261c" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M12 13.2c1.5-.6 3-1 4.6-1.2" stroke="#8d7bab" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+  <!-- вопрос на покрывале -->
+  <path d="M24 8.8c1.2 0 2 .7 2 1.6 0 1.2-1.3 1.5-2 2.4v.8" fill="none" stroke="#f2cd72" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="24" cy="15" r="0.85" fill="#f2cd72"/>
+  <!-- дымка сокрытого -->
+  <path d="M11 33c2-1.2 4-1.5 6-1M31 33.5c1.8-1 3.6-1.2 5.4-.6" fill="none" stroke="#9aa5b1" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

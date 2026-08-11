@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- утрата: опустевшая чаша и увядший лист -->
+  <circle cx="24" cy="24" r="19" fill="#ece8dd" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#9aa5b1" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- пустая чаша, наклонённая -->
+  <path d="M14 20h20c0 6.5-4.5 11-10 11s-10-4.5-10-11z" fill="#d9c9a3" stroke="#33261c" stroke-width="1.8" stroke-linejoin="round"/>
+  <ellipse cx="24" cy="20" rx="10" ry="2.4" fill="#c4b28c" stroke="#33261c" stroke-width="1.6"/>
+  <!-- пустота внутри -->
+  <ellipse cx="24" cy="20" rx="7" ry="1.4" fill="#ece8dd"/>
+  <path d="M19 26c.6 1.6 1.6 2.8 3 3.6" fill="none" stroke="#b8a67e" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- одна тёмная слеза -->
+  <path d="M24 33.5c0 0-1.9 2.5-1.9 3.7a1.9 1.9 0 0 0 3.8 0c0-1.2-1.9-3.7-1.9-3.7z" fill="#5d6785" stroke="#33261c" stroke-width="1.1"/>
+  <!-- увядший лист -->
+  <path d="M35 30c-3 .5-4.8 2.4-5 5.4 2.8-.4 4.6-2.2 5-5.4z" fill="#a98a63" stroke="#33261c" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M34.5 31l-3.5 3.5" stroke="#7a6248" stroke-width="1" stroke-linecap="round"/>
+  <path d="M13 34c-2.2.3-3.6 1.8-3.8 4 2.2-.3 3.5-1.7 3.8-4z" fill="#a98a63" stroke="#33261c" stroke-width="1.2" stroke-linejoin="round"/>
+  <!-- погасшая искра -->
+  <path d="M24 8.5v3M21.5 10l2.5 2M26.5 10l-2.5 2" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

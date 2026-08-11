@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- табличка вставных дней -->
+  <rect x="7" y="10" width="34" height="30" rx="3" fill="#f0e4c8" stroke="#33261c" stroke-width="2"/>
+  <rect x="7" y="10" width="34" height="6" rx="3" fill="#a86f3e" stroke="#33261c" stroke-width="1.6"/>
+  <circle cx="12" cy="13" r="1.1" fill="#33261c"/>
+  <circle cx="36" cy="13" r="1.1" fill="#33261c"/>
+  <!-- руна Дагаз в центре -->
+  <g fill="none" stroke="#33261c" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M19 20.5v13M29 20.5v13M19 20.5l10 13M29 20.5l-10 13"/>
+  </g>
+  <!-- четыре вставные зарубки по углам руны -->
+  <g stroke="#8f2f24" stroke-width="2.2" stroke-linecap="round">
+    <path d="M13 21.5l2.4 2.4M35 21.5l-2.4 2.4M13 32.5l2.4-2.4M35 32.5l-2.4-2.4"/>
+  </g>
+  <!-- звёздочки-знаки вставки -->
+  <g fill="#e0a832" stroke="#33261c" stroke-width="1.1" stroke-linejoin="round">
+    <path d="M13.5 36.5l.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9z"/>
+    <path d="M34.5 36.5l.9 1.8 1.8.9-1.8.9-.9 1.8-.9-1.8-1.8-.9 1.8-.9z"/>
+    <path d="M24 35.5l.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8z"/>
+  </g>
+</svg>

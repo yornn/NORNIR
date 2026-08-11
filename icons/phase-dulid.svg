@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Dulið: сокрытое — спелёнатый комок под тканью, лишь контур -->
+  <circle cx="24" cy="24" r="19" fill="#e9e2f2" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#8d7bab" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- холмик под тканью -->
+  <path d="M11 33c0-6 3-10 7-12 3-1.6 9-1.6 12 0 4 2 7 6 7 12z" fill="#8d7bab" stroke="#33261c" stroke-width="1.8" stroke-linejoin="round"/>
+  <!-- складки ткани -->
+  <path d="M16 33c0-4 1-7.5 3-10M24 33V20M32 33c0-4-1-7.5-3-10" fill="none" stroke="#6e5a94" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- завязанный узел сверху -->
+  <path d="M21.5 19c.8-1.8 1.7-2.6 2.5-2.6s1.7.8 2.5 2.6c-1.5.8-3.5.8-5 0z" fill="#5d4a7a" stroke="#33261c" stroke-width="1.4" stroke-linejoin="round"/>
+  <!-- кайма ткани -->
+  <path d="M11 33h26" stroke="#33261c" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13.5 35.5h21" stroke="#8d7bab" stroke-width="1.3" stroke-dasharray="1.8 1.8" stroke-linecap="round"/>
+  <!-- глаз, который не видит (сокрытое) -->
+  <path d="M18 9.5c2-1.5 4-2 6-2s4 .5 6 2c-2 1.5-4 2-6 2s-4-.5-6-2z" fill="#f2ecd8" stroke="#33261c" stroke-width="1.4" stroke-linejoin="round"/>
+  <path d="M17 8L31 12.5" stroke="#33261c" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- искра тайны -->
+  <path d="M38 12l.6 1.2 1.2.6-1.2.6-.6 1.2-.6-1.2-1.2-.6 1.2-.6z" fill="#8d7bab"/>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- жердь счёта недель -->
+  <path d="M17 4h14l-1.5 3h-11z" fill="#a86f3e" stroke="#33261c" stroke-width="1.6" stroke-linejoin="round"/>
+  <rect x="16" y="7" width="16" height="34" rx="2" fill="#c9a06b" stroke="#33261c" stroke-width="2"/>
+  <path d="M32 7l2 3.5V41l-2 1z" fill="#a9804a"/>
+  <!-- деления недель -->
+  <g stroke="#8a5a33" stroke-width="1.4">
+    <path d="M16 14h16M16 21h16M16 28h16M16 35h16"/>
+  </g>
+  <!-- зарубки: красные отмеченные, тёмные простые -->
+  <g stroke="#8f2f24" stroke-width="2.6" stroke-linecap="round">
+    <path d="M20 10.5l8 0M20 17.5h8M20 24.5h8"/>
+  </g>
+  <g stroke="#5d4028" stroke-width="2" stroke-linecap="round">
+    <path d="M20 31.5h6M20 38.5h6"/>
+  </g>
+  <!-- кольцо-отметка текущей недели -->
+  <ellipse cx="24" cy="17.5" rx="10" ry="4.6" fill="none" stroke="#e0a832" stroke-width="2"/>
+  <!-- верёвочка -->
+  <path d="M24 41v3.5M21.5 43l2.5 2 2.5-2" fill="none" stroke="#6e4a26" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Liggja á sæng: лежание после родов — ложе с мягким изголовьем -->
+  <circle cx="24" cy="24" r="19" fill="#eef1f6" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#7d94a8" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- кровать -->
+  <path d="M9 19v13M39 19v13" stroke="#6e4a26" stroke-width="3" stroke-linecap="round"/>
+  <path d="M9 26h30v6H9z" fill="#a86f3e" stroke="#33261c" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M11 28.5h26" stroke="#8a5a33" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- подушка -->
+  <path d="M11 22c0-2 1.5-3.5 3.5-3.5h4c2 0 3.5 1.5 3.5 3.5v3H11z" fill="#f2ecd8" stroke="#33261c" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M13.5 21c1-.8 2.2-1 3.5-.8" fill="none" stroke="#d9c9a3" stroke-width="1" stroke-linecap="round"/>
+  <!-- одеяло с узором -->
+  <path d="M22 22h12c2.5 0 4 1.5 4 3.5V26H22z" fill="#7d94a8" stroke="#33261c" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M25 22v4M29 22v4M33 22.5V26" stroke="#5d7b93" stroke-width="1.1"/>
+  <path d="M24 24l1.2-1.2L26.5 24l1.2-1.2L29 24" fill="none" stroke="#e0a832" stroke-width="1.2" stroke-linejoin="round"/>
+  <!-- луна покоя -->
+  <path d="M36.5 10.5a3.6 3.6 0 1 0 3 5.7 4.4 4.4 0 0 1-3-5.7z" fill="#d7dceb" stroke="#33261c" stroke-width="1.3" stroke-linejoin="round"/>
+  <!-- знак сна -->
+  <path d="M13 12h4l-4 4h4" fill="none" stroke="#7d94a8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

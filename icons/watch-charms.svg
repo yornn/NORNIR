@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- шнур с оберегами -->
+  <path d="M6 10c6 4 12 6 18 6s12-2 18-6" fill="none" stroke="#33261c" stroke-width="4" stroke-linecap="round"/>
+  <path d="M6 10c6 4 12 6 18 6s12-2 18-6" fill="none" stroke="#c9a06b" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- молот Тора -->
+  <g stroke-linejoin="round">
+    <rect x="18.5" y="17" width="11" height="6.5" rx="1" fill="#93a5b8" stroke="#33261c" stroke-width="1.6"/>
+    <rect x="22.5" y="23.5" width="3" height="11" rx="1" fill="#8a5a33" stroke="#33261c" stroke-width="1.5"/>
+    <path d="M21.5 20.2h5M22 26.5l1 1 1-1M22 29.5l1 1 1-1" stroke="#33261c" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- зуб-оберег слева -->
+  <path d="M10.5 17.5c-1 4 .5 8 3 10 .5-3.5 2-6.5 4-8.5-2.5-.8-5-1-7-1.5z" fill="#f6e7bd" stroke="#33261c" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M12 20.5c.8 1.8 1.8 3 3.2 4" fill="none" stroke="#d9c9a3" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- руническая бусина справа -->
+  <circle cx="36.5" cy="21" r="4.6" fill="#8f2f24" stroke="#33261c" stroke-width="1.6"/>
+  <path d="M36.5 18.2v5.6M34 19.8l2.5 1.8 2.5-1.8" fill="none" stroke="#f6e7bd" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- узелки -->
+  <circle cx="24" cy="16" r="1.4" fill="#6e4a26" stroke="#33261c" stroke-width="1"/>
+  <circle cx="12.5" cy="14.5" r="1.2" fill="#6e4a26" stroke="#33261c" stroke-width="1"/>
+  <circle cx="35.5" cy="14.5" r="1.2" fill="#6e4a26" stroke="#33261c" stroke-width="1"/>
+  <!-- искры защиты -->
+  <g fill="#e0a832">
+    <path d="M8 32l.7 1.4 1.4.7-1.4.7L8 36.2l-.7-1.4-1.4-.7 1.4-.7z"/>
+    <path d="M40 32l.7 1.4 1.4.7-1.4.7-.7 1.4-.7-1.4-1.4-.7 1.4-.7z"/>
+    <path d="M24 40l.7 1.4 1.4.7-1.4.7-.7 1.4-.7-1.4-1.4-.7 1.4-.7z"/>
+  </g>
+</svg>

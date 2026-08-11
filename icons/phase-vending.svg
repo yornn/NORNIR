@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Vending: тидир вот-вот вернутся — круговорот-спираль -->
+  <circle cx="24" cy="24" r="19" fill="#f6e7bd" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#b03a2a" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- круговая стрела-спираль возврата -->
+  <path d="M24 11a13 13 0 1 1-12.4 9.2" fill="none" stroke="#33261c" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M24 11a13 13 0 1 1-12.4 9.2" fill="none" stroke="#b03a2a" stroke-width="2.8" stroke-linecap="round"/>
+  <!-- наконечник стрелы -->
+  <path d="M8.5 16.5l2.8 5.2 3.2-4.6z" fill="#b03a2a" stroke="#33261c" stroke-width="1.3" stroke-linejoin="round"/>
+  <!-- зарубки цикла на дуге -->
+  <g stroke="#f6e7bd" stroke-width="1.4" stroke-linecap="round">
+    <path d="M35.5 14.5l-1.8 1.8M38.5 23h-2.6M35 32.5l-1.8-1.8M24 37.5v-2.6"/>
+  </g>
+  <!-- капля в центре круга -->
+  <path d="M24 19c0 0-3.2 4.2-3.2 6.2a3.2 3.2 0 0 0 6.4 0c0-2-3.2-6.2-3.2-6.2z" fill="#8f2f24" stroke="#33261c" stroke-width="1.4"/>
+  <path d="M22.8 24.5c.3.9 1 1.5 1.9 1.7" fill="none" stroke="#d96a4a" stroke-width="1" stroke-linecap="round"/>
+  <!-- маленькие знаки цикла -->
+  <path d="M37 8l.6 1.2 1.2.6-1.2.6-.6 1.2-.6-1.2-1.2-.6 1.2-.6z" fill="#e0a832"/>
+  <path d="M11 37l.6 1.2 1.2.6-1.2.6-.6 1.2-.6-1.2-1.2-.6 1.2-.6z" fill="#e0a832"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- Hríðir: схватки — волны, бьющие в чашу -->
+  <circle cx="24" cy="24" r="19" fill="#fdeeda" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#b03a2a" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- чаша утробы, сжатая волнами -->
+  <path d="M15 16h18c0 7-3 12-9 12s-9-5-9-12z" fill="#e8b48a" stroke="#33261c" stroke-width="1.8" stroke-linejoin="round"/>
+  <ellipse cx="24" cy="16" rx="9" ry="2.2" fill="#d9a276" stroke="#33261c" stroke-width="1.5"/>
+  <!-- складки сжатия -->
+  <path d="M19 20c0 2.5.8 4.5 2 6M29 20c0 2.5-.8 4.5-2 6" fill="none" stroke="#c98d5f" stroke-width="1.3" stroke-linecap="round"/>
+  <!-- волны-спазмы по бокам -->
+  <g fill="none" stroke="#b03a2a" stroke-width="2" stroke-linecap="round">
+    <path d="M8 20c1.5-2 3.5-2 5 0"/>
+    <path d="M7 26c1.8-2.4 4.2-2.4 6 0"/>
+    <path d="M35 20c1.5-2 3.5-2 5 0"/>
+    <path d="M35 26c1.8-2.4 4.2-2.4 6 0"/>
+  </g>
+  <!-- молния-спазм -->
+  <path d="M26.5 20l-3 4h2.4l-1.8 4.5 4.8-5.5h-2.6l2-3z" fill="#e8b84b" stroke="#33261c" stroke-width="1.1" stroke-linejoin="round"/>
+  <!-- капли -->
+  <path d="M24 31.5c0 0-1.8 2.4-1.8 3.6a1.8 1.8 0 0 0 3.6 0c0-1.2-1.8-3.6-1.8-3.6z" fill="#7cb3d4" stroke="#33261c" stroke-width="1.1"/>
+  <!-- воды отошли: ручейки -->
+  <path d="M14 37c3-1 7-1.4 10-1.4s7 .4 10 1.4M17 40.5c2-.8 4.7-1.1 7-1.1s5 .3 7 1.1" fill="none" stroke="#7cb3d4" stroke-width="1.7" stroke-linecap="round"/>
+</svg>

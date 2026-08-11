@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- мутит по утрам, не терпит запахов: рыба и дым перечёркнуты -->
+  <circle cx="24" cy="24" r="19" fill="#eef1f6" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#7d94a8" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- рыба -->
+  <path d="M11 20c2.5-2.5 6-3.5 9-3l4 1.5-2.5 2.5L24 23.5l-4 1.5c-3 .5-6.5-.5-9-3l-2-2z" fill="#7cb3d4" stroke="#33261c" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="13.5" cy="19" r="0.9" fill="#33261c"/>
+  <path d="M17 19.5c1.5-.5 3-.5 4.5 0" fill="none" stroke="#a8d4ea" stroke-width="1" stroke-linecap="round"/>
+  <!-- дымок над рыбой -->
+  <path d="M15 13.5c1.2-1.2 1.2-2.4 0-3.6M19.5 14.5c1.2-1.2 1.2-2.4 0-3.6" fill="none" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- перечёркнуто: диагональная черта отвращения -->
+  <path d="M10 12l28 20" stroke="#8f2f24" stroke-width="2.6" stroke-linecap="round"/>
+  <!-- зелёная волна тошноты -->
+  <path d="M12 33c2-2 4-2 6 0s4 2 6 0 4-2 6 0 4 2 6 0" fill="none" stroke="#5c7a3f" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M15 37.5c1.8-1.6 3.6-1.6 5.4 0s3.6 1.6 5.4 0 3.6-1.6 5.4 0" fill="none" stroke="#5c7a3f" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- кружение перед глазами -->
+  <path d="M35 14c1.5.5 2.5 1.7 2.7 3.2M33 12.5c2.3.6 3.9 2.4 4.3 4.8" fill="none" stroke="#5c7a3f" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

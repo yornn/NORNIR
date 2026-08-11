@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- фигура-силуэт на щитовом медальоне -->
+  <circle cx="24" cy="24" r="19" fill="#f0e4c8" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#e0a832" stroke-width="1.3" stroke-dasharray="2.4 2"/>
+  <!-- человечек с распахнутыми руками -->
+  <circle cx="24" cy="13.5" r="3.6" fill="#c98d5f" stroke="#33261c" stroke-width="1.6"/>
+  <path d="M24 17.5c-4.5 0-8 2.2-8 5.5V31c0 1 .8 1.8 1.8 1.8H30.2c1 0 1.8-.8 1.8-1.8v-8c0-3.3-3.5-5.5-8-5.5z" fill="#7d94a8" stroke="#33261c" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M16.5 22.5L10 26M31.5 22.5L38 26" stroke="#33261c" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M16.5 22.5L10 26M31.5 22.5L38 26" stroke="#c98d5f" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="0"/>
+  <path d="M10 26l-.8 1M38 26l.8 1" stroke="#33261c" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- сердце/искра состояния -->
+  <path d="M24 24.5c-.9-1.4-2.6-1.9-3.7-1-1 .9-1 2.4 0 3.6l3.7 3.4 3.7-3.4c1-1.2 1-2.7 0-3.6-1.1-.9-2.8-.4-3.7 1z" fill="#b03a2a" stroke="#33261c" stroke-width="1.2"/>
+  <!-- ноги-подол -->
+  <path d="M19 33l-1 4.5M24 33.5V38M29 33l1 4.5" stroke="#33261c" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

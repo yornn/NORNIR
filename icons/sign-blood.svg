@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- кровь скудная, лицо бело как творог -->
+  <circle cx="24" cy="24" r="19" fill="#f8f4ea" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#c9c4ae" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- бледное лицо -->
+  <circle cx="24" cy="19" r="8.5" fill="#fdf6e0" stroke="#33261c" stroke-width="1.7"/>
+  <!-- белёсые щёки-творог -->
+  <circle cx="18.5" cy="20.5" r="2" fill="#f4ead0"/>
+  <circle cx="29.5" cy="20.5" r="2" fill="#f4ead0"/>
+  <!-- усталые глаза -->
+  <path d="M20 17.5c.7.5 1.5.5 2.2 0M25.8 17.5c.7.5 1.5.5 2.2 0" fill="none" stroke="#33261c" stroke-width="1.1" stroke-linecap="round"/>
+  <path d="M19.5 15.8c.9-.4 1.8-.4 2.7 0M25.8 15.8c.9-.4 1.8-.4 2.7 0" fill="none" stroke="#9aa5b1" stroke-width="1" stroke-linecap="round"/>
+  <!-- бледные губы -->
+  <path d="M22 23.5c1.3.6 2.7.6 4 0" fill="none" stroke="#c9a08e" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- одна скудная капля крови -->
+  <path d="M24 31c0 0-2.2 2.9-2.2 4.3a2.2 2.2 0 0 0 4.4 0c0-1.4-2.2-4.3-2.2-4.3z" fill="#b03a2a" stroke="#33261c" stroke-width="1.3"/>
+  <path d="M23 34.5c.3.7.9 1.2 1.6 1.3" fill="none" stroke="#d96a4a" stroke-width="0.9" stroke-linecap="round"/>
+  <!-- мелкие точки-недомогание -->
+  <circle cx="13" cy="33" r="0.9" fill="#c9c4ae"/>
+  <circle cx="16" cy="36" r="0.7" fill="#c9c4ae"/>
+  <circle cx="35" cy="33" r="0.9" fill="#c9c4ae"/>
+  <circle cx="32" cy="36" r="0.7" fill="#c9c4ae"/>
+  <!-- знак малости -->
+  <path d="M36 12l2 2M38 12l-2 2" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M10 13l2 2M12 13l-2 2" stroke="#9aa5b1" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

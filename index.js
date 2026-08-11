@@ -108,6 +108,9 @@ const defaultSettings = {
     enabled: true,
     inject: true,
     theme: "default",
+    /* Какой лист разворота открыт. Нить Фрейи первой не по алфавиту:
+       ради неё расширение и писалось. */
+    activeTab: "freyja",
     timatalClosedSections: DEFAULT_CLOSED_SECTIONS,
     timatalVisibleColumns: DEFAULT_VISIBLE_COLUMNS,
     loreHints: false,
@@ -1263,28 +1266,63 @@ function icon(name, extraClass) {
  * обереги, отцовство и шевеления дитяти в одной серой строке. Читать такое
  * с одного взгляда, ради чего панель и висит, было нельзя.
  */
-function factRow(iconName, label, value) {
+function factRow(iconName, label, value, hint) {
     const row = $("<div>", { "class": "ncw-fact" }).append(icon(iconName));
     if (label) row.append($("<span>", { "class": "ncw-fact-label", text: `${label}:` }));
-    row.append($("<span>", { "class": "ncw-fact-value", text: value }));
+    row.append(hint
+        ? hintSpan(`fact-${label ?? iconName}`, value, hint).addClass("ncw-fact-value")
+        : $("<span>", { "class": "ncw-fact-value", text: value }));
     return row;
 }
 
 /**
- * Дозор — то, что сказано прямым текстом и держится наготове к родам.
+ * Чем дитя будет по закону этого века.
  *
- * Порядок здесь и есть порядок строк в панели: сперва люди, потом обереги
- * и приготовления, потом правовой слой — признание, ранг, имя.
+ * Слова приходят от модели: их четыре, и они перечислены в блоке промпта
+ * BLOCK_LEGAL. Здесь только перевод для подсказки — «хорнунг» само по себе
+ * не говорит ничего даже тому, кто писал расширение.
  */
-const WATCH_FIELDS = [
-    ["watch-midwife", "Льосмодир", "midwife"],
-    ["watch-women", "Женщин в доме", "women"],
-    ["watch-charms", "Обереги", "charms"],
-    ["watch-gear", "Наготове", "gear"],
+const CHILD_RANKS = {
+    "скирборинн": "Рождён в браке — наследует по закону",
+    "фриллуборинн": "Рождён от наложницы — признан, но не наравне с законными",
+    "тюборинн": "Рождён от рабыни — и сам раб",
+    "хорнунг": "Рождён от свободной женщины вне брака",
+};
+
+/** Подсказка к рангу дитяти, если слово узнано. */
+function childRankHint(value) {
+    return CHILD_RANKS[String(value ?? "").trim().toLowerCase()] ?? null;
+}
+
+/**
+ * Род — чьё дитя и кем оно будет в роду.
+ *
+ * Отец, признание отцовства, ранг и имя — один вопрос, а не четыре. Раньше
+ * отец стоял в панели пятой строкой, а фадерни с рангом — двенадцатой, между
+ * оберегами и греющейся водой, хотя в этом веке именно они и решали судьбу
+ * ребёнка: признанный сын наследует, непризнанный не наследует ничего.
+ */
+const KIN_FIELDS = [
     ["watch-faderni", "Фадерни", "faderni"],
     ["watch-rank", "Дитя будет", "childRank"],
     ["watch-name", "Имя", "childName"],
 ];
+
+/** Дом — кто рядом и что наготове к родам. */
+const HOUSE_FIELDS = [
+    ["watch-midwife", "Льосмодир", "midwife"],
+    ["watch-women", "Женщин в доме", "women"],
+    ["watch-charms", "Обереги", "charms"],
+    ["watch-gear", "Наготове", "gear"],
+];
+
+/** Кучка фактов под своим заголовком. Пустую не рисуем вовсе. */
+function fillGroup(selector, title, rows) {
+    const box = el(selector).empty();
+    if (!rows.length) { box.hide(); return false; }
+    box.append($("<div>", { "class": "ncw-group-title", text: title }), ...rows).show();
+    return true;
+}
 
 /** Сетка календаря (дни 1–30), только когда есть дата из чата. */
 function buildGrid() {
@@ -1356,15 +1394,22 @@ function renderAll() {
     if (!showTime && !showDate && !showDetails) {
         // Чистим содержимое, а не только прячем: иначе прошлая сцена остаётся
         // в DOM и попадает в текст сообщения при копировании или озвучке.
-        el("#ncw-eykt, #ncw-week, #ncw-date, #ncw-lore, #ncw-grid, #ncw-mood-chips, #ncw-children, #ncw-draught-name").empty();
-        el("#ncw-sun, #ncw-weather-text, #ncw-location-text").text("");
-        el("#ncw-attire-user-text, #ncw-attire-char-text, #ncw-thought-text, #ncw-cycle-text, #ncw-cycle-status, #ncw-cycle-extra, #ncw-cycle-guess, #ncw-cycle-signs, #ncw-cycle-watch, #ncw-cycle-debug, #ncw-char-state-text, #ncw-user-state-text, #ncw-advice-text").text("");
-        el("#ncw-left, #ncw-right, #ncw-char-col, #ncw-user-col").hide();
+        el("#ncw-eykt-name, #ncw-week, #ncw-date, #ncw-lore, #ncw-grid, #ncw-mood-chips, #ncw-children, #ncw-draught-name").empty();
+        el("#ncw-sun, #ncw-eykt-num, #ncw-weather-text, #ncw-location-text").text("");
+        el("#ncw-attire-user-text, #ncw-attire-char-text, #ncw-thought-text, #ncw-cycle-text, #ncw-cycle-status, #ncw-cycle-kicks, #ncw-cycle-extra, #ncw-cycle-kin, #ncw-cycle-house, #ncw-cycle-signs, #ncw-cycle-debug, #ncw-char-state-text, #ncw-user-state-text, #ncw-advice-text").text("");
+        /* Погоду в медальоне чистим отдельно: она живёт в SVG, и jQuery
+           её текстом не достать. */
+        const arc = el("#ncw-medallion").find("textPath")[0];
+        if (arc) arc.textContent = "";
+        el("#ncw-crown, #ncw-left, #ncw-page, #ncw-rail").hide();
         el("#ncw-grid").addClass("ncw-hidden");
         stub.show();
         return;
     }
     stub.hide();
+    /* Навершие и разворот показываем целиком: что в них пусто, решают
+       сами плашки и листы — каждая своим toggle. */
+    el("#ncw-crown, #ncw-page, #ncw-rail").show();
 
     renderTimeAndDate(showTime, showDate);
     renderExtraFields();
@@ -1375,18 +1420,23 @@ function renderAll() {
 function renderTimeAndDate(showTime, showDate) {
     el("#ncw-left").toggle(showTime || showDate);
 
-    const eyktEl = el("#ncw-eykt").empty();
+    const plate = el("#ncw-plate-eykt");
+    const dial = el("#ncw-dial");
     const sunEl = el("#ncw-sun");
     if (showTime) {
         const idx = eyktForHour(state.hour);
         const e = EYKTIR[idx];
         const hh = String(state.hour).padStart(2, "0");
         const mm = String(state.minute ?? 0).padStart(2, "0");
-        eyktEl.append(
-            icon("time-eykt"),
-            hintSpan("eykt", e.ru, `${hh}:${mm}`),
-            plainSpan(` • ${t`eykt ${idx + 1}`}`),
-        ).show();
+
+        el("#ncw-eykt-name").empty().append(hintSpan("eykt", e.ru, `${hh}:${mm}`));
+        el("#ncw-eykt-num").text(t`eykt ${idx + 1}`);
+        plate.show();
+
+        /* Круг знает свою эйкту одним числом: по нему CSS и подсвечивает
+           нужный луч, и доворачивает указатель. Считать углы в JS незачем. */
+        dial.attr("data-eykt", idx).show();
+
         /* Восемь эйкт — восемь румбов, ровно по кругу: знак солнца рисуется
            один, стрелкой на север, а поворот докручивает CSS по `data-dir`.
            Восьми файлов на одну и ту же стрелку заводить незачем. */
@@ -1395,7 +1445,8 @@ function renderTimeAndDate(showTime, showDate) {
             plainSpan(e.dirText),
         ).show();
     } else {
-        eyktEl.hide();
+        plate.hide();
+        dial.hide();
         sunEl.hide();
     }
 
@@ -1412,9 +1463,9 @@ function renderTimeAndDate(showTime, showDate) {
     const { year, month, day } = state;
     const season = seasonOf(month);
 
-    /* Строка 1 — день недели, номер недели, полугодие:
-       «Frjádagr · vika 48 · í Vetr». Точек-разделителей больше нет: три
-       разных факта разводит знак перед каждым, а не серая точка между ними. */
+    /* Строка 1 — где мы в неделе: «Frjádagr · vika 48».
+       Точек-разделителей больше нет: факты разводит знак перед каждым,
+       а не серая точка между ними. */
     const wd = WEEKDAYS_LORE[weekdayOf(year, month, day)];
     const vika = vikaOf(year, month, day);
     weekEl.append(
@@ -1422,11 +1473,11 @@ function renderTimeAndDate(showTime, showDate) {
         hintSpan("wd", wd.norse, wd.ru),
         icon("cal-vika"),
         hintSpan("vika", `vika ${vika}`, `${t`day`} ${dayOfYear(year, month, day)}/${yearLength(year)}`),
-        icon(season.norse === "Sumar" ? "season-sumar" : "season-vetr"),
-        hintSpan("season", `í ${season.norse}`, season.ru),
     ).show();
 
-    /* Строка 2 — сама дата: «7 Ýlir 998» */
+    /* Строка 2 — сама дата: «7 Ýlir · í Vetr · 998».
+       Полугодие переехало сюда из строки недели: год, месяц и сезон — это
+       один вопрос «когда», а день недели с викой — другой. */
     if (isAuk(month)) {
         const total = aukDays(year);
         const label = isSumaraukiYear(year) ? "Sumarauki" : "Auknætr";
@@ -1434,16 +1485,19 @@ function renderTimeAndDate(showTime, showDate) {
             icon("cal-auknaetr"),
             hintSpan("date", `${label} ${day}/${total}`,
                 t`Special mid-summer days before the haymaking`),
-            plainSpan(` ${year}`),
         );
     } else {
         dateEl.append(
             icon("cal-date"),
             plainSpan(`${day} `),
             hintSpan("date", MONTHS_LORE[month - 1].norse, MONTHS_RU_NOM[month - 1]),
-            plainSpan(` ${year}`),
         );
     }
+    dateEl.append(
+        icon(season.norse === "Sumar" ? "season-sumar" : "season-vetr"),
+        hintSpan("season", `í ${season.norse}`, season.ru),
+        plainSpan(` ${year}`),
+    );
     dateEl.show();
 
     /* Строка 3 — Луна */
@@ -1491,7 +1545,7 @@ function renderAdvice() {
 function renderCycle() {
     const row = el("#ncw-cycle");
     const s = bodySummary();
-    if (!s) { row.hide(); return; }
+    if (!s) { row.hide(); el("#ncw-cycle-cols").hide(); return; }
 
     /* Две обязательные строки: где мы в счёте и что с телом. Обе кликабельны.
        Ещё две необязательные — приметы и гадание — появляются только когда
@@ -1504,28 +1558,52 @@ function renderCycle() {
     );
     el("#ncw-cycle-status").empty().append(hintSpan("cycleStatus", s.status, s.statusHint));
 
+    /* Шевеления — во всю ширину, сразу под словами о теле. Тревога висит на
+       самой строке, а не на соседях: раньше затишье дитяти красило заодно и
+       обереги, и имя, и число женщин в доме — восемь строк кричали об одном,
+       и кричать переставало быть заметным. */
+    const kicks = el("#ncw-cycle-kicks").empty();
+    if (s.kicks) {
+        kicks.append(
+            factRow("watch-kicks", null, s.kicks.text).toggleClass("ncw-alarm", !!s.kicks.alarm),
+        ).show();
+    } else {
+        kicks.hide();
+    }
+
     const extra = el("#ncw-cycle-extra").empty();
     if (s.extra) extra.append(factRow(s.extraIcon, null, s.extra)).show(); else extra.hide();
 
-    /* Отец и гадание — двумя строками, не одной: признание отцовства это
-       правовой факт, а толкование живота — присказка повитухи, и подсказка
-       «гадание, а не знание» относится только ко второму. */
-    const guess = el("#ncw-cycle-guess").empty();
-    if (s.father) guess.append(factRow("body-father", "Отец", s.father));
+    /* Род. Отец и гадание — двумя строками, не одной: признание отцовства
+       это правовой факт, а толкование живота — присказка повитухи, и
+       подсказка «гадание, а не знание» относится только ко второму. */
+    const kin = [];
+    if (s.father) kin.push(factRow("body-father", "Отец", s.father));
     if (s.guess) {
-        guess.append(
-            $("<div>", { "class": "ncw-fact" }).append(
-                icon("body-divination"),
-                $("<span>", { "class": "ncw-fact-label", text: "Толкуют:" }),
-                hintSpan("cycleGuess", s.guess, s.guessHint),
-            ),
-        );
+        kin.push($("<div>", { "class": "ncw-fact" }).append(
+            icon("body-divination"),
+            $("<span>", { "class": "ncw-fact-label", text: "Толкуют:" }),
+            hintSpan("cycleGuess", s.guess, s.guessHint),
+        ));
     }
-    guess.toggle(!!(s.father || s.guess));
+    for (const [iconName, label, key] of KIN_FIELDS) {
+        if (!state[key]) continue;
+        /* Ранг дитяти — единственное поле рода, которое само по себе не
+           читается: «хорнунг» ничего не говорит, пока не щёлкнешь. */
+        kin.push(factRow(iconName, label, state[key],
+            key === "childRank" ? childRankHint(state[key]) : null));
+    }
+    const hasKin = fillGroup("#ncw-cycle-kin", "Род", kin);
+
+    const house = HOUSE_FIELDS
+        .filter(([, , key]) => state[key])
+        .map(([iconName, label, key]) => factRow(iconName, label, state[key]));
+    const hasHouse = fillGroup("#ncw-cycle-house", "Дом", house);
 
     /* Приметы — по строке на примету, каждая со своим знаком. Вид приметы
        считает bodyView(): что грудь, что дурнота, что кровь — знать это
-       раскладке неоткуда. */
+       раскладке неоткуда. Своим столбцом напротив рода и дома: к девятой
+       части их набирается десяток, и в общем потоке они топили всё под собой. */
     const signs = el("#ncw-cycle-signs").empty();
     if (s.signs?.length) {
         for (const sign of s.signs) signs.append(factRow(`sign-${sign.kind}`, null, sign.text));
@@ -1534,22 +1612,7 @@ function renderCycle() {
         signs.hide();
     }
 
-    /* Шевеления, готовность к родам и правовой слой — то, что модель
-       сообщила прямым текстом. Пустое не рисуем.
-
-       Тревога висит на строке шевелений, а не на всём дозоре: раньше затишье
-       дитяти красило заодно и обереги, и имя, и число женщин в доме — восемь
-       строк кричали об одном, и кричать переставало быть заметным. */
-    const watch = el("#ncw-cycle-watch").empty();
-    if (s.kicks) {
-        watch.append(
-            factRow("watch-kicks", null, s.kicks.text).toggleClass("ncw-alarm", !!s.kicks.alarm),
-        );
-    }
-    for (const [iconName, label, key] of WATCH_FIELDS) {
-        if (state[key]) watch.append(factRow(iconName, label, state[key]));
-    }
-    watch.toggle(watch.children().length > 0);
+    el("#ncw-cycle-cols").toggle(!!(s.signs?.length || s.extra || hasKin || hasHouse));
 
     const debug = el("#ncw-cycle-debug").empty();
     if (s.hidden?.length) debug.append(plainSpan(s.hidden.join(" · "))).show(); else debug.hide();
@@ -1609,62 +1672,73 @@ function renderChildren() {
     box.show();
 }
 
-/** Правые колонки: погода, локация, {{user}}, {{char}}, мысль. */
+/**
+ * Сколько букв погоды ещё ложится на дугу медальона.
+ *
+ * «Лютый мороз» ложится, «метель с моря, к ночи заворачивает» — уже нет:
+ * буквы пришлось бы жать вдвое. Такая погода уходит прямой строкой под круг.
+ */
+const WEATHER_CURVE_MAX = 19;
+
+/** Навершие доски: погода в круге, место на железной вставке. */
+function renderScene() {
+    const medallion = el("#ncw-medallion");
+    const straight = el("#ncw-weather-text");
+    const arc = medallion.find("textPath")[0] ?? null;
+
+    if (state.weather) {
+        const curved = state.weather.length <= WEATHER_CURVE_MAX;
+        if (arc) arc.textContent = curved ? state.weather : "";
+        straight.text(curved ? "" : state.weather).toggle(!curved);
+        medallion.show();
+    } else {
+        if (arc) arc.textContent = "";
+        straight.text("").hide();
+        medallion.hide();
+    }
+
+    const locPlate = el("#ncw-plate-loc");
+    if (state.location) {
+        el("#ncw-location-text").text(state.location);
+        locPlate.show();
+    } else {
+        locPlate.hide();
+    }
+}
+
+/**
+ * Листы разворота: {{user}}, нить Фрейи, {{char}}.
+ *
+ * Рисуем все три всегда, а показываем один — тот, что выбран деревяшкой.
+ * Прятать по «есть ли что показать» тут нельзя: кнопка должна открывать
+ * лист и тогда, когда сцена о человеке смолчала, иначе нажатие выглядит
+ * сломанным. Пустой лист говорит об этом словами.
+ */
 function renderExtraFields() {
     const context = getContext();
     const userName = context?.name1 || "{{user}}";
     const charName = context?.name2 || "{{char}}";
 
-    const weatherEl = el("#ncw-weather");
-    if (state.weather) {
-        el("#ncw-weather-text").text(state.weather);
-        weatherEl.show();
-    } else {
-        weatherEl.hide();
-    }
+    renderScene();
 
-    const locEl = el("#ncw-location");
-    if (state.location) {
-        el("#ncw-location-text").text(state.location);
-        locEl.show();
-    } else {
-        locEl.hide();
-    }
-
-    el("#ncw-scene").toggle(!!(state.weather || state.location));
-
-    const userDetails = el("#ncw-user-details");
+    /* --- лист {{user}} --- */
     el("#ncw-user-name").text(userName);
-    if (state.userAttire) {
-        el("#ncw-attire-user-text").text(state.userAttire);
-        el("#ncw-attire-user").show();
-    } else {
-        el("#ncw-attire-user").hide();
-    }
+    textRow("#ncw-attire-user", "#ncw-attire-user-text", state.userAttire);
     textRow("#ncw-user-state", "#ncw-user-state-text", state.userState);
+    leafEmpty("#ncw-user-empty", !!(state.userAttire || state.userState),
+        "Сцена о ней ничего не сказала.");
 
-    /* Колонка {{user}} — только одежда и состояние. Цикл, приметы и совет
-       переехали в третью, у неё своя проверка. */
-    const hasUser = !!(state.userAttire || state.userState);
-    userDetails.toggle(hasUser);
-    el("#ncw-user-col").toggle(hasUser);
-
-    /*
-     * Третью колонку надо ПОКАЗЫВАТЬ, а не только прятать.
-     *
-     * Прежде на этом месте стояли погода с локацией, и её переключал их
-     * собственный toggle. Он уехал в шапку вместе с ними, а нового не
-     * появилось: колонка пряталась в пустом состоянии и больше никогда
-     * не всплывала — вся беременность вместе с ней.
-     */
+    /* --- лист нити Фрейи --- */
     renderCycle();
     renderDraught();
-    renderChildren();
     renderAdvice();
+    renderChildren();
     const hasBody = !!bodySummary();
     const hasAdvice = !!(state.advice || bodySummary()?.advice);
-    el("#ncw-right").toggle(hasBody || hasAdvice);
+    leafEmpty("#ncw-freyja-empty", hasBody || hasAdvice,
+        settings().bodyTracking ? "Счёт тела ещё не начат." : "Счёт тела выключен в настройках.");
 
+    /* --- лист {{char}} --- */
     el("#ncw-char-name").text(charName);
     const moods = state.charMood
         ? state.charMood.split(",").map((s) => s.trim()).filter(Boolean)
@@ -1675,27 +1749,45 @@ function renderExtraFields() {
     }
     moodEl.toggle(moods.length > 0);
 
-    const charAttireRow = el("#ncw-attire-char");
-    if (state.charAttire) {
-        el("#ncw-attire-char-text").text(state.charAttire);
-        charAttireRow.show();
-    } else {
-        charAttireRow.hide();
-    }
-
-    const thoughtEl = el("#ncw-thought");
-    if (state.thought) {
-        el("#ncw-thought-text").text(state.thought);
-        thoughtEl.show();
-    } else {
-        thoughtEl.hide();
-    }
-
+    textRow("#ncw-attire-char", "#ncw-attire-char-text", state.charAttire);
     textRow("#ncw-char-state", "#ncw-char-state-text", state.charState);
+    textRow("#ncw-thought", "#ncw-thought-text", state.thought);
+    leafEmpty("#ncw-char-empty",
+        moods.length > 0 || !!state.charAttire || !!state.thought || !!state.charState,
+        "Сцена о нём ничего не сказала.");
 
-    const hasChar = moods.length > 0 || !!state.charAttire || !!state.thought || !!state.charState;
-    el("#ncw-char-details").toggle(hasChar);
-    el("#ncw-char-col").toggle(hasChar);
+    applyTab();
+}
+
+/** Слово вместо пустого листа: кнопка нажалась, а показать нечего. */
+function leafEmpty(selector, hasContent, words) {
+    el(selector).text(hasContent ? "" : words).toggle(!hasContent);
+}
+
+/* --- деревяшки: какой лист открыт --- */
+
+const TABS = ["user", "freyja", "char"];
+
+/**
+ * Выбранный лист живёт в настройках, а не в переменной.
+ *
+ * Виджет пересобирается на каждом ходу и на каждом свайпе, а SillyTavern
+ * вдобавок затирает его при перерисовке сообщения. Держи выбор в памяти
+ * модуля — и он слетал бы на нить Фрейи посреди разговора о {{char}}.
+ */
+function activeTab() {
+    const tab = settings().activeTab;
+    return TABS.includes(tab) ? tab : "freyja";
+}
+
+function applyTab() {
+    const tab = activeTab();
+    el("#ncw-page").attr("data-tab", tab);
+    el(".ncw-plank").each(function () {
+        const plank = $(this);
+        plank.toggleClass("ncw-plank-on", plank.attr("data-tab") === tab);
+    });
+    el("#ncw-thread").toggleClass("ncw-thread-on", tab === "freyja");
 }
 
 /* ============================================================
@@ -1767,6 +1859,91 @@ function mountWidget() {
  * 6. WIDGET BUILDING
  * ============================================================ */
 
+/** Элемент SVG. Через $("<svg>") их не создать: нужен createElementNS. */
+function svgEl(tag, attrs) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [key, value] of Object.entries(attrs ?? {})) node.setAttribute(key, value);
+    return node;
+}
+
+/**
+ * Медальон погоды — круг в навершии доски.
+ *
+ * Текст погоды ложится по дуге внутри круга: путь-дуга в <defs>, надпись на
+ * ней через <textPath>. Дуга идёт слева направо понизу — тогда «верх» букв
+ * смотрит в середину круга и надпись читается как обычно.
+ *
+ * Длинную погоду по дуге не уложить, поэтому она уходит прямой строкой под
+ * круг: см. WEATHER_CURVE_MAX в renderScene().
+ */
+const WEATHER_ARC_ID = "ncw-weather-arc";
+
+function weatherMedallion() {
+    const svg = svgEl("svg", {
+        "class": "ncw-medallion-svg",
+        viewBox: "0 0 120 120",
+        "aria-hidden": "true",
+    });
+    const defs = svgEl("defs");
+    defs.appendChild(svgEl("path", {
+        id: WEATHER_ARC_ID,
+        d: "M 18 62 A 42 42 0 0 0 102 62",
+        fill: "none",
+    }));
+    const text = svgEl("text", { "class": "ncw-medallion-text" });
+    const path = svgEl("textPath", {
+        href: `#${WEATHER_ARC_ID}`,
+        startOffset: "50%",
+        "text-anchor": "middle",
+    });
+    text.appendChild(path);
+    svg.appendChild(defs);
+    svg.appendChild(text);
+    return svg;
+}
+
+/**
+ * Циферблат эйкт — восемь чёрных лучей по кругу.
+ *
+ * Сутки здесь делятся не на часы, а на восемь эйкт, и круг показывает это
+ * прямо: луч на каждую, подсвечен тот, в котором сцена. В сердцевине
+ * треугольник-указатель и знак времени суток.
+ */
+function eyktDial() {
+    const ring = $("<div>", { "class": "ncw-dial-ring" });
+    for (let i = 0; i < EYKTIR.length; i++) {
+        ring.append($("<span>", { "class": "ncw-dial-ray", "data-ray": i }));
+    }
+    return $("<div>", { id: "ncw-dial", "class": "ncw-dial" }).append(
+        ring,
+        $("<div>", { "class": "ncw-dial-hub" }).append(
+            $("<span>", { id: "ncw-dial-pointer", "class": "ncw-dial-pointer" }),
+            $("<span>", { "class": "ncw-dial-core" }).append(
+                icon("time-eykt", "ncw-dial-icon"),
+            ),
+        ),
+    );
+}
+
+/**
+ * Деревяшка на кожаных подвязках — кнопка листа.
+ *
+ * Три такие кнопки правят левым листом: {{user}}, нить Фрейи и {{char}}.
+ * Нить висит на деревяшке хозяйки не по прихоти раскладки: это её тело,
+ * и отдельной доски оно не просит.
+ */
+function tabPlank(tab, nameId, extra) {
+    const plank = $("<div>", { "class": "ncw-plank", "data-tab": tab }).append(
+        $("<span>", { "class": "ncw-strap ncw-strap-left" }),
+        $("<span>", { "class": "ncw-strap ncw-strap-right" }),
+        $("<button>", { "class": "ncw-plank-btn", type: "button", "data-tab": tab }).append(
+            $("<span>", { id: nameId, "class": "ncw-plank-name" }),
+        ),
+    );
+    if (extra) plank.append(extra);
+    return plank;
+}
+
 /** Создаёт DOM-структуру виджета (detached — вставит mountWidget). */
 function buildWidget() {
     if ($widget) return $widget;
@@ -1774,64 +1951,135 @@ function buildWidget() {
     const s = settings();
 
     $widget = $("<div>", { id: "norse-calendar-widget", "class": "nc-themed" }).append(
-        $("<div>", { id: "ncw-header" }).append(
-            $("<span>", { "class": "ncw-runes", text: "ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ" }),
-            /* Погода и локация переехали в шапку: это обстановка сцены, одна
-               строка на двоих, и в колонках она занимала место, нужное телу.
-               Кнопки сворачивания больше нет — блок всегда развёрнут. */
-            $("<span>", { id: "ncw-scene", "class": "ncw-scene" }).append(
-                $("<span>", { id: "ncw-weather", "class": "ncw-weather" }).append(
-                    icon("scene-weather", "ncw-weather-icon"),
-                    $("<span>", { id: "ncw-weather-text" }),
+        $("<div>", { id: "ncw-board", "class": "ncw-board" }).append(
+
+            /* Навершие: обстановка сцены. Погода в круге посередине, время
+               слева на дереве, место справа на железе — по разным углам,
+               потому что это три разных вопроса к сцене, а не один список. */
+            $("<div>", { id: "ncw-crown", "class": "ncw-crown" }).append(
+                $("<div>", { id: "ncw-plate-eykt", "class": "ncw-plate ncw-plate-wood" }).append(
+                    $("<span>", { id: "ncw-eykt-name", "class": "ncw-plate-text" }),
+                    $("<span>", { id: "ncw-eykt-num", "class": "ncw-plate-sub" }),
                 ),
-                $("<span>", { id: "ncw-location", "class": "ncw-loc" }).append(
-                    icon("scene-location", "ncw-loc-icon"),
-                    $("<span>", { id: "ncw-location-text" }),
+                $("<div>", { id: "ncw-medallion", "class": "ncw-medallion" }).append(
+                    weatherMedallion(),
+                    icon("scene-weather", "ncw-medallion-icon"),
+                ),
+                $("<div>", { id: "ncw-plate-loc", "class": "ncw-plate ncw-plate-metal" }).append(
+                    icon("scene-location", "ncw-plate-icon"),
+                    $("<span>", { id: "ncw-location-text", "class": "ncw-plate-text" }),
                 ),
             ),
-        ),
-        $("<div>", { id: "ncw-body" }).append(
+            /* Длинная погода на дугу не ложится и уходит сюда, под круг. */
+            $("<div>", { id: "ncw-weather-text", "class": "ncw-weather-straight" }),
+
             $("<div>", { id: "ncw-stub", text: `ᚱ ${t`Waiting for the infoblock…`}` }),
+
             $("<div>", { id: "ncw-columns" }).append(
+
+                /* Треть первая — счёт времени: круг эйкт, дата, луна, неделя. */
                 $("<div>", { id: "ncw-left" }).append(
-                    $("<div>", { id: "ncw-eykt" }),
-                    $("<div>", { id: "ncw-sun" }),
-                    $("<div>", { id: "ncw-week" }),
-                    $("<div>", { id: "ncw-date" }),
-                    $("<div>", { id: "ncw-lore" }),
+                    eyktDial(),
+                    $("<div>", { id: "ncw-sun", "class": "ncw-sun-line" }),
+                    $("<div>", { id: "ncw-week", "class": "ncw-cal-line" }),
+                    $("<div>", { id: "ncw-date", "class": "ncw-cal-line" }),
+                    $("<div>", { id: "ncw-lore", "class": "ncw-cal-line" }),
+
+                    /*
+                     * Сводка о теле переехала сюда с листа нити.
+                     *
+                     * Фаза, счёт и слова о теле — это заголовок всего блока,
+                     * а не одна из трёх вкладок: они верны и когда смотришь
+                     * на {{char}}. На листе им место было только потому, что
+                     * оттуда они родом. Совет — следом: он о том же теле.
+                     */
+                    $("<div>", { id: "ncw-summary", "class": "ncw-summary-block" }).append(
+                        $("<div>", { id: "ncw-cycle-text", "class": "ncw-summary-line" }),
+                        $("<div>", { id: "ncw-cycle-status", "class": "ncw-summary-line" }),
+                        $("<div>", { id: "ncw-advice", "class": "ncw-advice" }).append(
+                            icon("advice", "ncw-advice-icon"),
+                            $("<span>", { id: "ncw-advice-text" }),
+                        ),
+                    ),
+
+                    /* Календарик стоит последним в колонке и прижат к её низу
+                       (margin-top: auto). Колонка тянется на всю высоту доски,
+                       поэтому неделя всегда у нижнего края и не скачет вслед
+                       за длиной сводки о теле. */
                     $("<div>", { id: "ncw-grid" }),
                 ),
-                /* Третья колонка — тело. Без карточки и подложки: это не
-                   собеседник, а сводка, и оформлять её как {{char}} значило бы
-                   поставить утробу в один ряд с людьми. */
-                $("<div>", { id: "ncw-right", "class": "ncw-col ncw-plain" }).append(
-                    $("<div>", { id: "ncw-cycle", "class": "ncw-cycle" }).append(
-                        $("<div>", { id: "ncw-cycle-text", "class": "ncw-cycle-line" }),
-                        $("<div>", { id: "ncw-cycle-status", "class": "ncw-cycle-line" }),
-                        $("<div>", { id: "ncw-cycle-extra", "class": "ncw-cycle-line ncw-cycle-dim" }),
-                        $("<div>", { id: "ncw-cycle-guess", "class": "ncw-cycle-line ncw-cycle-dim" }),
-                        $("<div>", { id: "ncw-cycle-signs", "class": "ncw-cycle-line ncw-cycle-dim" }),
-                        $("<div>", { id: "ncw-cycle-watch", "class": "ncw-cycle-line ncw-cycle-dim" }),
-                        $("<div>", { id: "ncw-cycle-debug", "class": "ncw-cycle-line ncw-cycle-debug" }),
-                    ),
-                    $("<div>", { id: "ncw-draught", "class": "ncw-draught" }).append(
-                        icon("draught", "ncw-draught-icon"),
-                        $("<span>", { id: "ncw-draught-name" }),
-                        $("<span>", { id: "ncw-draught-text", "class": "ncw-draught-text" }),
-                    ),
-                    $("<div>", { id: "ncw-children", "class": "ncw-children" }),
-                    $("<div>", { id: "ncw-advice", "class": "ncw-advice" }).append(
-                        icon("advice", "ncw-advice-icon"),
-                        $("<span>", { id: "ncw-advice-text" }),
-                    ),
-                ),
-                $("<div>", { id: "ncw-char-col", "class": "ncw-col" }).append(
-                    $("<details>", { id: "ncw-char-details", "class": "ncw-details" }).append(
-                        $("<summary>", { "class": "ncw-summary" }).append(
-                            $("<span>", { "class": "ncw-dot" }),
-                            $("<span>", { id: "ncw-char-name", "class": "ncw-name", text: "{{char}}" }),
+
+                /*
+                 * Части вторая и третья — лист и деревяшки.
+                 *
+                 * Лежат прямо в #ncw-columns, без обёртки-разворота: только
+                 * тогда сеткой можно задать крайним частям одинаковую ширину,
+                 * а листу — всё остальное. От этого лист сам собой встаёт
+                 * серединой под круг погоды, который тоже по центру доски.
+                 */
+                $("<div>", { id: "ncw-page", "class": "ncw-page", "data-tab": "freyja" }).append(
+
+                        $("<div>", { id: "ncw-page-user", "class": "ncw-leaf", "data-leaf": "user" }).append(
+                            $("<div>", { id: "ncw-attire-user", "class": "ncw-attire" }).append(
+                                icon("char-attire", "ncw-attire-icon"),
+                                $("<span>", { id: "ncw-attire-user-text" }),
+                            ),
+                            $("<div>", { id: "ncw-user-state", "class": "ncw-state" }).append(
+                                icon("char-state", "ncw-state-icon"),
+                                $("<span>", { id: "ncw-user-state-text" }),
+                            ),
+                            $("<div>", { id: "ncw-user-empty", "class": "ncw-leaf-empty" }),
                         ),
-                        $("<div>", { "class": "ncw-details-body" }).append(
+
+                        /* Нить Фрейи — то, ради чего расширение и писалось.
+                           Отвар и слово повитухи живут здесь же: они про
+                           утробу, и на чужом листе им делать нечего. */
+                        /*
+                         * Лист нити разложен по смыслу, а не по тому, откуда
+                         * какое поле пришло.
+                         *
+                         * Раньше «Отец» стоял пятой строкой, а признание
+                         * отцовства, ранг дитяти и имя — двенадцатой, хотя это
+                         * один и тот же вопрос: чей ребёнок и кем он будет в
+                         * роду. Теперь род собран в одну кучку, дом и
+                         * приготовления — в другую, а приметы, которых к концу
+                         * срока набирается десяток, стоят своим столбцом
+                         * напротив: так лист выходит вдвое короче.
+                         */
+                        $("<div>", { id: "ncw-page-freyja", "class": "ncw-leaf", "data-leaf": "freyja" }).append(
+                            $("<div>", { id: "ncw-cycle", "class": "ncw-cycle" }).append(
+                                $("<div>", { id: "ncw-cycle-text", "class": "ncw-cycle-line" }),
+                                $("<div>", { id: "ncw-cycle-status", "class": "ncw-cycle-line" }),
+                                /* Шевеления — во всю ширину и сразу под словами
+                                   о теле: затишье дитяти единственное, о чём
+                                   здесь тревожатся, и прятать его в столбец
+                                   значило бы обменять тревогу на стройность. */
+                                $("<div>", { id: "ncw-cycle-kicks", "class": "ncw-cycle-line ncw-cycle-dim" }),
+                            ),
+                            $("<div>", { id: "ncw-cycle-cols", "class": "ncw-cycle-cols" }).append(
+                                $("<div>", { "class": "ncw-cycle-col" }).append(
+                                    $("<div>", { id: "ncw-cycle-signs", "class": "ncw-cycle-dim" }),
+                                ),
+                                $("<div>", { "class": "ncw-cycle-col" }).append(
+                                    $("<div>", { id: "ncw-cycle-extra", "class": "ncw-cycle-dim" }),
+                                    $("<div>", { id: "ncw-cycle-kin", "class": "ncw-cycle-group" }),
+                                    $("<div>", { id: "ncw-cycle-house", "class": "ncw-cycle-group" }),
+                                ),
+                            ),
+                            $("<div>", { id: "ncw-cycle-debug", "class": "ncw-cycle-line ncw-cycle-debug" }),
+                            $("<div>", { id: "ncw-draught", "class": "ncw-draught" }).append(
+                                icon("draught", "ncw-draught-icon"),
+                                $("<span>", { id: "ncw-draught-name" }),
+                                $("<span>", { id: "ncw-draught-text", "class": "ncw-draught-text" }),
+                            ),
+                            $("<div>", { id: "ncw-advice", "class": "ncw-advice" }).append(
+                                icon("advice", "ncw-advice-icon"),
+                                $("<span>", { id: "ncw-advice-text" }),
+                            ),
+                            $("<div>", { id: "ncw-freyja-empty", "class": "ncw-leaf-empty" }),
+                        ),
+
+                        $("<div>", { id: "ncw-page-char", "class": "ncw-leaf", "data-leaf": "char" }).append(
                             $("<div>", { id: "ncw-mood-chips", "class": "ncw-chips" }),
                             $("<div>", { id: "ncw-attire-char", "class": "ncw-attire" }).append(
                                 icon("char-attire", "ncw-attire-icon"),
@@ -1845,26 +2093,21 @@ function buildWidget() {
                                 icon("char-thought", "ncw-thought-icon"),
                                 $("<span>", { id: "ncw-thought-text" }),
                             ),
+                            $("<div>", { id: "ncw-char-empty", "class": "ncw-leaf-empty" }),
                         ),
-                    ),
                 ),
-                $("<div>", { id: "ncw-user-col", "class": "ncw-col" }).append(
-                    $("<details>", { id: "ncw-user-details", "class": "ncw-details" }).append(
-                        $("<summary>", { "class": "ncw-summary" }).append(
-                            $("<span>", { "class": "ncw-dot" }),
-                            $("<span>", { id: "ncw-user-name", "class": "ncw-name", text: "{{user}}" }),
-                        ),
-                        $("<div>", { "class": "ncw-details-body" }).append(
-                            $("<div>", { id: "ncw-attire-user", "class": "ncw-attire" }).append(
-                                icon("char-attire", "ncw-attire-icon"),
-                                $("<span>", { id: "ncw-attire-user-text" }),
-                            ),
-                            $("<div>", { id: "ncw-user-state", "class": "ncw-state" }).append(
-                                icon("char-state", "ncw-state-icon"),
-                                $("<span>", { id: "ncw-user-state-text" }),
-                            ),
-                        ),
-                    ),
+
+                $("<div>", { id: "ncw-rail", "class": "ncw-rail" }).append(
+                    tabPlank("user", "ncw-user-name",
+                        $("<button>", {
+                            id: "ncw-thread",
+                            "class": "ncw-thread",
+                            type: "button",
+                            "data-tab": "freyja",
+                            text: "Нить Фрейи",
+                        })),
+                    tabPlank("char", "ncw-char-name"),
+                    $("<div>", { id: "ncw-children", "class": "ncw-children ncw-sheet" }),
                 ),
             ),
         ),
@@ -1896,6 +2139,16 @@ function bindWidgetHandlers() {
 
     $(document).on("click", "#norse-calendar-widget .ncw-hintable", function () {
         swapHint($(this));
+    });
+
+    /* Деревяшки и нить Фрейи. Ловим только кнопки: сама деревяшка тоже
+       помечена data-tab, и без сужения клик считался бы дважды. */
+    $(document).on("click", "#norse-calendar-widget button[data-tab]", function () {
+        const tab = $(this).attr("data-tab");
+        if (!TABS.includes(tab)) return;
+        settings().activeTab = tab;
+        saveSettingsDebounced();
+        applyTab();
     });
 }
 

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- снежинка: тёмная подложка для чёткости -->
+  <g stroke="#33261c" stroke-width="4.4" stroke-linecap="round">
+    <path d="M24 5v38M7.6 14.5l32.8 19M40.4 14.5l-32.8 19"/>
+  </g>
+  <g stroke="#cfe8f5" stroke-width="2.6" stroke-linecap="round">
+    <path d="M24 5v38M7.6 14.5l32.8 19M40.4 14.5l-32.8 19"/>
+  </g>
+  <!-- веточки на лучах -->
+  <g stroke="#33261c" stroke-width="3.4" stroke-linecap="round">
+    <path d="M20.5 9.5L24 13l3.5-3.5M20.5 38.5L24 35l3.5 3.5"/>
+    <path d="M11.4 17.4l5 .8-.8-5M36.6 30.6l-5-.8.8 5"/>
+    <path d="M36.6 17.4l-5 .8.8-5M11.4 30.6l5-.8-.8 5"/>
+  </g>
+  <g stroke="#eaf6fc" stroke-width="1.9" stroke-linecap="round">
+    <path d="M20.5 9.5L24 13l3.5-3.5M20.5 38.5L24 35l3.5 3.5"/>
+    <path d="M11.4 17.4l5 .8-.8-5M36.6 30.6l-5-.8.8 5"/>
+    <path d="M36.6 17.4l-5 .8.8-5M11.4 30.6l5-.8-.8 5"/>
+  </g>
+  <!-- сердцевина -->
+  <circle cx="24" cy="24" r="4.4" fill="#9fd3e8" stroke="#33261c" stroke-width="1.8"/>
+  <circle cx="24" cy="24" r="1.8" fill="#eaf6fc"/>
+  <!-- иней-точки -->
+  <g fill="#9fd3e8" stroke="#33261c" stroke-width="1">
+    <circle cx="24" cy="14" r="1.4"/>
+    <circle cx="24" cy="34" r="1.4"/>
+    <circle cx="15.3" cy="19" r="1.4"/>
+    <circle cx="32.7" cy="19" r="1.4"/>
+    <circle cx="15.3" cy="29" r="1.4"/>
+    <circle cx="32.7" cy="29" r="1.4"/>
+  </g>
+</svg>

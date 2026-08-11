@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- балка -->
+  <rect x="4" y="5" width="40" height="5" rx="1.5" fill="#6e4a26" stroke="#33261c" stroke-width="1.8"/>
+  <path d="M9 7.5h10M25 7.5h8" stroke="#8a5a33" stroke-width="1.3" stroke-linecap="round"/>
+  <!-- верёвка с балки с узлом -->
+  <path d="M34 10v8c0 3-2 4-4 4" fill="none" stroke="#33261c" stroke-width="4.4" stroke-linecap="round"/>
+  <path d="M34 10v8c0 3-2 4-4 4" fill="none" stroke="#c9a06b" stroke-width="2.6" stroke-linecap="round"/>
+  <!-- петля -->
+  <path d="M30 22c-3 0-5 2.2-5 5s2 5 5 5 5-2.2 5-5-2-5-5-5z" fill="none" stroke="#33261c" stroke-width="4.4"/>
+  <path d="M30 22c-3 0-5 2.2-5 5s2 5 5 5 5-2.2 5-5-2-5-5-5z" fill="none" stroke="#c9a06b" stroke-width="2.6"/>
+  <path d="M28 25.5l4 3M32 25.5l-4 3" stroke="#a9804a" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- деревянная кадка с водой -->
+  <path d="M8 26h16l-1.5 13c-.1 1.2-1.1 2-2.3 2h-8.4c-1.2 0-2.2-.8-2.3-2z" fill="#a86f3e" stroke="#33261c" stroke-width="1.8" stroke-linejoin="round"/>
+  <ellipse cx="16" cy="26" rx="8" ry="2.6" fill="#7cb3d4" stroke="#33261c" stroke-width="1.6"/>
+  <path d="M11.5 25.5c1.5.8 3 .8 4.5 0M17 26.5c1.2.6 2.4.6 3.6 0" fill="none" stroke="#a8d4ea" stroke-width="1.1" stroke-linecap="round"/>
+  <!-- обручи кадки -->
+  <path d="M8.8 31h14.4M9.6 36h12.8" stroke="#5d4028" stroke-width="1.8"/>
+  <!-- капли -->
+  <path d="M41 30c0 0-1.8 2.5-1.8 3.7a1.8 1.8 0 0 0 3.6 0c0-1.2-1.8-3.7-1.8-3.7z" fill="#4a7dab" stroke="#33261c" stroke-width="1.1"/>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- рунный камень -->
+  <path d="M24 3.5c5 0 8.5 1.6 10 4.5 1.8 3.4 2.2 9.5 2.2 16s-.4 12.6-2.2 16c-1.5 2.9-5 4.5-10 4.5s-8.5-1.6-10-4.5c-1.8-3.4-2.2-9.5-2.2-16s.4-12.6 2.2-16C15.5 5.1 19 3.5 24 3.5z" fill="#93a5b8" stroke="#33261c" stroke-width="2"/>
+  <path d="M17.5 8c-1.6 3-2.2 8-2.2 14" fill="none" stroke="#c9d6e2" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- внутренняя рамка-бордюр -->
+  <path d="M24 7.5c4 0 7 1.4 8.3 3.8 1.5 3 1.9 8.5 1.9 14.2" fill="none" stroke="#e0a832" stroke-width="1.2" stroke-dasharray="2.5 2"/>
+  <path d="M24 40.5c-4 0-7-1.4-8.3-3.8-1.5-3-1.9-8.5-1.9-14.2" fill="none" stroke="#e0a832" stroke-width="1.2" stroke-dasharray="2.5 2"/>
+  <!-- руна Ингуз (дата/день) -->
+  <g fill="none" stroke="#33261c" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M24 14.5l6 6-6 6-6-6z"/>
+    <path d="M24 14.5l6-6M24 14.5l-6-6M24 32.5l6 6M24 32.5l-6 6" stroke-width="0"/>
+  </g>
+  <path d="M20.5 11h7M20.5 36h7" stroke="#8f2f24" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- травка у камня -->
+  <g stroke="#3c6134" stroke-width="1.7" stroke-linecap="round" fill="none">
+    <path d="M10 44.5c0-2 .8-3.4.8-3.4M13.5 44.5c-.2-2.4-1-4-1-4M38 44.5c0-2-.8-3.4-.8-3.4M34.8 44.5c.2-2.4 1-4 1-4"/>
+  </g>
+</svg>

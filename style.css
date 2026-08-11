@@ -5,13 +5,13 @@
  *
  * 1. Fonts .............. Подключение шрифта Norse
  * 2. Themes ............. CSS-переменные тем (data-theme на виджете)
- * 3. Widget Base ........ Основной контейнер виджета
- * 4. Header ............. Шапка с рунами и кнопкой сворачивания
- * 5. Body & Columns ..... Сетка колонок (календарь, погода, персонажи)
- * 6. Left Column ........ Эйкта, солнце, дата, лор
+ * 3. Widget Base ........ Доска — основной контейнер виджета
+ * 4. Crown .............. Навершие: круг погоды, плашки времени и места
+ * 5. Columns ............ Треть времени и разворот из двух листов
+ * 6. Left Column ........ Круг эйкт, дата, луна
  * 7. Hints .............. Кликабельные слова-подсказки
- * 8. Weather & Location . Погода и локация
- * 9. Details Cards ...... Раскрывающиеся карточки {{char}} / {{user}}
+ * 8. Weather & Location . Надписи погоды и места
+ * 9. Leaf Rows .......... Строки листов {{user}} / нити / {{char}}
  * 10. Calendar Grid ..... Сетка дней месяца
  * 11. Auknætr ........... Дополнительные дни (Sumarauki)
  * 12. Settings Panel .... Панель настроек в UI SillyTavern
@@ -34,6 +34,28 @@
     font-family: "Norse";
     src: url("fonts/Norse-Bold.ttf") format("truetype");
     font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/*
+ * Два шрифта на пробу — пока выбирается тот, что читабельнее.
+ *
+ * Стоят на листе нити, каждый на своей половине: слева приметы одним,
+ * справа род и дом другим. Когда выбор сделан, лишний @font-face и правило
+ * в разделе 14 убираются, а победитель ставится на весь лист.
+ */
+@font-face {
+    font-family: "Alegreya";
+    src: url("fonts/Alegreya-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Cormorant Unicase";
+    src: url("fonts/CormorantUnicase-Medium.ttf") format("truetype");
+    font-weight: 500;
     font-style: normal;
     font-display: swap;
 }
@@ -165,15 +187,22 @@
     margin: 0 0 10px 0;
     position: relative;
     box-sizing: border-box;
-    background: var(--ncw-bg);
-    border: 1px solid var(--ncw-border);
-    border-radius: 8px;
     color: var(--ncw-text);
     font-family: Georgia, "Times New Roman", serif;
     font-size: 16px;
     user-select: none;
-    opacity: 0.96;
-    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    /* Место под навершие: круг погоды выступает за верхний край доски. */
+    padding-top: 50px;
+    /*
+     * Доска меряется собой, а не окном.
+     *
+     * Раньше перенос колонок висел на @media, то есть на ширине окна. Но
+     * виджет живёт в колонке чата: на широком мониторе с узкой колонкой
+     * окно «широкое», а места нет — и доска оставалась сплюснутой в три
+     * столбца по сто пикселей. Контейнерный запрос смотрит на саму доску.
+     */
+    container-type: inline-size;
+    container-name: ncw;
 }
 
 #norse-calendar-widget,
@@ -181,123 +210,408 @@
     box-sizing: border-box;
 }
 
+/*
+ * Доска.
+ *
+ * Здесь под всё оставлены переменные-крючки: когда появится нарисованная
+ * подложка (доска, кожа, железо), меняется значение, а не раскладка.
+ * Пока это ровный цвет темы.
+ */
+.ncw-board {
+    position: relative;
+    padding: 84px 16px 0;
+    background: var(--ncw-board-bg, var(--ncw-bg));
+    border: 1px solid var(--ncw-border);
+    border-radius: 10px;
+    opacity: 0.97;
+    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
 /* ============================================================
- * 4. HEADER
+ * 4. CROWN (навершие: погода, время суток, место)
  * ============================================================ */
 
-#ncw-header {
+/*
+ * Три разных вопроса к сцене — «когда», «какова погода», «где», — и стоят
+ * они по разным углам, а не одной строкой. Строкой они и были: список из
+ * трёх фактов, который глаз читал целиком, чтобы найти один.
+ */
+.ncw-crown {
+    position: absolute;
+    top: 0;
+    left: 16px;
+    right: 16px;
+    height: 0;
+}
+
+/*
+ * Плашки отодвинуты от краёв доски: по краям пойдут узоры, и упирать в них
+ * дерево с железом нельзя. Отступ держим переменной — когда узор будет
+ * нарисован и станет ясна его ширина, правится одно число.
+ */
+.ncw-plate {
+    position: absolute;
+    top: var(--ncw-plate-inset, 18px);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 10px 16px;
-    background: var(--ncw-bg-raised);
-    border-bottom: 1px solid var(--ncw-border);
-    border-radius: 7px 7px 0 0;
-    transition: background 0.25s ease, border-color 0.25s ease;
+    gap: 10px;
+    max-width: 32%;
+    padding: 10px 18px;
+    font-size: 30px;
+    line-height: 1.1;
+    border: 1px solid var(--ncw-border);
+    border-radius: 5px;
 }
 
-.ncw-runes {
-    font-size: 20px;
-    letter-spacing: 4px;
-    color: var(--ncw-accent);
+/* Дерево слева, железо справа — пока цветом, потом текстурой. */
+.ncw-plate-wood {
+    left: var(--ncw-plate-inset, 18px);
+    background: var(--ncw-plate-wood-bg, var(--ncw-bg-raised));
+    color: var(--ncw-text-panel);
 }
 
-/* Кнопки сворачивания больше нет: блок всегда развёрнут, а место в шапке
-   отдано обстановке сцены — погоде и локации. */
-.ncw-scene {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: flex-end;
-    gap: 4px 14px;
-    font-size: 13px;
-    color: var(--ncw-text-weather);
+.ncw-plate-metal {
+    right: var(--ncw-plate-inset, 18px);
+    background: var(--ncw-plate-metal-bg, var(--ncw-bg-open));
+    color: var(--ncw-text-panel);
 }
 
-.ncw-weather,
-.ncw-loc {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 5px;
-}
-
-/* Третья колонка — сводка, а не собеседник: без карточки и рамки. */
-.ncw-plain {
-    padding-top: 2px;
-}
-
-/* ============================================================
- * 5. BODY & COLUMNS
- * ============================================================ */
-
-#ncw-body {
-    padding: 14px 16px;
-}
-
-#ncw-columns {
-    display: flex;
-    gap: 16px;
-    align-items: stretch;
-}
-
-#ncw-left,
-#ncw-right,
-.ncw-col {
-    flex: 1 1 0;
+#norse-calendar-widget .ncw-plate-text {
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     min-width: 0;
 }
 
-#ncw-left {
+/* Номер эйкты набран тем же шрифтом, что и её имя, только тише и мельче:
+   это одна надпись, а не две, и разными шрифтами она разъезжалась. */
+#norse-calendar-widget .ncw-plate-sub {
+    flex-shrink: 0;
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 400 !important;
+    font-size: 19px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ncw-text-dim);
+}
+
+/*
+ * Знак меряем в em от текста плашки: он растёт вместе с ней и не вылезает
+ * за строку, как бы крупно ни набрали саму плашку.
+ *
+ * Через #id, а не просто по классу: базовый размер знака задан в разделе 14,
+ * то есть НИЖЕ по файлу, и при равном весе он перебивал бы всё, что написано
+ * здесь. Так же прописаны и остальные размеры знаков по месту.
+ */
+#norse-calendar-widget .ncw-plate-icon {
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+}
+
+/* --- медальон погоды --- */
+
+.ncw-medallion {
+    position: absolute;
+    top: -46px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 130px;
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ncw-border);
+    border-radius: 50%;
+    background: var(--ncw-medallion-bg, var(--ncw-bg-raised));
+    box-shadow: 0 0 0 4px var(--ncw-board-bg, var(--ncw-bg));
+}
+
+/*
+ * Надпись поверх круга, а не под ним.
+ *
+ * SVG идёт в разметке первым, поэтому знак погоды рисовался позже и накрывал
+ * буквы. Порядок правим слоями, а не перестановкой: знаку нужна серединка
+ * круга, надписи — дуга по низу, и меняться местами в потоке им нельзя.
+ */
+.ncw-medallion-svg {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+#norse-calendar-widget .ncw-medallion-text {
+    font-family: "Norse", Georgia, serif;
+    font-size: 16px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    fill: var(--ncw-text-weather);
+    paint-order: stroke;
+    stroke: var(--ncw-medallion-bg, var(--ncw-bg-raised));
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+#norse-calendar-widget .ncw-medallion-icon {
+    position: relative;
+    z-index: 1;
+    width: 62px;
+    height: 62px;
+    /* Знак стоит выше середины: низ круга занят надписью. */
+    margin-bottom: 26px;
+}
+
+/* Погода, которая на дугу не легла. */
+.ncw-weather-straight {
+    margin: 6px 0 0;
     text-align: center;
+    font-size: 18px;
+    color: var(--ncw-text-weather);
 }
 
-#ncw-right {
+/* ============================================================
+ * 5. COLUMNS (треть времени и разворот листов)
+ * ============================================================ */
+
+/*
+ * Три части в ряд: время — лист — деревяшки.
+ *
+ * Крайним задана одна и та же ширина, поэтому середина сама встаёт серединой
+ * доски — то есть точно под кругом погоды, который тоже по центру. Флексом
+ * так не выходило: лист и деревяшки лежали в общей обёртке, и центр съезжал.
+ */
+#ncw-columns {
+    display: grid;
+    grid-template-columns: var(--ncw-side, 250px) minmax(0, 1fr) var(--ncw-side, 250px);
+    gap: 16px;
+    align-items: stretch;
+    margin: 8px 0 16px;
+}
+
+/*
+ * Слева — счёт времени, справа — разворот.
+ *
+ * Ровной трети колонке времени больше не даём: круг занимает 186px, дата —
+ * одну строку, и на широкой доске треть уходила в пустоту. Всё сэкономленное
+ * достаётся листу: от его ширины зависит, лягут приметы в два столбца или
+ * каждая переносится и два столбца выйдут длиннее одного.
+ */
+#ncw-left {
+    min-width: 0;
+    text-align: center;
+    /* Столбцом — чтобы календарик внизу можно было отжать margin-top: auto.
+       Колонка тянется на всю высоту доски (align-items: stretch у #ncw-columns),
+       так что неделя всегда у нижнего края и при растягивании не скачет. */
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    border-left: 1px solid var(--ncw-border-soft);
-    padding-left: 16px;
 }
 
-.ncw-col {
+/* Средняя часть — лист, на который пишет выбранная деревяшка. */
+.ncw-page {
+    min-width: 0;
+    padding: 12px 16px;
+    background: var(--ncw-page-bg, var(--ncw-bg-raised));
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 4px;
+}
+
+/* Виден только тот лист, чья деревяшка нажата. */
+.ncw-leaf {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    animation: ncw-fade-in 0.3s ease forwards;
+}
+
+/* Сходство по атрибуту, а не по id: лист показывает та же буква, что стоит
+   на развороте. По id это работало бы ровно до второго виджета на странице. */
+.ncw-page[data-tab="user"] .ncw-leaf[data-leaf="user"],
+.ncw-page[data-tab="freyja"] .ncw-leaf[data-leaf="freyja"],
+.ncw-page[data-tab="char"] .ncw-leaf[data-leaf="char"] {
+    display: flex;
+}
+
+.ncw-leaf-empty {
+    font-style: italic;
+    font-size: 13.5px;
+    color: var(--ncw-text-dim);
+}
+
+/* --- правый край: деревяшки на подвязках --- */
+
+/* Третья часть — деревяшки. Ширина та же, что у части времени: обе заданы
+   переменной --ncw-side, и менять её надо в одном месте. */
+.ncw-rail {
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    border-left: 1px solid var(--ncw-border-soft);
-    padding-left: 16px;
+    gap: 14px;
 }
 
-/* На узких экранах колонки складываются вертикально:
-   календарь → погода+локация (в одну строку) → {{char}} → {{user}} */
-@media (max-width: 900px) {
+/* Подвязки — две кожаные полоски, уходящие вверх за край деревяшки. */
+.ncw-plank {
+    position: relative;
+    margin-top: 10px;
+    padding: 9px 10px 10px;
+    background: var(--ncw-plank-bg, var(--ncw-bg-raised));
+    border: 1px solid var(--ncw-border);
+    border-radius: 5px;
+    transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.ncw-strap {
+    position: absolute;
+    top: -10px;
+    width: 4px;
+    height: 12px;
+    background: var(--ncw-strap-bg, var(--ncw-border));
+    border-radius: 2px 2px 0 0;
+    opacity: 0.8;
+}
+
+.ncw-strap-left { left: 22%; }
+.ncw-strap-right { right: 22%; }
+
+.ncw-plank-btn {
+    display: block;
+    width: 100%;
+    padding: 2px 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ncw-text-panel);
+    font: inherit;
+}
+
+#norse-calendar-widget .ncw-plank-name {
+    display: block;
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 700 !important;
+    font-size: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ncw-plank-on {
+    background: var(--ncw-plank-on-bg, var(--ncw-bg-open));
+    border-color: var(--ncw-accent-border-dim);
+}
+
+.ncw-plank-on .ncw-plank-name {
+    color: var(--ncw-text-bright);
+}
+
+/* Нить Фрейи висит на деревяшке хозяйки: это её тело, и своей доски
+   оно не просит. Кнопка тише имени — она про одно, а не про всё. */
+#norse-calendar-widget .ncw-thread {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 5px 8px;
+    background: var(--ncw-chip-bg);
+    border: 1px solid var(--ncw-chip-border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 400 !important;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--ncw-chip-text);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.ncw-thread-on {
+    background: var(--ncw-accent-glow);
+    border-color: var(--ncw-accent);
+    color: var(--ncw-accent-contrast);
+}
+
+/* Листик с детьми — под кнопками и на любой вкладке: дитя не перестаёт
+   просить есть оттого, что смотрят на {{char}}. */
+.ncw-sheet {
+    padding: 10px 12px;
+    background: var(--ncw-page-bg, var(--ncw-bg-raised));
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 4px;
+}
+
+/* В узкой доске три части складываются в столбик: время, деревяшки, лист.
+   Деревяшки идут перед листом — сперва выбираешь, потом читаешь. */
+@container ncw (max-width: 900px) {
     #ncw-columns {
-        flex-direction: column;
-        gap: 12px;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
     }
+    #ncw-left { order: 1; }
+    .ncw-rail { order: 2; }
+    .ncw-page { order: 3; }
+
     #ncw-left {
-        flex: 1 1 auto;
+        border-bottom: 1px solid var(--ncw-border-soft);
+        padding-bottom: 12px;
     }
-    #ncw-right {
+    .ncw-rail {
         flex-direction: row;
-        align-items: stretch;
-        gap: 8px;
+        flex-wrap: wrap;
+        align-items: flex-start;
     }
-    #ncw-right > * {
+    .ncw-rail .ncw-plank {
         flex: 1 1 0;
         min-width: 0;
     }
-    #ncw-right,
-    .ncw-col {
-        border-left: none;
-        border-top: 1px solid var(--ncw-border-soft);
-        padding-left: 0;
-        padding-top: 12px;
+    .ncw-sheet {
+        flex: 1 1 100%;
     }
 }
 
-@media (max-width: 480px) {
-    #ncw-right {
+@container ncw (max-width: 480px) {
+    .ncw-plate {
+        position: static;
+        max-width: none;
+    }
+    .ncw-crown {
+        position: static;
+        height: auto;
+        display: flex;
         flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .ncw-medallion {
+        position: static;
+        transform: none;
+        order: -1;
+    }
+    #norse-calendar-widget {
+        padding-top: 0;
+    }
+    .ncw-board {
+        padding-top: 16px;
+    }
+    #ncw-columns {
+        margin-top: 14px;
+    }
+    .ncw-medallion {
+        width: 108px;
+        height: 108px;
+    }
+    #norse-calendar-widget .ncw-medallion-icon {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 22px;
     }
 }
 
@@ -312,48 +626,161 @@
  * 6. LEFT COLUMN (эйкта, солнце, дата, лор)
  * ============================================================ */
 
-#ncw-eykt {
-    text-align: center;
-    font-size: 24px;
-    font-weight: bold;
-    letter-spacing: 1px;
-    color: var(--ncw-text-bright);
-    margin: 2px 0 2px;
+/*
+ * Круг эйкт.
+ *
+ * Сутки здесь делятся не на часы, а на восемь эйкт, и круг показывает это
+ * прямо: луч на каждую, подсвечен тот, в котором сцена. Стрелок две не
+ * нужно — час в этом счёте никто не считал.
+ *
+ * Углы считает CSS по data-eykt, а не JS: одно число наружу, восемь правил
+ * здесь — и никакой арифметики в рендере.
+ */
+.ncw-dial {
+    position: relative;
+    width: 186px;
+    height: 186px;
+    margin: 2px auto 10px;
 }
 
-#ncw-sun {
+.ncw-dial-ring {
+    position: absolute;
+    inset: 0;
+}
+
+.ncw-dial-ray {
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    width: 7px;
+    height: 50%;
+    transform-origin: 50% 100%;
+    /*
+     * Лучи задуманы чёрными — и станут ими, когда под доску ляжет дерево:
+     * достаточно задать --ncw-dial-ray-bg. Пока доска сама тёмная, и чёрным
+     * по тёмному не видно ничего: на месте круга висел один подсвеченный
+     * луч без остальных семи. Поэтому по умолчанию берём цвет темы.
+     */
+    background: var(--ncw-dial-ray-bg, var(--ncw-text-muted));
+    border-radius: 2px 2px 0 0;
+    opacity: 0.75;
+}
+
+.ncw-dial-ray[data-ray="0"] { transform: translateX(-50%) rotate(0deg); }
+.ncw-dial-ray[data-ray="1"] { transform: translateX(-50%) rotate(45deg); }
+.ncw-dial-ray[data-ray="2"] { transform: translateX(-50%) rotate(90deg); }
+.ncw-dial-ray[data-ray="3"] { transform: translateX(-50%) rotate(135deg); }
+.ncw-dial-ray[data-ray="4"] { transform: translateX(-50%) rotate(180deg); }
+.ncw-dial-ray[data-ray="5"] { transform: translateX(-50%) rotate(225deg); }
+.ncw-dial-ray[data-ray="6"] { transform: translateX(-50%) rotate(270deg); }
+.ncw-dial-ray[data-ray="7"] { transform: translateX(-50%) rotate(315deg); }
+
+.ncw-dial[data-eykt="0"] .ncw-dial-ray[data-ray="0"],
+.ncw-dial[data-eykt="1"] .ncw-dial-ray[data-ray="1"],
+.ncw-dial[data-eykt="2"] .ncw-dial-ray[data-ray="2"],
+.ncw-dial[data-eykt="3"] .ncw-dial-ray[data-ray="3"],
+.ncw-dial[data-eykt="4"] .ncw-dial-ray[data-ray="4"],
+.ncw-dial[data-eykt="5"] .ncw-dial-ray[data-ray="5"],
+.ncw-dial[data-eykt="6"] .ncw-dial-ray[data-ray="6"],
+.ncw-dial[data-eykt="7"] .ncw-dial-ray[data-ray="7"] {
+    background: var(--ncw-accent);
+    opacity: 1;
+    box-shadow: 0 0 6px var(--ncw-accent-glow);
+}
+
+/* Сердцевина — деревянный кружок поверх лучей: он же прячет их внутренние
+   концы, поэтому лучи можно рисовать от самого центра. */
+.ncw-dial-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90px;
+    height: 90px;
+    transform: translate(-50%, -50%);
+    border: 1px solid var(--ncw-border);
+    border-radius: 50%;
+    background: var(--ncw-dial-hub-bg, var(--ncw-bg-raised));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ncw-dial-pointer {
+    position: absolute;
+    inset: 0;
+    transition: transform 0.35s ease;
+}
+
+.ncw-dial-pointer::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    margin-left: -8px;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 12px solid var(--ncw-accent);
+}
+
+.ncw-dial[data-eykt="0"] .ncw-dial-pointer { transform: rotate(0deg); }
+.ncw-dial[data-eykt="1"] .ncw-dial-pointer { transform: rotate(45deg); }
+.ncw-dial[data-eykt="2"] .ncw-dial-pointer { transform: rotate(90deg); }
+.ncw-dial[data-eykt="3"] .ncw-dial-pointer { transform: rotate(135deg); }
+.ncw-dial[data-eykt="4"] .ncw-dial-pointer { transform: rotate(180deg); }
+.ncw-dial[data-eykt="5"] .ncw-dial-pointer { transform: rotate(225deg); }
+.ncw-dial[data-eykt="6"] .ncw-dial-pointer { transform: rotate(270deg); }
+.ncw-dial[data-eykt="7"] .ncw-dial-pointer { transform: rotate(315deg); }
+
+/* Второй кружок — под знак времени суток. Знак пока один на все восемь
+   эйкт: своих ещё не нарисовано. */
+.ncw-dial-core {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border: 1px solid var(--ncw-border-soft);
+    border-radius: 50%;
+    background: var(--ncw-dial-core-bg, var(--ncw-bg-open));
+}
+
+#norse-calendar-widget .ncw-dial-icon {
+    width: 40px;
+    height: 40px;
+}
+
+.ncw-sun-line {
     text-align: center;
     font-size: 15px;
     font-style: italic;
     color: var(--ncw-text-dim);
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
-/* Строка недели: день недели · vika N · полугодие.
+/* Строка недели: день недели · vika N.
    Стоит над датой и набрана мельче — это «где мы в году», а не сама дата. */
 #ncw-week {
     text-align: center;
-    font-size: 15px;
+    font-size: 19px;
     letter-spacing: 0.5px;
     color: var(--ncw-text-lore);
-    margin: 2px 0 2px;
+    margin: 3px 0;
 }
 
 #ncw-date {
     text-align: center;
-    font-size: 19px;
+    font-size: 25px;
     color: var(--ncw-text-muted);
-    margin: 2px 0 4px;
+    margin: 3px 0 5px;
 }
 
 #ncw-lore {
     text-align: center;
-    font-size: 16px;
+    font-size: 20px;
     color: var(--ncw-text-lore);
     margin-bottom: 6px;
 }
 
-#norse-calendar-widget #ncw-eykt,
 #norse-calendar-widget #ncw-week,
 #norse-calendar-widget #ncw-date,
 #norse-calendar-widget #ncw-lore {
@@ -368,17 +795,30 @@
  * 7. HINTS (кликабельные слова)
  * ============================================================ */
 
+/*
+ * ПРАВИЛО РЕГИСТРА И ШРИФТА (одно на весь блок)
+ *
+ *   КАПС + Norse — всё, что подписывает: плашки, имена, дата, неделя, луна,
+ *   сводка о теле, заголовки кучек, кнопка нити, погода в круге.
+ *
+ *   как написано + текстовый шрифт — всё, что сказала сцена: приметы, род,
+ *   дом, одежда, состояние, мысль, совет. Здесь живые фразы с именами
+ *   собственными («Léttari», «Торстейн»), и капс их калечит.
+ *
+ * Регистр наследуется, поэтому задан он на самих подписывающих блоках, а не
+ * на кликабельном слове: раньше `.ncw-hintable` тащил капс с Norse всюду,
+ * куда попадал, и толкование живота на листе выходило криком.
+ */
 #norse-calendar-widget .ncw-hintable {
-    font-family: "Norse", Georgia, serif !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: inherit;
 }
 
+/* Подчёркивания под кликабельными словами нет нарочно: их в блоке
+   несколько десятков, и пунктир под каждым читался как сплошная штриховка.
+   Что слово живое, видно по курсору и по подсветке под мышью. */
 .ncw-hintable {
     cursor: pointer;
     transition: color 0.15s ease;
-    border-bottom: 1px dotted var(--ncw-accent-border-dim);
 }
 
 .ncw-hintable:hover {
@@ -388,148 +828,44 @@
 .ncw-hint {
     color: var(--ncw-accent) !important;
     text-shadow: 0 0 8px var(--ncw-accent-glow);
-    border-bottom-color: transparent;
 }
 
 /* ============================================================
  * 8. WEATHER & LOCATION
  * ============================================================ */
 
-.ncw-weather {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 14px;
-    font-size: 15px;
-    color: var(--ncw-text-weather);
-    background: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border);
-    border-radius: 14px;
-    transition: background 0.25s ease, border-color 0.25s ease;
-}
+/* Погода и место переехали в навершие — в круг и на железную вставку,
+   см. раздел 4. Здесь остались только буквы: круг и вставка сами по себе,
+   а надпись в обоих набрана одинаково. */
 
-.ncw-weather-icon {
-    width: 15px;
-    height: 15px;
-}
-
-#norse-calendar-widget #ncw-weather-text,
-#norse-calendar-widget #ncw-location-text {
+#norse-calendar-widget #ncw-weather-text {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 400 !important;
     text-transform: uppercase;
     letter-spacing: 1.5px;
 }
 
-#ncw-weather-text {
-    min-width: 0;
-}
-
-.ncw-loc {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 14px;
-    font-size: 15px;
-    color: var(--ncw-text-panel);
-    background: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border);
-    border-radius: 14px;
-    transition: background 0.25s ease, border-color 0.25s ease;
-}
-
-.ncw-loc-icon {
-    width: 15px;
-    height: 15px;
-}
-
-#ncw-location-text {
-    min-width: 0;
-}
-
-/* ============================================================
- * 9. DETAILS CARDS ({{char}} / {{user}})
- * ============================================================ */
-
-.ncw-details {
-    background: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border);
-    border-radius: 14px;
-    overflow: hidden;
-    transition: background 0.3s ease, border-color 0.25s ease;
-}
-
-.ncw-details[open] {
-    background: var(--ncw-bg-open);
-}
-
-.ncw-summary {
-    list-style: none;
-    padding: 10px 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    font-size: 16px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    text-align: center;
-    color: var(--ncw-text-panel);
-    opacity: 0.85;
-    transition: opacity 0.3s ease;
-}
-
-#norse-calendar-widget .ncw-name {
+/* Место — жирным: железная вставка стоит наравне с деревянной, а на той
+   имя эйкты набрано жирным. */
+#norse-calendar-widget #ncw-location-text {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 700 !important;
     text-transform: uppercase;
     letter-spacing: 1.5px;
 }
 
-.ncw-name {
+#ncw-weather-text,
+#ncw-location-text {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.ncw-summary::-webkit-details-marker,
-.ncw-summary::marker {
-    content: "";
-    display: none;
-}
-
-.ncw-details[open] .ncw-summary {
-    opacity: 1;
-    color: var(--ncw-text-bright);
-    border-bottom: 1px solid var(--ncw-border-soft);
-}
-
-.ncw-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--ncw-accent);
-    box-shadow: 0 0 4px 1px var(--ncw-accent-glow);
-    flex-shrink: 0;
-    opacity: 0.7;
-}
-
-.ncw-details[open] .ncw-dot {
-    opacity: 1;
-    box-shadow: 0 0 6px 2px var(--ncw-accent-glow-strong);
-}
-
-.ncw-details-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 14px 12px;
-    animation: ncw-fade-in 0.35s ease forwards;
-}
+/* ============================================================
+ * 9. LEAF ROWS (строки листов {{user}} / нити / {{char}})
+ *
+ * Раскрывающихся карточек с именами больше нет: имена уехали на деревяшки
+ * (раздел 5), а их содержимое — на лист разворота. Здесь остались сами
+ * строки, они одинаковы на всех трёх листах.
+ * ============================================================ */
 
 @keyframes ncw-fade-in {
     from { opacity: 0; transform: translateY(-4px); }
@@ -546,10 +882,9 @@
     overflow-wrap: anywhere;
 }
 
-.ncw-attire-icon {
-    width: 13px;
-    height: 13px;
-    opacity: 0.65;
+#norse-calendar-widget .ncw-attire-icon {
+    width: 16px;
+    height: 16px;
 }
 
 .ncw-chips {
@@ -585,8 +920,9 @@
     animation: ncw-fade-in 0.5s ease forwards;
 }
 
-.ncw-thought-icon {
-    opacity: 0.7;
+#norse-calendar-widget .ncw-thought-icon {
+    width: 16px;
+    height: 16px;
 }
 
 #ncw-thought-text {
@@ -597,11 +933,17 @@
  * 10. CALENDAR GRID
  * ============================================================ */
 
+/*
+ * Неделя — в самом низу колонки времени.
+ *
+ * `margin-top: auto` отжимает её к нижнему краю: сколько бы ни выросла сводка
+ * о теле справа, календарик стоит на месте и не ездит вслед за ней.
+ */
 #ncw-grid {
+    margin-top: auto;
+    padding-top: 12px;
     text-align: center;
     border-top: 1px solid var(--ncw-border-soft);
-    margin-top: 12px;
-    padding-top: 12px;
 }
 
 #ncw-grid.ncw-hidden {
@@ -858,45 +1200,53 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     color: var(--ncw-accent);
 }
 
-/* Обстановка сцены в шапке: погода и локация одной строкой. */
-.ncw-scene {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 14px;
-    justify-content: flex-end;
-    font-size: 13px;
-    color: var(--ncw-text-weather);
-}
-
-.ncw-weather,
-.ncw-loc {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 5px;
-}
-
-/* Третья колонка — сводка, а не собеседник: без карточки и рамки. */
-.ncw-plain {
-    padding-top: 2px;
-}
-
 /* --- состояние тела и совет --- */
 
 .ncw-state,
+/*
+ * Слово повитухи — врезанная табличка, а не строка в потоке.
+ *
+ * Совет единственное здесь, что сказано человеком и вслух, а не сосчитано
+ * панелью, — и выделен он поэтому не цветом, а оправой: тонкая рамка,
+ * подложка и руна ᚱ по краям, как зарубка на дереве.
+ */
 .ncw-advice {
+    position: relative;
     display: flex;
     align-items: baseline;
-    gap: 6px;
-    margin-top: 4px;
-    font-size: 13px;
-    line-height: 1.45;
+    justify-content: center;
+    gap: 7px;
+    margin: 10px 4px 2px;
+    padding: 9px 14px 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: left;
+    background: var(--ncw-advice-bg, var(--ncw-bg-raised));
+    border: 1px solid var(--ncw-accent-border-dim);
+    border-radius: 3px;
 }
 
-.ncw-state-icon,
-.ncw-advice-icon {
-    width: 13px;
-    height: 13px;
+/* Зарубки по углам: две руны на подложке доски, поверх рамки. */
+.ncw-advice::before,
+.ncw-advice::after {
+    content: "ᚱ";
+    position: absolute;
+    top: -9px;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0 4px;
+    color: var(--ncw-accent);
+    background: var(--ncw-board-bg, var(--ncw-bg));
+    opacity: 0.9;
+}
+
+.ncw-advice::before { left: 10px; }
+.ncw-advice::after { right: 10px; }
+
+#norse-calendar-widget .ncw-state-icon,
+#norse-calendar-widget .ncw-advice-icon {
+    width: 16px;
+    height: 16px;
 }
 
 #ncw-char-state-text,
@@ -906,6 +1256,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 
 /* Совет — не факт сцены, а слово со стороны, потому и курсивом. */
 #ncw-advice-text {
+    min-width: 0;
     font-style: italic;
     color: var(--ncw-text-lore);
 }
@@ -927,9 +1278,36 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     color: var(--ncw-text);
 }
 
-/* Счёт дня — тем же кеглем, но приглушённо: он справочный. */
-#ncw-cycle-text {
-    color: var(--ncw-text-muted);
+/*
+ * Сводка о теле над календариком — заголовок всего блока.
+ *
+ * Набрана скандинавской латиницей вслед за датой и луной: это одна колонка
+ * счёта, и три разных шрифта в ней читались бы как три разных блока.
+ */
+.ncw-summary-block {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ncw-border-soft);
+}
+
+#norse-calendar-widget .ncw-summary-line {
+    font-family: "Norse", Georgia, serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 0.6px;
+    line-height: 1.3;
+}
+
+#norse-calendar-widget #ncw-cycle-text {
+    font-size: 22px;
+    color: var(--ncw-accent);
+}
+
+#norse-calendar-widget #ncw-cycle-status {
+    font-size: 18px;
+    margin-top: 3px;
+    color: var(--ncw-text);
 }
 
 /* Скрытый слой отладки — моноширинным, он для сверки, а не для чтения. */
@@ -953,12 +1331,11 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     color: var(--ncw-text-dim);
 }
 
-/* Название фазы — тем же шрифтом, что и остальная скандинавская латиница. */
-#ncw-cycle-text .ncw-hint {
-    font-family: "Norse", Georgia, serif;
-    font-size: 16px;
-    letter-spacing: 0.8px;
-    color: var(--ncw-accent);
+/* Подсказка внутри сводки — тем же кеглем, что и сама строка. */
+#ncw-cycle-text .ncw-hint,
+#ncw-cycle-status .ncw-hint {
+    font-size: inherit;
+    letter-spacing: inherit;
 }
 
 /* --- женское питьё: плашка отката --- */
@@ -975,13 +1352,14 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* Плашка отвара и плашка дитяти не flex — знак отбиваем полем, не gap'ом. */
 .ncw-draught-icon {
     margin-right: 5px;
-    opacity: 0.85;
 }
 
 /* Название травы — той же скандинавской латиницей, что фазы и имена. */
 .ncw-draught .ncw-hintable {
     font-family: "Norse", Georgia, serif;
+    font-weight: 700;
     font-size: 15px;
+    text-transform: uppercase;
     letter-spacing: 0.6px;
     color: var(--ncw-accent);
 }
@@ -1019,13 +1397,14 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 
 .ncw-child-icon {
     margin-right: 5px;
-    opacity: 0.85;
 }
 
 /* Имя дитяти — той же скандинавской латиницей, что и названия фаз. */
 .ncw-child .ncw-hintable {
     font-family: "Norse", Georgia, serif;
+    font-weight: 700;
     font-size: 15px;
+    text-transform: uppercase;
     letter-spacing: 0.6px;
     color: var(--ncw-accent);
 }
@@ -1489,32 +1868,34 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* ============================================================
  * 14. ICONS (знаки полей)
  *
- * Знак — пустой элемент, которому CSS подкладывает файл из icons/ маской,
- * а не картинкой. Из этого следует всё остальное:
+ * Знак — пустой элемент, которому CSS подкладывает файл из icons/ фоном.
  *
- *  - `background-color: currentColor` — знак красится цветом своей строки,
- *    поэтому все четыре темы работают без отдельных файлов, а `.ncw-alarm`
- *    красит иконку вместе с текстом, ничего для этого не зная;
+ * Сперва здесь была маска и `background-color: currentColor`: знак красился
+ * цветом строки и сам попадал в тему. Но знаки нарисованы цветными и с
+ * подробностями — платок повитухи, пятна на луне, — а маска берёт из файла
+ * одну альфу, и от рисунка остались бы плоские пятна. Рисунок дороже
+ * автоматической подкраски, поэтому знаки подключены картинкой.
+ *
+ * Что из этого следует:
+ *
  *  - путь живёт здесь, а не в JS: `url()` считается от этого файла, ровно
  *    как в @font-face выше. В JS папку расширения так просто не достать;
  *  - имени нет в списке — покажется `_fallback.svg`, и вёрстка этого
- *    не заметит. Значит, иконки можно доносить в папку по одной.
+ *    не заметит. Значит, иконки можно доносить в папку по одной;
+ *  - за темой знаки больше не следуют. Им это и не нужно: каждый обведён
+ *    тёмным контуром и читается что на угольном фоне, что на берестяном.
  *
- * Файлы — квадратные SVG (viewBox 0 0 24 24), одноцветный силуэт.
- * Цвет внутри файла не важен вовсе: маска берёт только альфу.
+ * Файлы — квадратные SVG (viewBox 0 0 48 48).
  * ============================================================ */
 
 .ncw-icon {
     display: inline-block;
     flex-shrink: 0;
-    width: 14px;
-    height: 14px;
-    vertical-align: -0.12em;
-    opacity: 0.8;
-    background-color: currentColor;
+    width: 18px;
+    height: 18px;
+    vertical-align: -0.22em;
     --ncw-icon: url("icons/_fallback.svg");
-    -webkit-mask: var(--ncw-icon) center / contain no-repeat;
-    mask: var(--ncw-icon) center / contain no-repeat;
+    background: var(--ncw-icon) center / contain no-repeat;
 }
 
 /* --- сцена --- */
@@ -1605,6 +1986,14 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     line-height: 1.45;
 }
 
+/* В плотных строках знак чуть мельче общего: 18px перерастают строку в
+   13.5px и разгоняют каждую строку с двадцати пикселей до двадцати четырёх,
+   а таких строк в беременность полтора десятка. */
+.ncw-fact .ncw-icon {
+    width: 16px;
+    height: 16px;
+}
+
 .ncw-fact-label {
     flex-shrink: 0;
     color: var(--ncw-text-dim);
@@ -1615,34 +2004,87 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     color: var(--ncw-text);
 }
 
-/* Строки-свалки стали столбцами фактов.
+/*
+ * Лист нити — в два столбца по смыслу.
+ *
+ * Слева приметы: их к девятой части набирается десяток, и в общем потоке
+ * они топили под собой всё остальное. Справа — род и дом: короткие
+ * «подпись: значение», которые в узкий столбец ложатся как влитые.
+ * Высоты выходят сопоставимыми, а лист — вдвое короче прежнего.
+ */
+.ncw-cycle-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 10px 16px;
+    align-items: start;
+    margin-top: 6px;
+}
 
-   Раскладывать дозор в две колонки пробовали — не стоит того: «Наготове:
-   вода греется, верёвка с балки» в узком столбце переносится втрое, и вся
-   выгода съедается. В один столбец почти каждый факт умещается в строку. */
+.ncw-cycle-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+#ncw-cycle-kicks,
 #ncw-cycle-extra,
-#ncw-cycle-guess,
 #ncw-cycle-signs,
-#ncw-cycle-watch {
+.ncw-cycle-group {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-/* Приметы остаются присказкой и держат курсив от .ncw-cycle-dim; дозор
-   и гадание — нет: там теперь факты, а не лирика. */
-#ncw-cycle-watch .ncw-fact-value,
-#ncw-cycle-guess .ncw-fact-value {
+/*
+ * ПРОБА ШРИФТОВ — временно.
+ *
+ * Слева приметы набраны Alegreya, справа род и дом — Cormorant Unicase.
+ * Так видно оба сразу и на живом тексте. Когда выбор сделан: оставить
+ * победителя одним правилом на `.ncw-leaf`, второе правило и лишний
+ * @font-face в разделе 1 убрать.
+ */
+#ncw-cycle-signs {
+    font-family: "Alegreya", Georgia, serif;
+    font-size: 15px;
+}
+
+.ncw-cycle-group {
+    font-family: "Cormorant Unicase", Georgia, serif;
+    font-size: 15.5px;
+}
+
+/* Заголовок кучки — тише всего в блоке: он не факт, а перегородка. */
+.ncw-group-title {
+    font-size: 11.5px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--ncw-text-dim);
+    opacity: 0.75;
+    margin-bottom: 1px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--ncw-border-soft);
+}
+
+.ncw-cycle-group .ncw-fact-value {
     font-style: normal;
 }
 
-/* Тревога красит строку целиком — и значение, и знак вместе с ним. */
+/* Приметы остаются присказкой и держат курсив от .ncw-cycle-dim; род, дом
+   и шевеления — нет: там факты, а не лирика (см. .ncw-cycle-group выше). */
+#ncw-cycle-kicks .ncw-fact-value {
+    font-style: normal;
+}
+
+/* Тревога красит значение акцентом. Знак покрасить нельзя — он цветной
+   картинкой, — поэтому его подсвечиваем: тревожная строка должна ловить
+   взгляд целиком, а не одной своей половиной. */
 .ncw-fact.ncw-alarm .ncw-fact-value {
     color: var(--ncw-accent);
 }
 
 .ncw-fact.ncw-alarm .ncw-icon {
-    opacity: 1;
+    filter: drop-shadow(0 0 3px var(--ncw-accent-glow-strong));
 }
 
 /* --- знаки в левой колонке ---
@@ -1650,15 +2092,26 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
    в em: он растёт вместе со строкой, в которой стоит. Колонка набрана
    по центру, и знаки нарочно оставлены строчными — flex сломал бы центровку. */
 
-#ncw-eykt .ncw-icon,
+/* Знаки в строках даты равняем по середине текста, а не по базовой линии:
+   сдвиг в em подгонялся под один кегль, а кегли тут разные — эйкта, дата и
+   луна набраны по-своему, и знаки при базовой линии разъезжались. */
 #ncw-sun .ncw-icon,
 #ncw-week .ncw-icon,
 #ncw-date .ncw-icon,
 #ncw-lore .ncw-icon,
 .ncw-auk-title .ncw-icon {
-    width: 0.85em;
-    height: 0.85em;
-    margin-right: 5px;
+    width: 0.95em;
+    height: 0.95em;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* Текст рядом с ними — тоже по середине, иначе равнять было бы не с чем. */
+#ncw-sun > *,
+#ncw-week > *,
+#ncw-date > *,
+#ncw-lore > * {
+    vertical-align: middle;
 }
 
 /* В строке недели три разных факта подряд, и разводит их теперь не серая
@@ -1687,8 +2140,13 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 
 /* Знак фазы тела — крупнее прочих: он один отвечает за всю колонку. */
 #ncw-cycle-text .ncw-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 6px;
-    opacity: 0.9;
+    width: 22px;
+    height: 22px;
+    margin-right: 7px;
+    vertical-align: middle;
+}
+
+#ncw-cycle-text > *,
+#ncw-cycle-status > * {
+    vertical-align: middle;
 }

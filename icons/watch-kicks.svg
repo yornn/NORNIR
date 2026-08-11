@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- круг утробы -->
+  <circle cx="24" cy="24" r="19" fill="#f6e7bd" stroke="#33261c" stroke-width="2"/>
+  <circle cx="24" cy="24" r="15.5" fill="none" stroke="#e0a832" stroke-width="1.2" stroke-dasharray="2.2 2"/>
+  <!-- пяточка дитяти, бьющая изнутри -->
+  <path d="M17 28c-1.5-3 .5-6.5 3.5-7.5 2.5-.8 5.5.3 6.5 2.5 1.2 2.6-.5 5.5-3 6.5-2.2.9-6 .4-7-1.5z" fill="#c98d5f" stroke="#33261c" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M19 24.5l1.6-1M20.5 27l1.8-.8M22.5 29.2l1.6-.6" stroke="#a06a42" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- след-волна удара -->
+  <path d="M30 20c2 1.5 3.5 3.5 4 6M33 16.5c2.8 2 5 4.8 5.6 8" fill="none" stroke="#b03a2a" stroke-width="2" stroke-linecap="round"/>
+  <path d="M27.5 15.5c1 .2 2 .7 2.8 1.4" fill="none" stroke="#b03a2a" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- искры толчка -->
+  <g fill="#e0a832" stroke="#33261c" stroke-width="0.9">
+    <path d="M36.5 24.5l.7 1.4 1.4.7-1.4.7-.7 1.4-.7-1.4-1.4-.7 1.4-.7z"/>
+    <path d="M32.5 30.5l.6 1.2 1.2.6-1.2.6-.6 1.2-.6-1.2-1.2-.6 1.2-.6z"/>
+  </g>
+  <!-- волнистые отметки сотрясения слева -->
+  <path d="M9 21c1.2 1 1.2 2.4 0 3.4M12.5 23c1 1 1 2.2 0 3.2" fill="none" stroke="#8a5a33" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

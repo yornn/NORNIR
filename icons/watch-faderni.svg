@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- скреплённая грамота признания -->
+  <path d="M12 6h24v28c0 4-3 8-8 8H12z" fill="#f0e4c8" stroke="#33261c" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M12 6c-3 0-5 2-5 5s2 5 5 5" fill="#e6d7b2" stroke="#33261c" stroke-width="1.8"/>
+  <!-- строки рун -->
+  <g stroke="#5d4028" stroke-width="1.7" stroke-linecap="round">
+    <path d="M17 12h3M22 12h2M26 12h3M31 12h2"/>
+    <path d="M17 17h2M21 17h3M26 17h2M30 17h3"/>
+    <path d="M17 22h3M22 22h2M26 22h3"/>
+  </g>
+  <!-- зарубки-руны -->
+  <g stroke="#8f2f24" stroke-width="1.5" stroke-linecap="round">
+    <path d="M17.5 11v2.2M22.5 11v2.2M27.5 11v2.2M31.5 11v2.2"/>
+  </g>
+  <!-- восковая печать с руной -->
+  <circle cx="30" cy="32" r="6" fill="#8f2f24" stroke="#33261c" stroke-width="1.8"/>
+  <circle cx="30" cy="32" r="4.4" fill="none" stroke="#b03a2a" stroke-width="1"/>
+  <path d="M30 29v6M28 30.2l2 1.4 2-1.4" fill="none" stroke="#f6e7bd" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- шнур печати -->
+  <path d="M25 30c-2-1.5-4-2-6.5-1.8" fill="none" stroke="#6e4a26" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- перо -->
+  <path d="M37 8c2 1.5 3 4 2.5 7L34 20l-1.5-1.5 3-7.5c.5-1.2 1-2.2 1.5-3z" fill="#93a5b8" stroke="#33261c" stroke-width="1.4" stroke-linejoin="round"/>
+  <path d="M35.5 10.5l2 2" stroke="#33261c" stroke-width="1"/>
+</svg>

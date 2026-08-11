@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- дощечка недели -->
+  <rect x="8" y="7" width="32" height="34" rx="3" fill="#f0e4c8" stroke="#33261c" stroke-width="2"/>
+  <path d="M8 12h32" stroke="#d9c9a3" stroke-width="1.4"/>
+  <!-- верхняя планка с гвоздями -->
+  <rect x="8" y="7" width="32" height="5" rx="2.5" fill="#a86f3e" stroke="#33261c" stroke-width="1.6"/>
+  <circle cx="13" cy="9.5" r="1.2" fill="#33261c"/>
+  <circle cx="35" cy="9.5" r="1.2" fill="#33261c"/>
+  <!-- семь зарубок-дней -->
+  <g stroke="#8f2f24" stroke-width="2.4" stroke-linecap="round">
+    <path d="M13 34v5M16.8 34v5M20.6 34v5M24.4 34v5M28.2 34v5M32 34v5M35.8 34v5"/>
+  </g>
+  <!-- солнце и луна -->
+  <circle cx="19" cy="23" r="4.6" fill="#f2cd72" stroke="#33261c" stroke-width="1.6"/>
+  <path d="M19 16.4v1.6M19 28v1.6M12.4 23h1.6M24 23h1.6" stroke="#e0a832" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M32.5 18.6a4.8 4.8 0 1 0 4 7.6 5.8 5.8 0 0 1-4-7.6z" fill="#d7dceb" stroke="#33261c" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>
