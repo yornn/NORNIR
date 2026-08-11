@@ -18,6 +18,7 @@ import {
     conceptionChance,
     cycleDay,
     cyclePhrase,
+    cycleSigns,
     disruptionShift,
     termSigns,
     weatherToll,
@@ -45,7 +46,7 @@ import {
     STILLBIRTH,
     VIABLE_DAY,
 } from "./body.js";
-import { cycleAnchor, findBodyState, findLatestState, herbAnchor, labourAnchor, pregnancyAnchor, readChat, syncWholeChat } from "./chat-state.js";
+import { cycleAnchor, findBodyState, findLatestState, herbAnchor, labourAnchor, pregnancyAnchor, readChat, setSceneDate, syncWholeChat } from "./chat-state.js";
 import { addDays, parseBodyEvents, parseYesNo, parseYorniTag, serialOf, serialToDate } from "./parser.js";
 import { daysSinceBleeding } from "./body.js";
 import { readFileSync } from "node:fs";
@@ -144,6 +145,25 @@ syncWholeChat(chat);
 const state = findBodyState(chat);
 check("событие запомнило свой день",
     `${state.lastBleed.day} / ${state.lastBleed.month}`, "1 / 9");
+
+/*
+ * Пересборка не должна съедать снимок.
+ *
+ * Отпечаток генерации кладётся в extra приведённым к секундам, и при
+ * следующей сверке приведение делается снова — уже над своим же выводом.
+ * Значит оно обязано быть идемпотентным: пока Date.parse разбирал голые
+ * числа как год, отпечаток переставал совпадать сам с собой, и снимок со
+ * всем сказанным стирался как чужой.
+ */
+const restamped = [
+    { is_user: false, gen_finished: "told-70", extra: {},
+      mes: ["проза", "<!-- [YORNI:", "eykt: хадеги", "date: 5 сольмануд 1015",
+          "child_name: Хельга", "weather: снег", "location: дом", "mood: ок", "] -->"].join("\n") },
+];
+syncWholeChat(restamped);
+check("снимок прочитан", readChat(restamped, null, {}).told?.childName, "Хельга");
+syncWholeChat(restamped);
+check("и пересборку пережил", readChat(restamped, null, {}).told?.childName, "Хельга");
 
 /* Второе событие сдвигает якорь: цикл считается от свежей крови. */
 chat.push(mk("хадеги", "", "кровь пришла"));
@@ -307,6 +327,52 @@ const carryView = bodyView(carrying, { year: 1015, month: 10, day: 20 });
 check("у беременной задержка считается", carryView.state, "pregnant_unknown");
 check("и показана днями", carryView.title.startsWith("Кровь не приходила:"), true);
 
+console.log("\n=== Потерянная смена года ===");
+
+/*
+ * Год начинается первым гормануда, то есть перещёлкивает посреди осени.
+ * Модель старых чатов писала даты привычным календарём и смены года не
+ * замечала: после «4 хейаннир 1015» у неё шёл «1 гормануд 1015» вместо
+ * 1016 — и якорь тащил всю историю на 284 дня назад.
+ */
+const turned = [
+    mk("хадеги", "date: 4 хейаннир 1015"),
+    mk("хадеги"),
+    mk("хадеги", "date: 1 гормануд 1015"),
+];
+syncWholeChat(turned);
+const turnedDate = readChat(turned, null, {}).date;
+check("потерянный год восстановлен", `${turnedDate.day}.${turnedDate.month}.${turnedDate.year}`, "1.1.1016");
+
+/* Малый откат так не лечим: это уже не потерянный год, а путаница, и
+   подменять её скачком на год вперёд было бы хуже болезни. */
+const stumble = [
+    mk("хадеги", "date: 10 гормануд 1015"),
+    mk("хадеги", "date: 4 гормануд 1015"),
+];
+syncWholeChat(stumble);
+const stumbleDate = readChat(stumble, null, {}).date;
+check("малый откат оставлен как есть", `${stumbleDate.day}.${stumbleDate.month}.${stumbleDate.year}`, "4.1.1015");
+
+/* Рука пользователя — авторский акт: назад её двигают намеренно. */
+const handMoved = [mk("хадеги", "date: 4 хейаннир 1015"), mk("хадеги")];
+syncWholeChat(handMoved);
+setSceneDate(handMoved, { year: 1015, month: 1, day: 1 });
+const handDate = readChat(handMoved, null, {}).date;
+check("поставленную руками не поправляем",
+    `${handDate.day}.${handDate.month}.${handDate.year}`, "1.1.1015");
+
+/* И то, ради чего всё затевалось: срок ношения перестал съезжать. */
+const carriedOver = [
+    mk("хадеги", "date: 4 хейаннир 1015", "понесла"),
+    mk("хадеги"),
+    mk("хадеги", "date: 4 гормануд 1015"),
+];
+syncWholeChat(carriedOver);
+const over = readChat(carriedOver, null, {});
+check("и ношение считается верно",
+    bodyView(over.body, over.date, {}).count, "Ношение: 4/9");
+
 console.log("\n=== Приметы по сроку ===");
 
 /* Считаются от части срока и погоды: модели их не спрашивают, потому что
@@ -321,6 +387,91 @@ check("и не раньше", termSigns(8).some((x) => x.text.startsWith("Létta
    заглушку и все приметы выглядят одинаково. */
 check("у léttari свой вид",
     termSigns(9).find((x) => x.text.startsWith("Léttari")).kind, "lettari");
+
+/*
+ * Слова меняются, состав — нет.
+ *
+ * Прежде список был плоским: часть срока держится тридцать суток, и всё это
+ * время панель повторяла те же строки в том же порядке. Теперь на каждый вид
+ * стоит пул, а слово из него берётся по сиду — сутки держат, свайп не
+ * перекидывает, у разных носящих в один день разное.
+ */
+const termAt = (seed) => termSigns(6, seed).map((s) => s.text).join("|");
+check("при том же сиде приметы те же", termAt("a|100") === termAt("a|100"), true);
+check("назавтра слова другие", termAt("a|100") !== termAt("a|101"), true);
+check("а состав тот же", termSigns(6, "a|100").map((s) => s.kind).join("|"),
+    termSigns(6, "a|101").map((s) => s.kind).join("|"));
+check("у разных носящих в один день разное", termAt("a|100") !== termAt("b|100"), true);
+
+/* Пулы не должны протекать за своё окно: молозиво на шестой части — ложь. */
+const milkTexts = ["Молозиво пришло", "Молозиво выступило — рубаха мокра поутру",
+    "Из сосков сочится жёлтое и липкое"];
+check("молозиво не приходит раньше девятой",
+    Array.from({ length: 40 }, (_, i) => termSigns(8, `s|${i}`))
+        .some((row) => row.some((s) => milkTexts.includes(s.text))), false);
+/* Каждый пул должен отдавать больше одного слова, иначе разнообразия нет. */
+const seen = new Map();
+for (let i = 0; i < 200; i++) {
+    for (const s of termSigns(9, `v|${i}`)) {
+        if (!seen.has(s.kind)) seen.set(s.kind, new Set());
+        seen.get(s.kind).add(s.text);
+    }
+}
+check("каждый вид говорит по-разному",
+    Array.from(seen.values()).every((texts) => texts.size > 1), true);
+
+/* Неосознанная беременность видит приметы тела, но не живот: поясок и
+   округлившийся стан начинаются с четвёртой части, когда скрывать нечего. */
+const unaware = bodyView(
+    { lastBleed: { year: 1014, month: 12, day: 18 },
+      pregnancy: { conceived: { year: 1015, month: 1, day: 1 } } },
+    addDays(1015, 1, 1, 80), {});
+check("не знающая о дитяти видит приметы", unaware.state, "pregnant_unknown");
+check("грудь и дурноту среди них",
+    ["breast", "nausea"].every((k) => unaware.signs.some((s) => s.kind === k)), true);
+check("а живот себя не выдаёт", unaware.signs.some((s) => s.kind === "belly"), false);
+
+console.log("\n=== Приметы цикла ===");
+
+/* Небеременной панель показывала одну фазу и ничего больше, хотя грудь, сон
+   и запахи ходят по кругу ровно так же, как под дитятей. */
+const kindsAt = (day, seed = "c|1") => cycleSigns(day, 28, seed).map((s) => s.kind);
+check("в дни крови есть кровь, грудь и сон",
+    ["blood", "breast", "sleep"].every((k) => kindsAt(2).includes(k)), true);
+check("и запахи тоже", kindsAt(2).includes("smell"), true);
+check("на очищении крови уже нет", kindsAt(8).includes("blood"), false);
+check("зато прибывает сила", kindsAt(8).includes("hunger"), true);
+check("на открытом лоне своё", kindsAt(14).includes("heat"), true);
+check("перед кровью отекает", kindsAt(26).includes("swelling"), true);
+check("а на семнадцатый день ещё нет", kindsAt(17).includes("swelling"), false);
+/* Хвост цикла принадлежит предкровью: иначе грудь встала бы двумя строками —
+   и «потяжелела», и «каменная». */
+check("грудь не двоится в предкровье",
+    kindsAt(26).filter((k) => k === "breast").length, 1);
+check("и в тяжелеющем лоне тоже",
+    kindsAt(20).filter((k) => k === "breast").length, 1);
+check("предкровье считается с хвоста, а не с головы",
+    cycleSigns(36, 40, "c|1").map((s) => s.kind).includes("swelling"), false);
+check("при длинном цикле оно всё равно наступит",
+    cycleSigns(38, 40, "c|1").map((s) => s.kind).includes("swelling"), true);
+check("без дня цикла примет нет", cycleSigns(null, 28, "c|1").length, 0);
+
+const cycleAt = (seed) => cycleSigns(3, 28, seed).map((s) => s.text).join("|");
+check("сид держит приметы цикла сутки", cycleAt("c|5") === cycleAt("c|5"), true);
+check("а назавтра слова другие", cycleAt("c|5") !== cycleAt("c|6"), true);
+
+/* Панель обязана верить сцене: сказано, что кровь кончилась, — примет о
+   крови быть не должно, хоть по таблице тидир ещё идут. */
+const bleedDay = (d) => ({ year: 1015, month: 9, day: d });
+const flowing = bodyView({ lastBleed: bleedDay(1) }, bleedDay(2), {});
+check("в дни крови панель показывает приметы", flowing.signs.length > 0, true);
+check("и кровь среди них", flowing.signs.some((s) => s.kind === "blood"), true);
+const stopped = bodyView({ lastBleed: bleedDay(1), bleedEnded: bleedDay(2) }, bleedDay(2), {});
+check("а сказанное «кровь кончилась» её убирает",
+    stopped.signs.some((s) => s.kind === "blood"), false);
+check("прочие приметы остаются", stopped.signs.length > 0, true);
+
+console.log("\n=== Приметы по сроку ===");
 
 check("жара бьёт по телу", weatherToll("Сильная жара", 6).includes("отекают"), true);
 check("мороз тоже", weatherToll("Мокрый снег и мороз", 9).includes("Холод"), true);

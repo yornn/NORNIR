@@ -22,7 +22,7 @@
  *
  * 1. Helpers ............ Мелкие конструкторы DOM
  * 2. Columns ............ Реестр колонок, облачки выбора и таблица
- * 3. Sections ........... Эйкты, месяцы, дни недели, Луна, формат блока
+ * 3. Sections ........... Эйкты, месяцы, дни недели, Луна, праздники, блок
  * 4. Assembly ........... Сборка окна с аккордеоном
  */
 
@@ -57,6 +57,21 @@ import {
     yearLength,
 } from "./parser.js";
 
+import {
+    HOLIDAYS,
+    HOLIDAY_REGIONS,
+    HOLIDAY_TIERS,
+    holidayEnd,
+    holidayStart,
+    holidaysOn,
+    nextHoliday,
+} from "./holidays.js";
+
+/* Справочник показывает ВСЕ слои, какие бы ни стояли в настройках: это
+   книга, а не панель. Что из этого видно в инфоблоке, сказано примечанием
+   под таблицами. */
+const ALL_TIERS = HOLIDAY_TIERS.map((tier) => tier.id);
+
 /* ============================================================
  * 1. HELPERS
  * ============================================================ */
@@ -88,14 +103,25 @@ const COLUMN_LABELS = {
     meaning: () => t`Meaning`,
     sun: () => t`Sun`,
     short: () => t`Short`,
+    /* Праздники: когда стоит, сколько длится, чей и откуда известен. */
+    when: () => t`Date`,
+    weekday: () => t`Weekday`,
+    days: () => t`Days`,
+    region: () => t`Region`,
+    source: () => t`Known from`,
 };
 
 /**
  * Постоянные колонки — опора таблицы, их не выключить и облачков у них нет.
  * Древнескандинавское написание есть везде, номер — только в эйктах; в CSS
  * они прижаты друг к другу, чтобы читались как одно целое.
+ *
+ * Дата праздника здесь по той же причине, что и номер месяца: праздник без
+ * своего дня — не сведение, а имя. Колонки по умолчанию выключены все, кроме
+ * русской, и таблица праздников открывалась бы вовсе без дат. В прочих
+ * таблицах ключа `when` нет, так что им это ничего не меняет.
  */
-export const PERMANENT_COLUMNS = ["num", "norse"];
+export const PERMANENT_COLUMNS = ["num", "norse", "when"];
 
 export const isPermanent = (key) => PERMANENT_COLUMNS.includes(key);
 
@@ -693,6 +719,106 @@ function monthSection(body, state, prefs) {
 }
 
 /**
+ * Праздники — по слоям достоверности.
+ *
+ * Разложены не по месяцам, а по тому, насколько им можно верить: сага,
+ * догадка, церковь, нынешнее неоязычество. Так справочник отвечает на
+ * главный вопрос — «а это правда было?» — прежде, чем на вопрос «когда».
+ *
+ * Даты показаны конкретным числом того года, что стоит в сцене, и рядом
+ * день недели: по нему видно само правило. Первая суббота гормануда — это
+ * и есть первое гормануда, и в столбце это читается без объяснений.
+ */
+function holidaySection(body, state, prefs) {
+    body.append(lead(t`Feasts are pinned to a weekday within the month, not to a number — the first Saturday of Gormánaður, the first Thursday of Harpa, the last Thursday of Sólmánuður. That is how they were actually reckoned, and without it the dates would drift from year to year.`));
+
+    /* Год берём из сцены: справочник показывает тот год, в котором играют.
+       Даты в нём всё равно те же — год состоит из целых недель, — но так
+       подсвеченная строка совпадает с тем, что стоит в панели. */
+    const year = hasDate(state) ? state.year : 1015;
+
+    const today = hasDate(state)
+        ? holidaysOn(state.year, state.month, state.day, { tiers: ALL_TIERS, region: "all" })
+        : [];
+    const todayIds = new Set(today.map((x) => x.holiday.id));
+
+    if (today.length) {
+        const main = today[0];
+        const count = main.days > 1 ? ` · ${t`day`} ${main.day}/${main.days}` : "";
+        body.append(h("div", "nct-picker-now-line",
+            `${main.holiday.norse} — ${main.holiday.ru}${count}`));
+    } else if (hasDate(state)) {
+        const soon = nextHoliday(state.year, state.month, state.day, { tiers: ALL_TIERS, region: "all" });
+        if (soon) {
+            /* Склейку числа со словом делаем так же, как в эхе беременности:
+               одним ключом «day», без подстановки внутрь перевода. */
+            body.append(h("div", "nct-picker-echo",
+                `${t`Next`}: ${soon.holiday.norse} — ${soon.holiday.ru} · ${soon.days} ${t`day`}`));
+        }
+    }
+
+    /* Постоянные колонки стоят первыми и рядом: имя и день. Остальное
+       добирается облачками, как и в прочих таблицах справочника. */
+    const columns = ["norse", "when", "ru", "weekday", "days", "region", "meaning", "source"];
+    body.append(chipsRow(columns, prefs));
+
+    const regionName = (id) => HOLIDAY_REGIONS.find((r) => r.id === id)?.ru ?? id;
+    const monthName = (d) => (isAuk(d.month) ? "Auknætr" : MONTHS_LORE[d.month - 1].norse);
+
+    /*
+     * Срок праздника словами.
+     *
+     * Месяц называем дважды, когда конец пришёлся на другой: Alþingi
+     * начинается в сольмануде и кончается уже в аукнэтр или в хейанире,
+     * и «25 — 8 Sólmánuður» было бы прямой неправдой.
+     */
+    const spanWords = (at, end) => {
+        if (at.day === end.day && at.month === end.month) return `${at.day} ${monthName(at)}`;
+        if (at.month === end.month) return `${at.day} — ${end.day} ${monthName(at)}`;
+        return `${at.day} ${monthName(at)} — ${end.day} ${monthName(end)}`;
+    };
+
+    for (const tier of HOLIDAY_TIERS) {
+        const inTier = HOLIDAYS.filter((x) => x.tier === tier.id);
+        if (!inTier.length) continue;
+
+        body.append(h("div", "nct-subhead", tier.ru));
+        body.append(h("div", "nct-hint", tier.hint));
+
+        const rows = inTier
+            .map((holiday) => ({ holiday, at: holidayStart(holiday, year) }))
+            /* Праздника, которого в этом году ещё нет, — Олавова дня до
+               1031-го, — в таблице тоже нет: справочник показывает год
+               сцены, а не вообще всё, что когда-нибудь появится. */
+            .filter((x) => x.at)
+            .sort((a, b) => serialOf(a.at.year, a.at.month, a.at.day)
+                - serialOf(b.at.year, b.at.month, b.at.day))
+            .map(({ holiday, at }) => {
+                const end = holidayEnd(holiday, year);
+                return {
+                    current: todayIds.has(holiday.id),
+                    cells: {
+                        norse: h("span", "nct-norse", holiday.norse),
+                        ru: holiday.ru,
+                        when: spanWords(at, end),
+                        weekday: WEEKDAYS_LORE[weekdayOf(at.year, at.month, at.day)].norse,
+                        days: holiday.days,
+                        region: regionName(holiday.region),
+                        meaning: holiday.gloss,
+                        source: holiday.source,
+                    },
+                };
+            });
+        body.append(table(columns, rows, prefs));
+    }
+
+    body.append(h("div", "nct-note",
+        t`Whole layers are switched on and off in the extension settings, and so is the land the story is set in: feasts of all Scandinavia show everywhere, the Icelandic and Swedish ones only on their own soil. A feast listed here may therefore be missing from the panel — that is the setting, not an error.`));
+    body.append(h("div", "nct-note",
+        t`Several feasts can fall on one day: the winter nights carry the great feast, the rite for the álfar and the sacrifice to the dísir at once. The panel names the chief one and keeps the rest in its hint — a saga outweighs a reconstruction, a long feast a single day.`));
+}
+
+/**
  * Устройство года: недели, вставки, с какого дня всё начинается.
  * Таблицы здесь нет — это связный рассказ, а не перечень вариантов.
  */
@@ -809,6 +935,9 @@ const SECTIONS = [
     { id: "vika",  icon: "🗓", title: () => t`Vika — the year in whole weeks`,     build: vikaSection },
     { id: "week",  icon: "🪓", title: () => t`Weekdays — named after the gods`,   build: weekdaySection },
     { id: "moon",  icon: "🌕", title: () => t`Tungl — phases of the Moon`,        build: moonSection },
+    /* Праздники стоят после Луны и до блока: это последнее знание о мире,
+       а блок — уже про то, как оно попадает в чат. */
+    { id: "feast", icon: "🔥", title: () => t`Feasts — the year by its holidays`, build: holidaySection },
     { id: "block", icon: "ᚱ",  title: () => t`The calendar block`,                build: blockSection },
 ];
 

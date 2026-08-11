@@ -38,6 +38,38 @@
                     <input id="nc_body" type="checkbox" />
                     <span data-i18n="Track the woman's cycle">Track the woman's cycle</span>
                 </label>
+                <label class="checkbox_label" for="nc_holidays">
+                    <input id="nc_holidays" type="checkbox" />
+                    <span data-i18n="Show holidays">Show holidays</span>
+                </label>
+                <!-- Слои достоверности: включаются пластами, а не поштучно.
+                     Современный по умолчанию выключен. -->
+                <div class="nc-sub">
+                    <label class="checkbox_label" for="nc_holiday_attested">
+                        <input id="nc_holiday_attested" type="checkbox" />
+                        <span data-i18n="Attested in the sagas and laws">Attested in the sagas and laws</span>
+                    </label>
+                    <label class="checkbox_label" for="nc_holiday_probable">
+                        <input id="nc_holiday_probable" type="checkbox" />
+                        <span data-i18n="Probable, reconstructed">Probable, reconstructed</span>
+                    </label>
+                    <label class="checkbox_label" for="nc_holiday_christian">
+                        <input id="nc_holiday_christian" type="checkbox" />
+                        <span data-i18n="Christian, from about the year 1000">Christian, from about the year 1000</span>
+                    </label>
+                    <label class="checkbox_label" for="nc_holiday_modern">
+                        <input id="nc_holiday_modern" type="checkbox" />
+                        <span data-i18n="Modern heathen (not of the age)">Modern heathen (not of the age)</span>
+                    </label>
+                    <label class="nc-theme-label" for="nc_holiday_region">
+                        <span data-i18n="Where the story is set">Where the story is set</span>
+                        <select id="nc_holiday_region" class="text_pole">
+                            <option value="all" data-i18n="All of Scandinavia">All of Scandinavia</option>
+                            <option value="iceland" data-i18n="Iceland">Iceland</option>
+                            <option value="sweden" data-i18n="Sweden">Sweden</option>
+                        </select>
+                    </label>
+                </div>
                 <label class="nc-theme-label" for="nc_theme">
                     <span data-i18n="Theme">Theme</span>
                     <select id="nc_theme" class="text_pole">

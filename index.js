@@ -92,12 +92,14 @@ import {
 
 import { CYCLE_DEFAULT, DIVINATION_ACCURACY, bodyView, pregnancyTerm } from "./body.js";
 
+import { DEFAULT_TIERS, HOLIDAY_TIERS, holidayView, markWeek } from "./holidays.js";
+
 const extensionName = "Norse-Calendar";
 const extensionFolderName = `third-party/${extensionName}`;
 
 /* По умолчанию в Tímatal открыты только Эйкты: с телефона незачем листать
    весь справочник, а нужный раздел разворачивается одним касанием. */
-const DEFAULT_CLOSED_SECTIONS = ["month", "vika", "week", "moon", "block"];
+const DEFAULT_CLOSED_SECTIONS = ["month", "vika", "week", "moon", "feast", "block"];
 
 /* Постоянные колонки (номер и др.-сканд. написание) здесь не перечисляются —
    они всегда на месте. Русский включён, чтобы при первом открытии сразу было
@@ -114,6 +116,12 @@ const defaultSettings = {
     timatalClosedSections: DEFAULT_CLOSED_SECTIONS,
     timatalVisibleColumns: DEFAULT_VISIBLE_COLUMNS,
     loreHints: false,
+    /* Праздники: сам показ, слои достоверности и край света. Слои списком,
+       а не четырьмя флагами, — их включают пластами, и добавить пятый слой
+       не должно значить добавить пятую настройку. */
+    holidays: true,
+    holidayTiers: [...DEFAULT_TIERS],
+    holidayRegion: "all",
     bodyTracking: false,
     bodyDebug: false,
     herbDeath: false,
@@ -643,6 +651,10 @@ function timeContext() {
         "This story keeps time the Norse way, and so do the people in it.",
         "",
         "The year runs twelve months of thirty days, winter first: гормануд, юлир, морсугур, торри, гоа, эйнмануд, then харпа, скерпла, сольмануд, хейаннир, твимануд, хаустмануд. Four аукнэтр stand at midsummer, between сольмануд and хейаннир. The half-years are Vetr and Sumar; a week is a vika.",
+    /* Год перещёлкивает посреди осени, а не в январе, — и это единственное
+       место, где модель ошибалась молча: хейаннир 1015 у неё переходил
+       в гормануд 1015. Строка стоит десяток токенов и снимает весь класс. */
+        "The year turns with the winter: the first day of гормануд opens a new one. So хейаннир 1015 is followed, three months on, by гормануд 1016 — not 1015. These people count years in winters, not from midwinter as we do.",
         "The day runs eight eyktir of three hours: миднатти, отта, моргун, дагмал, хадеги, ундорн, мидафтан, наттмал. Хадеги is noon and the sun stands due south; наттмал is the late evening.",
     ];
 
@@ -657,6 +669,30 @@ function timeContext() {
             "The panel keeps this count and moves it along with the scene. Take the day as given and let the characters speak of it as people of their time would.",
             "When the story skips ahead, say how much time went by in the marker's passed line and the panel will move the date; working the new date out yourself is not needed.",
         );
+
+        /*
+         * Праздник — не украшение даты, а обстоятельство сцены.
+         *
+         * Без этой строки модель знала день, луну и погоду, но не знала, что
+         * на дворе третьи сутки Йоля, — и писала будний вечер у очага в тот
+         * день, когда усадьба должна стоять на ушах. Считает праздник панель,
+         * как и всё прочее: у модели его не спрашиваем.
+         */
+        const feast = holidaySummary();
+        if (feast) {
+            const which = feast.days > 1
+                ? ` This is day ${feast.day} of ${feast.days}${feast.first ? ", the first" : feast.last ? ", the last" : ""}.`
+                : "";
+            const along = feast.others.length
+                ? ` The same days carry ${feast.others.map((o) => o.norse).join(" and ")} — kept alongside it, not instead of it.`
+                : "";
+            out.push(
+                "",
+                `A feast stands on this day: ${feast.norse} — ${feast.ru}.${which}${along}`,
+                feast.gloss,
+                "Let it show in the scene as people of the time would live it — in the work that stops, the food, the drink, the guests, what is owed and what is forbidden. Do not announce it as a label.",
+            );
+        }
     } else {
         out.push(
             "",
@@ -672,6 +708,31 @@ function timeContext() {
 function sceneDate() {
     const d = readState().date;
     return d && d.year != null ? d : null;
+}
+
+/** Какие слои праздников и какой край света выбраны в настройках. */
+function holidayOpts() {
+    return {
+        tiers: settings().holidayTiers ?? DEFAULT_TIERS,
+        region: settings().holidayRegion ?? "all",
+    };
+}
+
+/**
+ * Праздник этого дня — одной точкой сборки на панель и на промпт.
+ *
+ * Считается заново на каждый спрос: перебор двух десятков строк таблицы
+ * дешевле любого кэша, а кэш пришлось бы сбрасывать и на смене даты, и на
+ * смене настроек.
+ */
+function holidaySummary() {
+    if (!settings().holidays) return null;
+    const d = sceneDate();
+    if (!d) return null;
+    /* Аукнэтр не пропускаем: Alþingi начинается в сольмануде и перешагивает
+       через них целиком, а панель в эти четверо суток молчала бы. */
+    const view = holidayView(d.year, d.month, d.day, holidayOpts());
+    return view?.none ? null : view;
 }
 
 /**
@@ -1324,6 +1385,35 @@ function fillGroup(selector, title, rows) {
     return true;
 }
 
+/**
+ * Праздник — строкой над календариком.
+ *
+ * Стоит именно там, где на него смотрят: прямо над неделей, в которой он
+ * и покрашен. Многодневный называет свой день вслух («день 2 из 3»), а
+ * прочие праздники тех же суток уходят в облачко: в зимние ночи их разом
+ * трое, и вываливать все три в строку значило бы утопить главный.
+ */
+function renderFeast() {
+    const row = el("#ncw-feast").empty();
+    const feast = holidaySummary();
+    if (!feast) { row.hide(); return; }
+
+    const tier = HOLIDAY_TIERS.find((t) => t.id === feast.tier);
+    const hint = [feast.gloss, feast.source, tier ? `${tier.ru}: ${tier.hint}` : null]
+        .filter(Boolean).join("\n\n");
+
+    row.attr("data-tier", feast.tier).append(
+        icon("cal-feast"),
+        hintSpan("feast", feast.norse, hint),
+    );
+    if (feast.count) row.append(plainSpan(` · ${feast.count}`));
+    if (feast.others.length) {
+        row.append(hintSpan("feast-more", ` +${feast.others.length}`,
+            feast.others.map((o) => `${o.norse} — ${o.ru}. ${o.gloss}`).join("\n\n")));
+    }
+    row.show();
+}
+
 /** Сетка календаря (дни 1–30), только когда есть дата из чата. */
 function buildGrid() {
     const grid = el("#ncw-grid");
@@ -1359,13 +1449,31 @@ function buildGrid() {
 
     // weekdayOf уже считает от понедельника — пересчитывать нечего
     const offsetToday = weekdayOf(year, month, day);
+    const days = Array.from({ length: 7 }, (_, i) => addDays(year, month, day, i - offsetToday));
+
+    /* Праздничные дни красятся все подряд, а не только первый: трое суток
+       зимних ночей — это трое суток, и по полосе это должно быть видно
+       одним взглядом. Края помечаем отдельно, чтобы CSS скруглил ленту
+       с началом и концом, а середину оставил сплошной. */
+    const feasts = settings().holidays ? markWeek(days, holidayOpts()) : days.map(() => null);
+
     const weekRow = $("<div>", { "class": "ncw-row" });
     for (let i = 0; i < 7; i++) {
-        const d = addDays(year, month, day, i - offsetToday);
+        const d = days[i];
         let cls = "ncw-cell ncw-day";
         if (d.month !== month) cls += " ncw-dim";
         if (i === offsetToday) cls += " ncw-today";
-        weekRow.append($("<div>", { "class": cls, text: d.day }));
+        if (feasts[i]) {
+            cls += " ncw-feast-day";
+            if (feasts[i].first) cls += " ncw-feast-first";
+            if (feasts[i].last) cls += " ncw-feast-last";
+        }
+        const cell = $("<div>", { "class": cls, text: d.day });
+        if (feasts[i]) {
+            cell.attr("data-tier", feasts[i].holiday.tier);
+            cell.attr("title", `${feasts[i].holiday.norse} — ${feasts[i].holiday.ru}`);
+        }
+        weekRow.append(cell);
     }
     grid.append(weekRow);
 }
@@ -1394,7 +1502,7 @@ function renderAll() {
     if (!showTime && !showDate && !showDetails) {
         // Чистим содержимое, а не только прячем: иначе прошлая сцена остаётся
         // в DOM и попадает в текст сообщения при копировании или озвучке.
-        el("#ncw-eykt-name, #ncw-week, #ncw-date, #ncw-lore, #ncw-grid, #ncw-mood-chips, #ncw-children, #ncw-draught-name").empty();
+        el("#ncw-eykt-name, #ncw-week, #ncw-date, #ncw-lore, #ncw-feast, #ncw-grid, #ncw-mood-chips, #ncw-children, #ncw-draught-name").empty();
         el("#ncw-sun, #ncw-eykt-num, #ncw-weather-text, #ncw-location-text").text("");
         el("#ncw-attire-user-text, #ncw-attire-char-text, #ncw-thought-text, #ncw-cycle-text, #ncw-cycle-status, #ncw-cycle-kicks, #ncw-cycle-extra, #ncw-cycle-kin, #ncw-cycle-house, #ncw-cycle-signs, #ncw-cycle-debug, #ncw-char-state-text, #ncw-user-state-text, #ncw-advice-text").text("");
         /* Погоду в медальоне чистим отдельно: она живёт в SVG, и jQuery
@@ -1413,6 +1521,7 @@ function renderAll() {
 
     renderTimeAndDate(showTime, showDate);
     renderExtraFields();
+    renderFeast();
     buildGrid();
 }
 
@@ -1612,7 +1721,7 @@ function renderCycle() {
         signs.hide();
     }
 
-    el("#ncw-cycle-cols").toggle(!!(s.signs?.length || s.extra || hasKin || hasHouse));
+    el("#ncw-cycle-cols").toggle(hasKin || hasHouse);
 
     const debug = el("#ncw-cycle-debug").empty();
     if (s.hidden?.length) debug.append(plainSpan(s.hidden.join(" · "))).show(); else debug.hide();
@@ -1985,22 +2094,8 @@ function buildWidget() {
                     $("<div>", { id: "ncw-date", "class": "ncw-cal-line" }),
                     $("<div>", { id: "ncw-lore", "class": "ncw-cal-line" }),
 
-                    /*
-                     * Сводка о теле переехала сюда с листа нити.
-                     *
-                     * Фаза, счёт и слова о теле — это заголовок всего блока,
-                     * а не одна из трёх вкладок: они верны и когда смотришь
-                     * на {{char}}. На листе им место было только потому, что
-                     * оттуда они родом. Совет — следом: он о том же теле.
-                     */
-                    $("<div>", { id: "ncw-summary", "class": "ncw-summary-block" }).append(
-                        $("<div>", { id: "ncw-cycle-text", "class": "ncw-summary-line" }),
-                        $("<div>", { id: "ncw-cycle-status", "class": "ncw-summary-line" }),
-                        $("<div>", { id: "ncw-advice", "class": "ncw-advice" }).append(
-                            icon("advice", "ncw-advice-icon"),
-                            $("<span>", { id: "ncw-advice-text" }),
-                        ),
-                    ),
+                    /* Праздник — прямо над календариком, где он и покрашен. */
+                    $("<div>", { id: "ncw-feast", "class": "ncw-cal-line" }),
 
                     /* Календарик стоит последним в колонке и прижат к её низу
                        (margin-top: auto). Колонка тянется на всю высоту доски,
@@ -2048,24 +2143,35 @@ function buildWidget() {
                          */
                         $("<div>", { id: "ncw-page-freyja", "class": "ncw-leaf", "data-leaf": "freyja" }).append(
                             $("<div>", { id: "ncw-cycle", "class": "ncw-cycle" }).append(
-                                $("<div>", { id: "ncw-cycle-text", "class": "ncw-cycle-line" }),
-                                $("<div>", { id: "ncw-cycle-status", "class": "ncw-cycle-line" }),
+                                /* Фаза со счётом — заголовок листа, слова о теле
+                                   под ним подзаголовком. */
+                                $("<div>", { id: "ncw-cycle-text", "class": "ncw-cycle-head" }),
+                                $("<div>", { id: "ncw-cycle-status", "class": "ncw-cycle-sub" }),
                                 /* Шевеления — во всю ширину и сразу под словами
                                    о теле: затишье дитяти единственное, о чём
                                    здесь тревожатся, и прятать его в столбец
                                    значило бы обменять тревогу на стройность. */
                                 $("<div>", { id: "ncw-cycle-kicks", "class": "ncw-cycle-line ncw-cycle-dim" }),
+                                /* Срок и размер дитяти — часть заголовка: это
+                                   тот же счёт, что и «Ношение: 6/9», только
+                                   словами. */
+                                $("<div>", { id: "ncw-cycle-extra", "class": "ncw-cycle-dim" }),
                             ),
+                            /* Род и дом — двумя столбцами сразу под сроком:
+                               это короткие «подпись: значение», и они дают
+                               обзор быстрее длинных примет. */
                             $("<div>", { id: "ncw-cycle-cols", "class": "ncw-cycle-cols" }).append(
                                 $("<div>", { "class": "ncw-cycle-col" }).append(
-                                    $("<div>", { id: "ncw-cycle-signs", "class": "ncw-cycle-dim" }),
+                                    $("<div>", { id: "ncw-cycle-kin", "class": "ncw-cycle-group" }),
                                 ),
                                 $("<div>", { "class": "ncw-cycle-col" }).append(
-                                    $("<div>", { id: "ncw-cycle-extra", "class": "ncw-cycle-dim" }),
-                                    $("<div>", { id: "ncw-cycle-kin", "class": "ncw-cycle-group" }),
                                     $("<div>", { id: "ncw-cycle-house", "class": "ncw-cycle-group" }),
                                 ),
                             ),
+                            /* Приметы — под ними и во всю ширину листа: к концу
+                               срока их десяток, и целыми фразами они ложатся
+                               лучше в широкую строку, чем в узкий столбец. */
+                            $("<div>", { id: "ncw-cycle-signs", "class": "ncw-cycle-dim" }),
                             $("<div>", { id: "ncw-cycle-debug", "class": "ncw-cycle-line ncw-cycle-debug" }),
                             $("<div>", { id: "ncw-draught", "class": "ncw-draught" }).append(
                                 icon("draught", "ncw-draught-icon"),
@@ -2426,6 +2532,36 @@ function bindSettings() {
 
     bindCheckbox("#nc_inject", "inject", () => injectNorsePrompt());
     bindCheckbox("#nc_lore_hints", "loreHints", () => injectNorsePrompt());
+
+    /* Праздники: показ, слои и край света. Каждая правка перетряхивает и
+       панель, и инжект — праздник виден в обоих, и разъехаться им нельзя. */
+    const feastsChanged = () => { injectNorsePrompt(); refresh(); };
+    bindCheckbox("#nc_holidays", "holidays", feastsChanged);
+
+    for (const tier of HOLIDAY_TIERS) {
+        const $box = $(`#nc_holiday_${tier.id}`);
+        $box.prop("checked", (settings().holidayTiers ?? DEFAULT_TIERS).includes(tier.id));
+        $box.on("input", function () {
+            const on = Boolean($(this).prop("checked"));
+            const kept = (settings().holidayTiers ?? DEFAULT_TIERS).filter((id) => id !== tier.id);
+            /* Порядок слоёв держим по таблице, а не по тому, в каком порядке
+               их щёлкали: от него зависит старшинство праздников в один день. */
+            settings().holidayTiers = HOLIDAY_TIERS
+                .map((t) => t.id)
+                .filter((id) => (id === tier.id ? on : kept.includes(id)));
+            saveSettingsDebounced();
+            feastsChanged();
+        });
+    }
+
+    const regionSel = $("#nc_holiday_region");
+    regionSel.val(settings().holidayRegion || "all");
+    regionSel.on("input", function () {
+        settings().holidayRegion = String($(this).val());
+        saveSettingsDebounced();
+        feastsChanged();
+    });
+
     bindCheckbox("#nc_body", "bodyTracking", () => { injectNorsePrompt(); refresh(); });
     bindCheckbox("#nc_body_debug", "bodyDebug", () => refresh());
     bindCheckbox("#nc_herb_death", "herbDeath", () => { injectNorsePrompt(); refresh(); });
