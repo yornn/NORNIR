@@ -99,7 +99,7 @@ const extensionFolderName = `third-party/${extensionName}`;
 
 /* По умолчанию в Tímatal открыты только Эйкты: с телефона незачем листать
    весь справочник, а нужный раздел разворачивается одним касанием. */
-const DEFAULT_CLOSED_SECTIONS = ["month", "vika", "week", "moon", "feast", "block"];
+const DEFAULT_CLOSED_SECTIONS = ["month", "vika", "week", "moon", "feast", "block", "css"];
 
 /* Постоянные колонки (номер и др.-сканд. написание) здесь не перечисляются —
    они всегда на месте. Русский включён, чтобы при первом открытии сразу было
@@ -110,6 +110,15 @@ const defaultSettings = {
     enabled: true,
     inject: true,
     theme: "default",
+    /*
+     * Раскладка и цвет — две разные настройки.
+     *
+     * skin решает, КАК стоит блок: «board» — доска-картинка с книгой,
+     * «flat» — прежняя плоская вёрстка колонками. theme решает, КАКОГО
+     * ОН ЦВЕТА, и работает в обеих раскладках. Разметка при этом одна:
+     * лишнее в каждой раскладке спрятано стилями, а не пересобрано.
+     */
+    skin: "board",
     /* Какой лист разворота открыт. Нить Фрейи первой не по алфавиту:
        ради неё расширение и писалось. */
     activeTab: "freyja",
@@ -1393,23 +1402,41 @@ function fillGroup(selector, title, rows) {
  * прочие праздники тех же суток уходят в облачко: в зимние ночи их разом
  * трое, и вываливать все три в строку значило бы утопить главный.
  */
+/**
+ * Толкование праздника для блока — только имя по-русски.
+ *
+ * Раньше сюда сваливались толкование, источник и слой достоверности разом,
+ * и «Vetrnætr» подменялось абзацем в пять строк. Блок висит в чате и живёт
+ * с одного взгляда; развёрнутое место у праздника одно — Tímatal, там ему
+ * и полагается быть. Если русского имени нет, берём первую фразу толкования
+ * и обрезаем: короткая подсказка лучше никакой.
+ */
+const FEAST_HINT_MAX = 46;
+
+function feastHint(holiday) {
+    if (holiday.ru) return holiday.ru;
+    const first = String(holiday.gloss ?? "").split(/(?<=[.!?])\s/)[0].trim();
+    if (!first) return holiday.norse;
+    return first.length > FEAST_HINT_MAX
+        ? `${first.slice(0, FEAST_HINT_MAX).trimEnd()}…`
+        : first;
+}
+
 function renderFeast() {
     const row = el("#ncw-feast").empty();
     const feast = holidaySummary();
     if (!feast) { row.hide(); return; }
 
-    const tier = HOLIDAY_TIERS.find((t) => t.id === feast.tier);
-    const hint = [feast.gloss, feast.source, tier ? `${tier.ru}: ${tier.hint}` : null]
-        .filter(Boolean).join("\n\n");
-
     row.attr("data-tier", feast.tier).append(
         icon("cal-feast"),
-        hintSpan("feast", feast.norse, hint),
+        hintSpan("feast", feast.norse, feastHint(feast)),
     );
     if (feast.count) row.append(plainSpan(` · ${feast.count}`));
     if (feast.others.length) {
+        /* Прочие праздники этих же суток — тоже только именами: в зимние
+           ночи их разом трое, и три толкования подряд утопили бы главный. */
         row.append(hintSpan("feast-more", ` +${feast.others.length}`,
-            feast.others.map((o) => `${o.norse} — ${o.ru}. ${o.gloss}`).join("\n\n")));
+            feast.others.map((o) => o.ru || o.norse).join(", ")));
     }
     row.show();
 }
@@ -1503,21 +1530,19 @@ function renderAll() {
         // Чистим содержимое, а не только прячем: иначе прошлая сцена остаётся
         // в DOM и попадает в текст сообщения при копировании или озвучке.
         el("#ncw-eykt-name, #ncw-week, #ncw-date, #ncw-lore, #ncw-feast, #ncw-grid, #ncw-mood-chips, #ncw-children, #ncw-draught-name").empty();
-        el("#ncw-sun, #ncw-eykt-num, #ncw-weather-text, #ncw-location-text").text("");
-        el("#ncw-attire-user-text, #ncw-attire-char-text, #ncw-thought-text, #ncw-cycle-text, #ncw-cycle-status, #ncw-cycle-kicks, #ncw-cycle-extra, #ncw-cycle-kin, #ncw-cycle-house, #ncw-cycle-signs, #ncw-cycle-debug, #ncw-char-state-text, #ncw-user-state-text, #ncw-advice-text").text("");
-        /* Погоду в медальоне чистим отдельно: она живёт в SVG, и jQuery
-           её текстом не достать. */
-        const arc = el("#ncw-medallion").find("textPath")[0];
+        el("#ncw-sun, #ncw-eykt-num, #ncw-weather-value, #ncw-location-value").text("");
+        const arc = el("#ncw-weather-text").find("textPath")[0];
         if (arc) arc.textContent = "";
-        el("#ncw-crown, #ncw-left, #ncw-page, #ncw-rail").hide();
+        el("#ncw-attire-user-text, #ncw-attire-char-text, #ncw-thought-text, #ncw-cycle-text, #ncw-cycle-status, #ncw-cycle-kicks, #ncw-cycle-extra, #ncw-cycle-kin, #ncw-cycle-house, #ncw-cycle-signs, #ncw-cycle-debug, #ncw-char-state-text, #ncw-user-state-text, #ncw-advice-text").text("");
+        el("#ncw-beam, #ncw-wood, #ncw-book").hide();
         el("#ncw-grid").addClass("ncw-hidden");
         stub.show();
         return;
     }
     stub.hide();
-    /* Навершие и разворот показываем целиком: что в них пусто, решают
-       сами плашки и листы — каждая своим toggle. */
-    el("#ncw-crown, #ncw-page, #ncw-rail").show();
+    /* Балку и книгу показываем целиком: что в них пусто, решают сами
+       надписи и страницы — каждая своим toggle. */
+    el("#ncw-beam, #ncw-book").show();
 
     renderTimeAndDate(showTime, showDate);
     renderExtraFields();
@@ -1525,12 +1550,12 @@ function renderAll() {
     buildGrid();
 }
 
-/** Левая колонка: эйкта, положение солнца, дата, день недели и фаза Луны. */
+/** Левая половина доски: эйкта, положение солнца, дата, день недели и Луна. */
 function renderTimeAndDate(showTime, showDate) {
-    el("#ncw-left").toggle(showTime || showDate);
+    el("#ncw-wood").toggle(showTime || showDate);
 
-    const plate = el("#ncw-plate-eykt");
-    const dial = el("#ncw-dial");
+    const timeLine = el("#ncw-time-line");
+    const vegvisir = el("#ncw-vegvisir");
     const sunEl = el("#ncw-sun");
     if (showTime) {
         const idx = eyktForHour(state.hour);
@@ -1540,11 +1565,11 @@ function renderTimeAndDate(showTime, showDate) {
 
         el("#ncw-eykt-name").empty().append(hintSpan("eykt", e.ru, `${hh}:${mm}`));
         el("#ncw-eykt-num").text(t`eykt ${idx + 1}`);
-        plate.show();
+        timeLine.show();
 
-        /* Круг знает свою эйкту одним числом: по нему CSS и подсвечивает
-           нужный луч, и доворачивает указатель. Считать углы в JS незачем. */
-        dial.attr("data-eykt", idx).show();
+        /* Вегвизир знает свою эйкту одним числом: по нему CSS и зажигает
+           нужный луч. Считать углы в JS незачем. */
+        vegvisir.attr("data-eykt", idx).show();
 
         /* Восемь эйкт — восемь румбов, ровно по кругу: знак солнца рисуется
            один, стрелкой на север, а поворот докручивает CSS по `data-dir`.
@@ -1554,8 +1579,8 @@ function renderTimeAndDate(showTime, showDate) {
             plainSpan(e.dirText),
         ).show();
     } else {
-        plate.hide();
-        dial.hide();
+        timeLine.hide();
+        vegvisir.hide();
         sunEl.hide();
     }
 
@@ -1785,43 +1810,41 @@ function renderChildren() {
  * Сколько букв погоды ещё ложится на дугу медальона.
  *
  * «Лютый мороз» ложится, «метель с моря, к ночи заворачивает» — уже нет:
- * буквы пришлось бы жать вдвое. Такая погода уходит прямой строкой под круг.
+ * буквы пришлось бы жать вдвое. Такая погода уходит прямой строкой.
  */
 const WEATHER_CURVE_MAX = 19;
 
-/** Навершие доски: погода в круге, место на железной вставке. */
+/**
+ * Верхняя балка: погода слева, место справа — по разные стороны солнца.
+ *
+ * Раскладку здесь не спрашиваем. Погода пишется сразу в оба места — и в
+ * дугу медальона, и прямой строкой, — а какое из них показать, решают
+ * стили по классу `ncw-weather-curved` и по самой раскладке. Иначе рендер
+ * пришлось бы учить различать доску и плоскую вёрстку, а он о них не знает
+ * и знать не должен.
+ */
 function renderScene() {
-    const medallion = el("#ncw-medallion");
-    const straight = el("#ncw-weather-text");
-    const arc = medallion.find("textPath")[0] ?? null;
+    const weather = el("#ncw-weather-text");
+    const arc = weather.find("textPath")[0] ?? null;
+    const curved = !!state.weather && state.weather.length <= WEATHER_CURVE_MAX;
 
-    if (state.weather) {
-        const curved = state.weather.length <= WEATHER_CURVE_MAX;
-        if (arc) arc.textContent = curved ? state.weather : "";
-        straight.text(curved ? "" : state.weather).toggle(!curved);
-        medallion.show();
-    } else {
-        if (arc) arc.textContent = "";
-        straight.text("").hide();
-        medallion.hide();
-    }
+    /* Погоду в дуге чистим отдельно: она живёт в SVG, и jQuery её текстом
+       не достать. */
+    if (arc) arc.textContent = curved ? state.weather : "";
+    el("#ncw-weather-value").text(state.weather || "");
+    weather.toggleClass("ncw-weather-curved", curved).toggle(!!state.weather);
 
-    const locPlate = el("#ncw-plate-loc");
-    if (state.location) {
-        el("#ncw-location-text").text(state.location);
-        locPlate.show();
-    } else {
-        locPlate.hide();
-    }
+    el("#ncw-location-value").text(state.location || "");
+    el("#ncw-location-text").toggle(!!state.location);
 }
 
 /**
- * Листы разворота: {{user}}, нить Фрейи, {{char}}.
+ * Страницы книги: {{user}}, нить Фрейи, {{char}}.
  *
- * Рисуем все три всегда, а показываем один — тот, что выбран деревяшкой.
- * Прятать по «есть ли что показать» тут нельзя: кнопка должна открывать
- * лист и тогда, когда сцена о человеке смолчала, иначе нажатие выглядит
- * сломанным. Пустой лист говорит об этом словами.
+ * Рисуем все три всегда, а показываем одну — ту, чья фигурка выбрана.
+ * Прятать по «есть ли что показать» тут нельзя: фигурка должна открывать
+ * страницу и тогда, когда сцена о человеке смолчала, иначе нажатие выглядит
+ * сломанным. Пустая страница говорит об этом словами.
  */
 function renderExtraFields() {
     const context = getContext();
@@ -1830,8 +1853,17 @@ function renderExtraFields() {
 
     renderScene();
 
-    /* --- лист {{user}} --- */
-    el("#ncw-user-name").text(userName);
+    /*
+     * Имена — на самих фигурках, подсказкой под курсором.
+     *
+     * Подписей под ними больше нет: фигурку узнают в лицо, а имя нужно
+     * ровно в ту секунду, когда на неё наводят. Держим его и в aria-label,
+     * иначе для чтения с экрана кнопка осталась бы безымянной.
+     */
+    figureLabel("#ncw-fig-user", userName);
+    figureLabel("#ncw-fig-char", charName);
+
+    /* --- страница {{user}} --- */
     textRow("#ncw-attire-user", "#ncw-attire-user-text", state.userAttire);
     textRow("#ncw-user-state", "#ncw-user-state-text", state.userState);
     leafEmpty("#ncw-user-empty", !!(state.userAttire || state.userState),
@@ -1847,8 +1879,7 @@ function renderExtraFields() {
     leafEmpty("#ncw-freyja-empty", hasBody || hasAdvice,
         settings().bodyTracking ? "Счёт тела ещё не начат." : "Счёт тела выключен в настройках.");
 
-    /* --- лист {{char}} --- */
-    el("#ncw-char-name").text(charName);
+    /* --- страница {{char}} --- */
     const moods = state.charMood
         ? state.charMood.split(",").map((s) => s.trim()).filter(Boolean)
         : [];
@@ -1873,7 +1904,21 @@ function leafEmpty(selector, hasContent, words) {
     el(selector).text(hasContent ? "" : words).toggle(!hasContent);
 }
 
-/* --- деревяшки: какой лист открыт --- */
+/**
+ * Имя фигурки — в подпись, в подсказку под курсором и в aria-label.
+ *
+ * Подпись видна только в плоской раскладке; на доске имя живёт в подсказке,
+ * потому что фигурку там узнают в лицо. Пишем во все три места разом —
+ * рендеру не положено знать, какая раскладка выбрана.
+ */
+function figureLabel(selector, name) {
+    const fig = el(selector);
+    fig.attr({ "aria-label": name, title: name });
+    fig.find(".ncw-fig-hit").attr("title", name);
+    fig.find(".ncw-fig-name").text(name);
+}
+
+/* --- фигурки: какая страница открыта --- */
 
 const TABS = ["user", "freyja", "char"];
 
@@ -1892,11 +1937,11 @@ function activeTab() {
 function applyTab() {
     const tab = activeTab();
     el("#ncw-page").attr("data-tab", tab);
-    el(".ncw-plank").each(function () {
-        const plank = $(this);
-        plank.toggleClass("ncw-plank-on", plank.attr("data-tab") === tab);
+    el(".ncw-fig").each(function () {
+        const fig = $(this);
+        const on = fig.attr("data-tab") === tab;
+        fig.toggleClass("ncw-fig-on", on).attr("aria-pressed", on ? "true" : "false");
     });
-    el("#ncw-thread").toggleClass("ncw-thread-on", tab === "freyja");
 }
 
 /* ============================================================
@@ -1976,18 +2021,19 @@ function svgEl(tag, attrs) {
 }
 
 /**
- * Медальон погоды — круг в навершии доски.
+ * Медальон погоды — круг с надписью по дуге. Только плоская раскладка.
  *
  * Текст погоды ложится по дуге внутри круга: путь-дуга в <defs>, надпись на
  * ней через <textPath>. Дуга идёт слева направо понизу — тогда «верх» букв
  * смотрит в середину круга и надпись читается как обычно.
  *
  * Длинную погоду по дуге не уложить, поэтому она уходит прямой строкой под
- * круг: см. WEATHER_CURVE_MAX в renderScene().
+ * круг: см. WEATHER_CURVE_MAX в renderScene(). На доске-картинке круга нет
+ * вовсе, и там прямая строка показывается всегда.
  */
 const WEATHER_ARC_ID = "ncw-weather-arc";
 
-function weatherMedallion() {
+function weatherArc() {
     const svg = svgEl("svg", {
         "class": "ncw-medallion-svg",
         viewBox: "0 0 120 120",
@@ -2000,57 +2046,101 @@ function weatherMedallion() {
         fill: "none",
     }));
     const text = svgEl("text", { "class": "ncw-medallion-text" });
-    const path = svgEl("textPath", {
+    text.appendChild(svgEl("textPath", {
         href: `#${WEATHER_ARC_ID}`,
         startOffset: "50%",
         "text-anchor": "middle",
-    });
-    text.appendChild(path);
+    }));
     svg.appendChild(defs);
     svg.appendChild(text);
     return svg;
 }
 
 /**
- * Циферблат эйкт — восемь чёрных лучей по кругу.
+ * Вегвизир — подсветка активной эйкты.
  *
- * Сутки здесь делятся не на часы, а на восемь эйкт, и круг показывает это
- * прямо: луч на каждую, подсвечен тот, в котором сцена. В сердцевине
- * треугольник-указатель и знак времени суток.
+ * Циферблата больше нет: знак уже нарисован на самой доске (background.png),
+ * и рисовать поверх него второй круг со стрелками значило бы спорить с
+ * картинкой. Вместо этого поверх знака лежит прозрачный SVG ровно по его
+ * месту, и в нём восемь полосок — по одной вдоль каждого луча вегвизира.
+ * Видна всегда одна, та, в чьей эйкте идёт сцена.
+ *
+ * Координаты — в «пикселях рисунка»: квадрат 240×240 стоит серединой на
+ * перекрестье знака (см. --ncw-vegvisir-* в разделе 5 стилей), полоска идёт
+ * от 16 до 96 единиц от середины — это ровно длина прямой части луча, без
+ * его концевых завитков. Углы не считаем: восемь эйкт — восемь румбов, и
+ * каждый следующий луч просто довёрнут на 45°.
  */
-function eyktDial() {
-    const ring = $("<div>", { "class": "ncw-dial-ring" });
-    for (let i = 0; i < EYKTIR.length; i++) {
-        ring.append($("<span>", { "class": "ncw-dial-ray", "data-ray": i }));
+const VEGVISIR_RAYS = 8;
+
+function vegvisirOverlay() {
+    const svg = svgEl("svg", {
+        "class": "ncw-vegvisir-svg",
+        viewBox: "0 0 240 240",
+        "aria-hidden": "true",
+    });
+
+    for (let i = 0; i < VEGVISIR_RAYS; i++) {
+        const ray = svgEl("g", {
+            "class": "ncw-vegvisir-ray",
+            "data-ray": i,
+            transform: `rotate(${i * 45} 120 120)`,
+        });
+        /* Две линии одна на другой: широкая тусклая — свечение вокруг луча,
+           узкая яркая — сам огонёк. Фильтров нет нарочно: размытие в SVG
+           считается в пикселях экрана и на широкой доске расплылось бы. */
+        for (const cls of ["ncw-ray-halo", "ncw-ray-core"]) {
+            ray.appendChild(svgEl("line", {
+                "class": cls, x1: 120, y1: 104, x2: 120, y2: 24,
+            }));
+        }
+        svg.appendChild(ray);
     }
-    return $("<div>", { id: "ncw-dial", "class": "ncw-dial" }).append(
-        ring,
-        $("<div>", { "class": "ncw-dial-hub" }).append(
-            $("<span>", { id: "ncw-dial-pointer", "class": "ncw-dial-pointer" }),
-            $("<span>", { "class": "ncw-dial-core" }).append(
-                icon("time-eykt", "ncw-dial-icon"),
-            ),
+
+    /*
+     * Сердцевина круга — только для плоской раскладки.
+     *
+     * Там те же восемь лучей становятся циферблатом эйкт, и им нужен
+     * деревянный кружок посередине: он прячет внутренние концы лучей и
+     * держит стрелку со знаком времени суток. На доске сердцевина спрятана —
+     * там середину знака рисует сама картинка.
+     */
+    const hub = $("<div>", { "class": "ncw-dial-hub" }).append(
+        $("<span>", { "class": "ncw-dial-pointer" }),
+        $("<span>", { "class": "ncw-dial-core" }).append(
+            icon("time-eykt", "ncw-dial-icon"),
         ),
     );
+
+    return $("<div>", { id: "ncw-vegvisir", "class": "ncw-vegvisir" }).append(svg, hub);
 }
 
 /**
- * Деревяшка на кожаных подвязках — кнопка листа.
+ * Фигурка на правой странице книги — кнопка листа.
  *
- * Три такие кнопки правят левым листом: {{user}}, нить Фрейи и {{char}}.
- * Нить висит на деревяшке хозяйки не по прихоти раскладки: это её тело,
- * и отдельной доски оно не просит.
+ * Три таких кнопки правят левой страницей: {{user}}, нить Фрейи (медальон)
+ * и {{char}}. Подписей под ними больше нет — фигурку узнают в лицо, — поэтому
+ * имя уехало в подсказку под курсором и в aria-label.
+ *
+ * Внутри кнопки лежит «горячее место», и ловит клики именно оно, а сама
+ * кнопка помечена pointer-events: none. Причина в шнурках: рисунки висят
+ * на них внахлёст, и прямоугольник медальона накрывает пустой угол фигурки
+ * хозяйки. По прямоугольникам клик уходил бы не туда, куда указывает глаз.
  */
-function tabPlank(tab, nameId, extra) {
-    const plank = $("<div>", { "class": "ncw-plank", "data-tab": tab }).append(
-        $("<span>", { "class": "ncw-strap ncw-strap-left" }),
-        $("<span>", { "class": "ncw-strap ncw-strap-right" }),
-        $("<button>", { "class": "ncw-plank-btn", type: "button", "data-tab": tab }).append(
-            $("<span>", { id: nameId, "class": "ncw-plank-name" }),
-        ),
+function figureButton(tab, id, label) {
+    return $("<button>", {
+        id,
+        "class": `ncw-fig ncw-fig-${tab}`,
+        type: "button",
+        "data-tab": tab,
+        "aria-label": label,
+        title: label,
+    }).append(
+        $("<span>", { "class": "ncw-fig-hit", title: label }),
+        /* Подпись — для плоской раскладки: там фигурок нет, а есть
+           деревяшка с именем, и узнать её можно только по нему. */
+        $("<span>", { "class": "ncw-fig-name", text: label }),
     );
-    if (extra) plank.append(extra);
-    return plank;
 }
 
 /** Создаёт DOM-структуру виджета (detached — вставит mountWidget). */
@@ -2062,33 +2152,51 @@ function buildWidget() {
     $widget = $("<div>", { id: "norse-calendar-widget", "class": "nc-themed" }).append(
         $("<div>", { id: "ncw-board", "class": "ncw-board" }).append(
 
-            /* Навершие: обстановка сцены. Погода в круге посередине, время
-               слева на дереве, место справа на железе — по разным углам,
-               потому что это три разных вопроса к сцене, а не один список. */
-            $("<div>", { id: "ncw-crown", "class": "ncw-crown" }).append(
-                $("<div>", { id: "ncw-plate-eykt", "class": "ncw-plate ncw-plate-wood" }).append(
-                    $("<span>", { id: "ncw-eykt-name", "class": "ncw-plate-text" }),
-                    $("<span>", { id: "ncw-eykt-num", "class": "ncw-plate-sub" }),
+            /*
+             * Верхняя балка: обстановка сцены.
+             *
+             * Погода и место стоят друг напротив друга по разные стороны
+             * солнца, время суток — под погодой. Три разных вопроса к сцене
+             * разведены по углам балки, а не сложены в один список: так
+             * ответ на каждый находится глазом сразу, без чтения остальных.
+             *
+             * Знаков у них больше нет. На доске, где всё нарисовано, знак
+             * рядом с надписью — это второй рисунок поверх первого.
+             */
+            $("<div>", { id: "ncw-beam", "class": "ncw-beam" }).append(
+                /* Погода и время — одной стопкой, а не двумя надписями по
+                   своим местам: длинная погода занимает две строки, и время
+                   должно съехать вниз вместе с ней, а не оказаться под ней. */
+                $("<div>", { "class": "ncw-beam-left" }).append(
+                    /* Дуга и знаки нужны только плоской раскладке — там это
+                       круглый медальон с надписью по дуге. На доске они
+                       спрятаны стилями, и погода читается прямой строкой. */
+                    $("<div>", { id: "ncw-weather-text", "class": "ncw-beam-line" }).append(
+                        weatherArc(),
+                        icon("scene-weather", "ncw-medallion-icon"),
+                        $("<span>", { id: "ncw-weather-value" }),
+                    ),
+                    $("<div>", { id: "ncw-time-line", "class": "ncw-beam-line" }).append(
+                        $("<span>", { id: "ncw-eykt-name" }),
+                        $("<span>", { id: "ncw-eykt-num" }),
+                    ),
                 ),
-                $("<div>", { id: "ncw-medallion", "class": "ncw-medallion" }).append(
-                    weatherMedallion(),
-                    icon("scene-weather", "ncw-medallion-icon"),
-                ),
-                $("<div>", { id: "ncw-plate-loc", "class": "ncw-plate ncw-plate-metal" }).append(
+                $("<div>", { id: "ncw-location-text", "class": "ncw-beam-line" }).append(
                     icon("scene-location", "ncw-plate-icon"),
-                    $("<span>", { id: "ncw-location-text", "class": "ncw-plate-text" }),
+                    $("<span>", { id: "ncw-location-value" }),
                 ),
             ),
-            /* Длинная погода на дугу не ложится и уходит сюда, под круг. */
-            $("<div>", { id: "ncw-weather-text", "class": "ncw-weather-straight" }),
 
-            $("<div>", { id: "ncw-stub", text: `ᚱ ${t`Waiting for the infoblock…`}` }),
+            /*
+             * Левая половина доски — счёт времени, прямо по дереву.
+             *
+             * Вегвизир на ней уже нарисован; сверху лежит только подсветка
+             * активной эйкты. Под знаком дата, у нижнего края — календарик.
+             */
+            $("<div>", { id: "ncw-wood", "class": "ncw-wood" }).append(
+                vegvisirOverlay(),
 
-            $("<div>", { id: "ncw-columns" }).append(
-
-                /* Треть первая — счёт времени: круг эйкт, дата, луна, неделя. */
-                $("<div>", { id: "ncw-left" }).append(
-                    eyktDial(),
+                $("<div>", { id: "ncw-datebox" }).append(
                     $("<div>", { id: "ncw-sun", "class": "ncw-sun-line" }),
                     $("<div>", { id: "ncw-week", "class": "ncw-cal-line" }),
                     $("<div>", { id: "ncw-date", "class": "ncw-cal-line" }),
@@ -2096,22 +2204,20 @@ function buildWidget() {
 
                     /* Праздник — прямо над календариком, где он и покрашен. */
                     $("<div>", { id: "ncw-feast", "class": "ncw-cal-line" }),
-
-                    /* Календарик стоит последним в колонке и прижат к её низу
-                       (margin-top: auto). Колонка тянется на всю высоту доски,
-                       поэтому неделя всегда у нижнего края и не скачет вслед
-                       за длиной сводки о теле. */
-                    $("<div>", { id: "ncw-grid" }),
                 ),
 
-                /*
-                 * Части вторая и третья — лист и деревяшки.
-                 *
-                 * Лежат прямо в #ncw-columns, без обёртки-разворота: только
-                 * тогда сеткой можно задать крайним частям одинаковую ширину,
-                 * а листу — всё остальное. От этого лист сам собой встаёт
-                 * серединой под круг погоды, который тоже по центру доски.
-                 */
+                $("<div>", { id: "ncw-grid" }),
+            ),
+
+            /*
+             * Книга — вместо разворота из отдельных листов.
+             *
+             * Левая страница видна целиком, и на ней вся сводка. Правая
+             * обрезана краем доски, и на ней то, чем сводку переключают:
+             * фигурки {{user}} и {{char}}, медальон нити Фрейи и дети.
+             */
+            $("<div>", { id: "ncw-book", "class": "ncw-book" }).append(
+
                 $("<div>", { id: "ncw-page", "class": "ncw-page", "data-tab": "freyja" }).append(
 
                         $("<div>", { id: "ncw-page-user", "class": "ncw-leaf", "data-leaf": "user" }).append(
@@ -2203,23 +2309,29 @@ function buildWidget() {
                         ),
                 ),
 
-                $("<div>", { id: "ncw-rail", "class": "ncw-rail" }).append(
-                    tabPlank("user", "ncw-user-name",
-                        $("<button>", {
-                            id: "ncw-thread",
-                            "class": "ncw-thread",
-                            type: "button",
-                            "data-tab": "freyja",
-                            text: "Нить Фрейи",
-                        })),
-                    tabPlank("char", "ncw-char-name"),
-                    $("<div>", { id: "ncw-children", "class": "ncw-children ncw-sheet" }),
-                ),
+                /*
+                 * Фигурки. Порядок в разметке — порядок слоёв: шнурки висят
+                 * внахлёст, и {{char}} нарисован поверх медальона, медальон —
+                 * поверх хозяйки. Так же они лежали и в макете.
+                 */
+                figureButton("user", "ncw-fig-user", "{{user}}"),
+                figureButton("freyja", "ncw-fig-freyja", "Нить Фрейи"),
+                figureButton("char", "ncw-fig-char", "{{char}}"),
+
+                /* Дети вписаны в саму книгу, под фигурками, и видны на любой
+                   странице: дитя не перестаёт просить есть оттого, что
+                   смотрят на {{char}}. */
+                $("<div>", { id: "ncw-children", "class": "ncw-children" }),
             ),
+
+            $("<div>", { id: "ncw-stub", text: `ᚱ ${t`Waiting for the infoblock…`}` }),
         ),
     );
 
-    $widget.attr("data-theme", s.theme || "default");
+    $widget.attr({
+        "data-theme": s.theme || "default",
+        "data-skin": s.skin || "board",
+    });
 
     bindWidgetHandlers();
 
@@ -2247,8 +2359,9 @@ function bindWidgetHandlers() {
         swapHint($(this));
     });
 
-    /* Деревяшки и нить Фрейи. Ловим только кнопки: сама деревяшка тоже
-       помечена data-tab, и без сужения клик считался бы дважды. */
+    /* Фигурки на правой странице. Клик приходит с «горячего места» внутри
+       кнопки и всплывает сюда: сама кнопка помечена pointer-events: none,
+       чтобы прямоугольники рисунков не воровали клики друг у друга. */
     $(document).on("click", "#norse-calendar-widget button[data-tab]", function () {
         const tab = $(this).attr("data-tab");
         if (!TABS.includes(tab)) return;
@@ -2335,10 +2448,221 @@ function applySceneDate(date) {
     return true;
 }
 
+/* ============================================================
+ * 7a. ОФОРМЛЕНИЕ: РАСКЛАДКА, ТЕМА И ПОЛЬЗОВАТЕЛЬСКИЙ CSS
+ *
+ * Последний раздел Tímatal собрал всё, что относится к виду блока:
+ * выбор раскладки, выбор темы и поле с исходным CSS выбранной темы,
+ * которое можно править, — «Применить» и «Восстановить» под ним.
+ *
+ * В «кубиках» таверны этих двух списков больше нет нарочно. Оформление
+ * выбирают глазами, а глазами блок виден отсюда: справочник открывается
+ * поверх чата, и перекрашенный блок видно в ту же секунду. В настройках
+ * расширения остались только те переключатели, у которых есть последствия
+ * помимо вида, — инжект в промпт, счёт тела, праздники.
+ *
+ * Правки лежат в localStorage, а не в настройках расширения: это оформление
+ * одного браузера, а не часть чата, и таскать его на сервер вместе с датами
+ * и телом незачем. Ключ у каждой темы свой — правка «Полночного моря» не
+ * должна пропадать оттого, что человек ушёл в «Жар очага».
+ *
+ * Применяется всё одним <style> в конце <head>. Он идёт после нашего
+ * style.css, поэтому при равном весе побеждают правки пользователя — и
+ * ему не приходится дописывать !important к каждой строке.
+ * ============================================================ */
+
+const USER_CSS_PREFIX = "norse-calendar-css:";
+const USER_CSS_STYLE_ID = "norse-calendar-user-css";
+
+/**
+ * Темы и раскладки — списком, а не только блоками в CSS.
+ *
+ * Порядок здесь и есть порядок в откидном меню справочника: сперва тёмные,
+ * потом светлые, стандартная первой. Добавили тему в style.css — впишите
+ * её сюда, и она появится в выборе.
+ */
+const THEME_LABELS = {
+    default: () => t`Default (dark)`,
+    midnight: () => t`Midnight`,
+    ember: () => t`Ember`,
+    blood: () => t`Blood and iron`,
+    forest: () => t`Deep woods`,
+    stone: () => t`Grey stone`,
+    light: () => t`Light`,
+    frost: () => t`Hoarfrost`,
+    parchment: () => t`Parchment`,
+};
+
+const SKIN_LABELS = {
+    board: () => t`Carved board`,
+    flat: () => t`Plain panel`,
+};
+
+function themeLabel(theme) {
+    return (THEME_LABELS[theme] ?? (() => theme))();
+}
+
+function currentTheme() {
+    return THEME_LABELS[settings().theme] ? settings().theme : "default";
+}
+
+function currentSkin() {
+    return SKIN_LABELS[settings().skin] ? settings().skin : "board";
+}
+
+/*
+ * localStorage бывает недоступен: приватное окно, запрет на сторонние
+ * данные, переполнение квоты. Тогда правки просто не сохраняются — окно
+ * скажет об этом словом, а блок продолжит работать на своих цветах.
+ */
+function readUserCss(theme) {
+    try {
+        return localStorage.getItem(`${USER_CSS_PREFIX}${theme || "default"}`);
+    } catch {
+        return null;
+    }
+}
+
+function writeUserCss(theme, text) {
+    const key = `${USER_CSS_PREFIX}${theme || "default"}`;
+    try {
+        if (text == null) localStorage.removeItem(key);
+        else localStorage.setItem(key, text);
+        return true;
+    } catch (e) {
+        console.error(`[${extensionName}] не удалось сохранить правку CSS:`, e);
+        return false;
+    }
+}
+
+/** Темы, у которых есть сохранённая правка. Список не заведён нарочно:
+    так добавление темы не требует править ещё и это место. */
+function editedThemes() {
+    const out = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith(USER_CSS_PREFIX)) out.push(key.slice(USER_CSS_PREFIX.length));
+        }
+    } catch { /* localStorage недоступен — правок нет по определению */ }
+    return out;
+}
+
+/** Собирает все сохранённые правки в один <style> в конце <head>. */
+function applyUserCss() {
+    const parts = editedThemes().map((th) => readUserCss(th)).filter(Boolean);
+    let el = document.getElementById(USER_CSS_STYLE_ID);
+
+    if (!parts.length) { el?.remove(); return; }
+
+    if (!el) {
+        el = document.createElement("style");
+        el.id = USER_CSS_STYLE_ID;
+        document.head.append(el);
+    }
+    el.textContent = parts.join("\n\n");
+}
+
+/**
+ * Исходный CSS темы — прочитанный из самого style.css, а не переписанный
+ * сюда руками.
+ *
+ * Иначе «Восстановить» возвращало бы вчерашние цвета: правка файла и копия
+ * в коде разъезжаются на первом же изменении темы. Берём все правила, в
+ * чьём селекторе стоит эта тема, — то есть и общий блок переменных, и
+ * поправки вроде «светлые темы на доске пишут по дереву светлым».
+ */
+/**
+ * Правило — в читаемый вид: селекторы по строкам, свойства столбиком.
+ *
+ * Через rule.cssText не выйдет: браузер отдаёт его одной строкой в тысячу
+ * знаков, и править её в поле ввода невозможно. Поэтому пересобираем сами,
+ * из selectorText и списка свойств.
+ */
+function themeRuleText(rule) {
+    const selectors = rule.selectorText.split(",").map((s) => s.trim()).join(",\n");
+    const lines = [];
+    for (const prop of rule.style) {
+        const value = rule.style.getPropertyValue(prop).trim();
+        const bang = rule.style.getPropertyPriority(prop) ? " !important" : "";
+        lines.push(`    ${prop}: ${value}${bang};`);
+    }
+    return `${selectors} {\n${lines.join("\n")}\n}`;
+}
+
+function originalThemeCss(theme) {
+    const marker = `[data-theme="${theme || "default"}"]`;
+    const chunks = [];
+
+    for (const sheet of document.styleSheets) {
+        if (!(sheet.href ?? "").includes("Norse-Calendar")) continue;
+        let rules;
+        /* Чужой источник читать нельзя — браузер бросит SecurityError. */
+        try { rules = sheet.cssRules; } catch { continue; }
+        for (const rule of rules) {
+            if (!rule.selectorText?.includes(marker)) continue;
+            chunks.push(themeRuleText(rule));
+        }
+    }
+    return chunks.join("\n\n");
+}
+
+/**
+ * Всё, что нужно разделу оформления в справочнике.
+ *
+ * Тема здесь не запомнена числом, а спрашивается каждый раз: список сам
+ * её и меняет, и окно не пересобирается ради этого — перекрашивается на
+ * месте. Поэтому все действия принимают тему явным доводом.
+ *
+ * @param {function(): HTMLElement|null} getDialog Подложка окна Tímatal:
+ *   её тоже надо перекрасить, а создаётся она позже самого содержимого.
+ */
+function lookControls(getDialog) {
+    const list = (labels) => Object.keys(labels).map((id) => ({ id, label: labels[id]() }));
+
+    return {
+        skins: list(SKIN_LABELS),
+        themes: list(THEME_LABELS),
+        skin: () => currentSkin(),
+        theme: () => currentTheme(),
+        themeLabel,
+
+        setSkin: (id) => {
+            settings().skin = SKIN_LABELS[id] ? id : "board";
+            saveSettingsDebounced();
+            applySkin(settings().skin);
+        },
+
+        setTheme: (id) => {
+            settings().theme = THEME_LABELS[id] ? id : "default";
+            saveSettingsDebounced();
+            applyTheme(settings().theme);
+            /* Окно справочника красится той же темой, что и блок: иначе
+               выбор пришлось бы сверять с чатом за спиной у окна. */
+            const dlg = getDialog?.();
+            if (dlg) dlg.dataset.theme = settings().theme;
+        },
+
+        original: (theme) => originalThemeCss(theme),
+        isEdited: (theme) => readUserCss(theme) != null,
+        read: (theme) => readUserCss(theme) ?? originalThemeCss(theme),
+
+        apply: (theme, text) => {
+            if (!writeUserCss(theme, text)) return false;
+            applyUserCss();
+            return true;
+        },
+
+        restore: (theme) => {
+            writeUserCss(theme, null);
+            applyUserCss();
+            return originalThemeCss(theme);
+        },
+    };
+}
+
 /** Открывает окно Tímatal. */
 async function openTimatal() {
-    const theme = settings().theme || "default";
-
     /*
      * Окно пересобирается после каждой правки, а не только при открытии.
      *
@@ -2349,9 +2673,15 @@ async function openTimatal() {
      * висело то, что было на момент открытия.
      */
     const shell = document.createElement("div");
+    /* Подложка окна появляется после первой сборки содержимого, поэтому
+       раздел оформления получает не её саму, а способ её спросить. */
+    let dialog = null;
+    const look = lookControls(() => dialog);
+
     const paint = () => {
         shell.replaceChildren(
-            buildReference(state, theme, timatalPrefs(), onSetDate, cycleControls(paint)),
+            buildReference(state, currentTheme(), timatalPrefs(), onSetDate,
+                cycleControls(paint), look),
         );
     };
     const onSetDate = (date) => {
@@ -2370,7 +2700,8 @@ async function openTimatal() {
         leftAlign: true,
     });
     popup.dlg.classList.add("nc-popup", "nc-themed");
-    popup.dlg.dataset.theme = theme;
+    popup.dlg.dataset.theme = currentTheme();
+    dialog = popup.dlg;
 
     await popup.show();
 }
@@ -2521,6 +2852,17 @@ function applyTheme(theme) {
     if ($widget) $widget.attr("data-theme", theme || "default");
 }
 
+/**
+ * Применяет раскладку (атрибут data-skin).
+ *
+ * Пересобирать виджет не нужно: разметка у раскладок одна, различие целиком
+ * в стилях. Поэтому переключение мгновенное и не теряет ни выбранной
+ * страницы, ни прокрутки.
+ */
+function applySkin(skin) {
+    if ($widget) $widget.attr("data-skin", skin || "board");
+}
+
 function bindSettings() {
     bindCheckbox("#nc_enabled", "enabled", (v) => {
         if (v) {
@@ -2566,13 +2908,8 @@ function bindSettings() {
     bindCheckbox("#nc_body_debug", "bodyDebug", () => refresh());
     bindCheckbox("#nc_herb_death", "herbDeath", () => { injectNorsePrompt(); refresh(); });
 
-    const themeSel = $("#nc_theme");
-    themeSel.val(settings().theme || "default");
-    themeSel.on("input", function () {
-        settings().theme = String($(this).val());
-        saveSettingsDebounced();
-        applyTheme(settings().theme);
-    });
+    /* Раскладки и темы здесь нет: оформление живёт в Tímatal, рядом с
+       полем правки CSS — см. раздел 7a. */
 
     bindCheckbox("#nc_debug_markers", "debugKeepMarkers", () => refresh());
 
@@ -2595,6 +2932,10 @@ function bindSettings() {
 
 jQuery(async () => {
     loadSettings();
+
+    /* Правки CSS подкладываем до сборки виджета: иначе на первый кадр
+       блок вспыхнул бы нашими цветами и только потом перекрасился. */
+    applyUserCss();
 
     try {
         const settingsHtml = await renderExtensionTemplateAsync(extensionFolderName, "settings");

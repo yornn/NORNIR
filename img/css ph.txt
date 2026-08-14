@@ -1,0 +1,44 @@
+.объекты {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 1200px;
+  height: 896px;
+  z-index: 7;
+}
+.Слой_4 {
+  background-image: url("Слой 4.png");
+  position: absolute;
+  left: 1037px;
+  top: 232px;
+  width: 122px;
+  height: 328px;
+  z-index: 6;
+}
+.Слой_2 {
+  background-image: url("Слой 2.png");
+  position: absolute;
+  left: 965px;
+  top: 234px;
+  width: 59px;
+  height: 103px;
+  z-index: 5;
+}
+.Слой_3 {
+  background-image: url("Слой 3.png");
+  position: absolute;
+  left: 926px;
+  top: 231px;
+  width: 139px;
+  height: 360px;
+  z-index: 4;
+}
+.Слой_5 {
+  background-image: url("Слой 5.png");
+  position: absolute;
+  left: 394px;
+  top: 198px;
+  width: 1056px;
+  height: 660px;
+  z-index: 3;
+}

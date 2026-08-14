@@ -925,6 +925,131 @@ function blockSection(body) {
         t`The date is not asked of the model at all — you set it above and the panel carries it forward. Everything else appears only when it is due: passed after a time skip, body when something happened to her, and the birth, standing and naming lines while they matter.`));
 }
 
+/** Откидной список с подписью — как в календарике даты, только для вида. */
+function lookSelect(labelText, options, current, onPick) {
+    const label = h("label", "nct-look-label");
+    label.append(h("span", "nct-look-name", labelText));
+
+    const select = h("select", "nct-look-select");
+    for (const opt of options) {
+        const node = h("option", null, opt.label);
+        node.value = opt.id;
+        select.append(node);
+    }
+    select.value = current;
+    select.addEventListener("input", () => onPick(select.value));
+
+    label.append(select);
+    return { node: label, select };
+}
+
+/**
+ * Последний раздел — вид блока целиком в руки читателю.
+ *
+ * Здесь три вещи, и стоят они вместе не по случайности: раскладка, тема и
+ * CSS этой темы — один и тот же вопрос «как это выглядит», заданный со
+ * всё большей подробностью. Из «кубиков» таверны первые два списка убраны:
+ * оформление выбирают глазами, а глазами блок виден отсюда — справочник
+ * открыт поверх чата, и перекрашенный блок видно в ту же секунду.
+ *
+ * Поле показывает исходный CSS ВЫБРАННОЙ темы: не весь файл стилей, а тот
+ * его кусок, где у темы заданы цвета. Весь файл в поле ввода читать нельзя,
+ * да и незачем — раскладку правит разработчик, а цвет хочет править всякий.
+ *
+ * «Применить» запоминает правку в браузере и подкладывает её поверх наших
+ * стилей; «Восстановить» забывает её и возвращает в поле то, что написано
+ * в style.css. Правки у каждой темы свои, и смена темы в списке выше их не
+ * теряет: окно перекрашивается на месте, а поле перечитывается под новую
+ * тему — пересобирать справочник ради этого не нужно.
+ */
+function cssSection(body, state, prefs, extras) {
+    const look = extras?.look;
+
+    body.append(lead(t`Everything about how the block looks lives here: the layout, the theme and the CSS of that theme. Change a value in the field, press Apply, and the block repaints at once.`));
+
+    if (!look) {
+        body.append(h("div", "nct-note", t`Editing is not available in this window.`));
+        return;
+    }
+
+    /* --- раскладка и тема --- */
+
+    const picks = h("div", "nct-look-row");
+    const skin = lookSelect(t`Layout`, look.skins, look.skin(), (id) => look.setSkin(id));
+    const theme = lookSelect(t`Theme`, look.themes, look.theme(), (id) => pickTheme(id));
+    picks.append(skin.node, theme.node);
+    body.append(picks);
+
+    /* --- CSS выбранной темы --- */
+
+    const head = h("div", "nct-css-head");
+    const themeName = h("span", "nct-css-theme", look.themeLabel(look.theme()));
+    const badge = h("span", "nct-css-badge", t`edited`);
+    head.append(themeName, badge);
+    body.append(head);
+
+    const area = h("textarea", "nct-css-area");
+    area.value = look.read(look.theme());
+    area.spellcheck = false;
+    area.setAttribute("rows", "14");
+    area.setAttribute("aria-label", t`Theme CSS`);
+    body.append(area);
+
+    const row = h("div", "nct-css-row");
+    const apply = h("button", "nct-css-apply", t`Apply`);
+    apply.type = "button";
+    const restore = h("button", "nct-css-restore", t`Restore`);
+    restore.type = "button";
+    restore.title = t`Forget your changes and load the original CSS of this theme`;
+    const echo = h("div", "nct-css-echo");
+    row.append(apply, restore, echo);
+    body.append(row);
+
+    body.append(h("div", "nct-note",
+        t`Changes are kept in this browser only — they do not travel with the chat and are not sent anywhere. Each theme remembers its own.`));
+
+    const syncBadge = () => badge.classList.toggle("nct-hidden", !look.isEdited(look.theme()));
+    syncBadge();
+
+    /* Слово вместо тишины: нажатие должно быть слышно, а «Применить»
+       ничего не двигает в самом окне — перекрашивается блок в чате. */
+    const say = (words) => {
+        echo.textContent = words;
+        clearTimeout(echo.dataset.timer);
+        echo.dataset.timer = setTimeout(() => { echo.textContent = ""; }, 2000);
+    };
+
+    /*
+     * Смена темы перекрашивает окно на месте, а не пересобирает его.
+     *
+     * Пересборка увела бы читателя наверх: раздел этот — последний, и
+     * после каждого выбора темы пришлось бы прокручивать окно заново.
+     * Перекрасить достаточно корень справочника: подложку окна красит
+     * setTheme, а всё остальное здесь наследует переменные от корня.
+     */
+    function pickTheme(id) {
+        look.setTheme(id);
+        const root = body.closest(".norse-timatal");
+        if (root) root.dataset.theme = look.theme();
+        themeName.textContent = look.themeLabel(look.theme());
+        area.value = look.read(look.theme());
+        syncBadge();
+        echo.textContent = "";
+    }
+
+    apply.addEventListener("click", () => {
+        const ok = look.apply(look.theme(), area.value);
+        say(ok ? t`Applied` : t`Could not save: the browser refused to keep the changes`);
+        syncBadge();
+    });
+
+    restore.addEventListener("click", () => {
+        area.value = look.restore(look.theme());
+        say(t`Original restored`);
+        syncBadge();
+    });
+}
+
 /* ============================================================
  * 4. ASSEMBLY
  * ============================================================ */
@@ -939,13 +1064,16 @@ const SECTIONS = [
        а блок — уже про то, как оно попадает в чат. */
     { id: "feast", icon: "🔥", title: () => t`Feasts — the year by its holidays`, build: holidaySection },
     { id: "block", icon: "ᚱ",  title: () => t`The calendar block`,                build: blockSection },
+    /* Оформление — в самом конце: это уже не про счёт времени, а про то,
+       каким его видно. Читателю справочника оно нужно реже прочего. */
+    { id: "css",   icon: "🎨", title: () => t`Look — layout, theme and CSS`,      build: cssSection },
 ];
 
 /** Все ключи разделов и колонок — index.js использует их для сброса вида. */
 export const SECTION_IDS = SECTIONS.map((s) => s.id);
 export const COLUMN_KEYS = Object.keys(COLUMN_LABELS);
 
-function buildSection(def, state, prefs) {
+function buildSection(def, state, prefs, extras) {
     const section = h("div", "nct-section");
     section.dataset.section = def.id;
 
@@ -963,7 +1091,7 @@ function buildSection(def, state, prefs) {
     );
 
     const body = h("div", "nct-section-body");
-    def.build(body, state, prefs);
+    def.build(body, state, prefs, extras);
 
     section.append(head, body);
     return section;
@@ -977,9 +1105,15 @@ function buildSection(def, state, prefs) {
  * @param {object} prefs Настройки вида:
  *   isSectionClosed(id), toggleSection(id), isColumnVisible(key),
  *   toggleColumn(key), resetView(), isDefaultView()
+ * @param {function|null} onSetDate Установка даты сцены из календарика
+ * @param {object|null} cycle Ручная правка счёта тела
+ * @param {object|null} look Вид блока: раскладка, тема и CSS темы —
+ *   skins, themes, skin(), theme(), setSkin(id), setTheme(id),
+ *   themeLabel(id), read(theme), original(theme), isEdited(theme),
+ *   apply(theme, text), restore(theme)
  * @returns {HTMLElement} Корневой элемент для Popup
  */
-export function buildReference(state, theme = "default", prefs, onSetDate = null, cycle = null) {
+export function buildReference(state, theme = "default", prefs, onSetDate = null, cycle = null, look = null) {
     const root = h("div", "norse-timatal nc-themed");
     root.setAttribute("data-theme", theme || "default");
 
@@ -1006,7 +1140,8 @@ export function buildReference(state, theme = "default", prefs, onSetDate = null
     const hint = h("div", "nct-hint", t`Tap a heading to fold a section. Pick the chips to add columns.`);
     root.append(hint);
 
-    for (const def of SECTIONS) root.append(buildSection(def, state, prefs));
+    const extras = { look };
+    for (const def of SECTIONS) root.append(buildSection(def, state, prefs, extras));
 
     function syncReset() {
         reset.classList.toggle("nct-hidden", prefs.isDefaultView());
