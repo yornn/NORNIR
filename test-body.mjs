@@ -1,5 +1,5 @@
 /*
- * Norse Calendar — тест женского цикла.
+ * NORNIR — тест женского цикла.
  *
  * Считается всё вычитанием дат, поэтому проверяем границы фаз, оборот цикла
  * через конец месяца и аукнэтр, а заодно разбор событий из маркера.
@@ -47,7 +47,7 @@ import {
     VIABLE_DAY,
 } from "./body.js";
 import { cycleAnchor, findBodyState, findLatestState, herbAnchor, labourAnchor, pregnancyAnchor, readChat, setSceneDate, syncWholeChat } from "./chat-state.js";
-import { addDays, parseBodyEvents, parseYesNo, parseYorniTag, serialOf, serialToDate } from "./parser.js";
+import { WEEKDAYS, addDays, parseBodyEvents, parseYesNo, parseUrd, serialOf, serialToDate } from "./parser.js";
 import { daysSinceBleeding } from "./body.js";
 import { readFileSync } from "node:fs";
 
@@ -67,7 +67,7 @@ function mk(eykt, dateLine = "", body = "", passed = "") {
         gen_finished: `gen-${seq++}`,
         extra: {},
         mes: [
-            "проза", "", "<!-- [YORNI:",
+            "проза", "", "<!-- [URD:",
             `eykt: ${eykt}`,
             dateLine,
             body ? `body: ${body}` : "",
@@ -157,7 +157,7 @@ check("событие запомнило свой день",
  */
 const restamped = [
     { is_user: false, gen_finished: "told-70", extra: {},
-      mes: ["проза", "<!-- [YORNI:", "eykt: хадеги", "date: 5 сольмануд 1015",
+      mes: ["проза", "<!-- [URD:", "eykt: хадеги", "date: 5 сольмануд 1015",
           "child_name: Хельга", "weather: снег", "location: дом", "mood: ок", "] -->"].join("\n") },
 ];
 syncWholeChat(restamped);
@@ -204,7 +204,7 @@ const lie = (dayOfMonth, internal = "да") => {
         mk("хадеги", "date: 1 сольмануд 1015"),
         {
             is_user: false, gen_finished: "s-" + (seq++), extra: {},
-            mes: ["проза", "", "<!-- [YORNI:", "eykt: хадеги",
+            mes: ["проза", "", "<!-- [URD:", "eykt: хадеги",
                 "date: " + dayOfMonth + " сольмануд 1015",
                 "sex: да", "internal: " + internal,
                 "weather: снег", "location: дом", "mood: ок",
@@ -289,7 +289,7 @@ const missed = [
     mk("хадеги", "date: 1 сольмануд 1015"),
     {
         is_user: false, gen_finished: "miss-1", extra: {},
-        mes: ["проза", "", "<!-- [YORNI:", "eykt: хадеги", "date: 7 сольмануд 1015",
+        mes: ["проза", "", "<!-- [URD:", "eykt: хадеги", "date: 7 сольмануд 1015",
             "sex: да", "internal: да", "weather: снег", "location: дом", "mood: ок",
             "user_attire: а", "char_attire: б", "thought: в", "] -->"].join("\n"),
     },
@@ -693,7 +693,7 @@ console.log("\n=== Сказанное однажды ===");
 function marked(day, lines) {
     return {
         is_user: false, gen_finished: `told-${seq++}`, extra: {},
-        mes: ["проза", "<!-- [YORNI:", "eykt: хадеги", `date: ${day} сольмануд 1015`,
+        mes: ["проза", "<!-- [URD:", "eykt: хадеги", `date: ${day} сольмануд 1015`,
             ...lines, "weather: снег", "location: дом", "mood: ок", "] -->"].join("\n"),
     };
 }
@@ -752,9 +752,9 @@ check("повторное чтение ничего не меняет", readChat
 check("и третье тоже", readChat(stable, null, stableOpts).changed, false);
 
 check("маркер с одним событием не отбрасывается",
-    String(parseYorniTag("<!-- [YORNI:\nbody: кровь пришла\n] -->")?.body), "bleedStart");
+    String(parseUrd("<!-- [URD:\nbody: кровь пришла\n] -->")?.body), "bleedStart");
 check("маркер с одним именем — тоже",
-    parseYorniTag("<!-- [YORNI:\nchild_name: Хельга\n] -->")?.childName, "Хельга");
+    parseUrd("<!-- [URD:\nchild_name: Хельга\n] -->")?.childName, "Хельга");
 
 /* ============================================================
  * Бросок: пол, число дитяти, шанс зачатия.
@@ -874,11 +874,17 @@ console.log("\n=== Дитя: нужды ===");
 const needAt = (days, eykt, weekday) =>
     childNeed(days, addDays(1015, 9, 1, days), eykt, weekday, "seed");
 
-check("нужда всегда находится", typeof needAt(30, 4, 0), "string");
+/* Номер лаугардага берём из таблицы, а не числом: порядок дней недели уже
+   переставляли, и зашитая цифра переехала бы на соседний день молча. */
+const LAU = WEEKDAYS.findIndex((w) => w.en === "Saturday");
+const OTHER_DAY = (LAU + 3) % 7;
+
+check("нужда всегда находится", typeof needAt(30, 4, OTHER_DAY), "string");
 /* Мыли под вечер, после дневных дел, — потому и эйкты вечерние. */
 check("в лаугардаг под вечер моют",
-    /мыт|банн|корыт/.test(needAt(30, 5, 5)) && /мыт|банн|корыт/.test(needAt(30, 6, 5)), true);
-check("а с утра в тот же день — как обычно", /мыт|банн|корыт/.test(needAt(30, 2, 5)), false);
+    /мыт|банн|корыт/.test(needAt(30, 5, LAU)) && /мыт|банн|корыт/.test(needAt(30, 6, LAU)), true);
+check("а с утра в тот же день — как обычно", /мыт|банн|корыт/.test(needAt(30, 2, LAU)), false);
+check("в другой день не моют", /мыт|банн|корыт/.test(needAt(30, 5, OTHER_DAY)), false);
 /* Одна эйкта — одна нужда: свайп не должен её перекидывать. */
 check("нужда не пляшет в пределах эйкты", needAt(30, 4, 0), needAt(30, 4, 0));
 check("а с эйктой меняется", needAt(30, 4, 0) !== needAt(30, 7, 0), true);
@@ -935,7 +941,7 @@ check("а через неделю уже не новость", toothLater.childr
 
 const named = childChat([{
     is_user: false, gen_finished: "nm", extra: {},
-    mes: ["проза", "<!-- [YORNI:", "eykt: хадеги", "date: 5 сольмануд 1015",
+    mes: ["проза", "<!-- [URD:", "eykt: хадеги", "date: 5 сольмануд 1015",
         "child_name: Хельга", "weather: снег", "location: дом", "mood: ок", "] -->"].join("\n"),
 }]);
 const namedState = readChat(named, null, bornOptions);
@@ -1337,7 +1343,7 @@ const barrenTry = (() => {
         mk("хадеги", "date: 10 хаустмануд 1015"),
         {
             is_user: false, gen_finished: "bt", extra: {},
-            mes: ["проза", "<!-- [YORNI:", "eykt: хадеги", "date: 20 хаустмануд 1015",
+            mes: ["проза", "<!-- [URD:", "eykt: хадеги", "date: 20 хаустмануд 1015",
                 "sex: да", "internal: да", "weather: снег", "location: дом", "mood: ок", "] -->"].join("\n"),
         },
     ];

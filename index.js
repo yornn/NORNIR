@@ -1,10 +1,10 @@
 /*
- * Norse Calendar — расширение-инфоблок для SillyTavern.
+ * NORNIR — расширение-инфоблок для SillyTavern.
  *
  * Модель работы: расширение инжектит в промпт инструкцию, модель заканчивает
- * ответ невидимым маркером <!-- [YORNI: … ] --> с метаданными сцены, расширение
+ * ответ невидимым маркером <!-- [URD: … ] --> с метаданными сцены, расширение
  * разбирает его, кладёт снимок в msg.extra и вырезает маркер из текста.
- * Виджет YORNIE рендерит из снимка эйкту, положение солнца, дату, день недели
+ * Виджет рендерит из снимка эйкту, положение солнца, дату, день недели
  * и фазу Луны.
  *
  * Реальное время не используется — только данные из чата. Своего «текущего
@@ -17,7 +17,7 @@
  * функциями, каждая шла по истории сама, и делали они это с разными
  * настройками — см. комментарий к readState().
  *
- * Лор и разбор маркера живут в parser.js, счёт цикла и беременности —
+ * Календарные таблицы и разбор маркера живут в parser.js, счёт цикла и беременности —
  * в body.js. Оба не зависят от SillyTavern и покрыты тестами в test-*.mjs.
  *
  * ОГЛАВЛЕНИЕ (STRUCTURE):
@@ -29,7 +29,7 @@
  * 5. Widget Mounting .... Встраивание в DOM сообщения
  * 6. Widget Building .... Построение DOM-структуры виджета
  * 7. Tímatal ............ Мини-справочник в меню «волшебной палочки»
- * 8. Slash Commands ..... STscript-команды /norse-*
+ * 8. Slash Commands ..... STscript-команды /nornir-*
  * 9. Settings ........... Панель настроек SillyTavern
  * 10. Init .............. Точка входа, подписки на события
  */
@@ -53,29 +53,26 @@ import { Popup, POPUP_TYPE } from "../../../popup.js";
 import { buildReference, SECTION_IDS, COLUMN_KEYS, isPermanent } from "./reference.js";
 
 import {
-    MONTHS_RU_NOM,
     AUK_AFTER_MONTH,
-    MONTHS_LORE,
-    WEEKDAYS_LORE,
-    WEEKDAYS_SHORT_NORSE,
-    WEEKDAY_DESC_RU,
-    WEEKDAYS_FULL_RU,
+    MONTHS,
+    WEEKDAYS,
     EYKTIR,
     addDays,
     aukDays,
-    dayOfYear,
     eyktForHour,
     isSumaraukiYear,
     vikaOf,
-    weeksInYear,
-    yearLength,
+    vikaFirstDay,
+    weeksInMisseri,
+    dayOfMisseri,
+    misseriLength,
     hasDate,
     hasDetails,
     hasTime,
     isAuk,
     moonPhase,
     seasonOf,
-    stripYorniMarkers,
+    stripUrd,
     weekdayOf,
 } from "./parser.js";
 
@@ -94,7 +91,7 @@ import { CYCLE_DEFAULT, DIVINATION_ACCURACY, bodyView, pregnancyTerm } from "./b
 
 import { DEFAULT_TIERS, HOLIDAY_TIERS, holidayView, markWeek } from "./holidays.js";
 
-const extensionName = "Norse-Calendar";
+const extensionName = "NORNIR";
 const extensionFolderName = `third-party/${extensionName}`;
 
 /* По умолчанию в Tímatal открыты только Эйкты: с телефона незачем листать
@@ -124,7 +121,7 @@ const defaultSettings = {
     activeTab: "freyja",
     timatalClosedSections: DEFAULT_CLOSED_SECTIONS,
     timatalVisibleColumns: DEFAULT_VISIBLE_COLUMNS,
-    loreHints: false,
+    calendarHints: false,
     /* Праздники: сам показ, слои достоверности и край света. Слои списком,
        а не четырьмя флагами, — их включают пластами, и добавить пятый слой
        не должно значить добавить пятую настройку. */
@@ -170,8 +167,9 @@ function settings() {
  *    для современных сцен;
  *  - есть заполненный пример. Схема с <плейсхолдерами> показывает форму, но не
  *    показывает ни одного значения, и модель сочиняет их в рассуждениях;
- *  - эталон состояния приходит инжектом ([NORSE CALENDAR STATE]), а не из
- *    истории: старые маркеры из чата вырезаны, модели их взять неоткуда.
+ *  - эталон состояния приходит инжектом (<norse_time>, <norse_body>,
+ *    <norse_child>, <norse_scene>), а не из истории: старые маркеры из чата
+ *    вырезаны, модели их взять неоткуда.
  *
  * История вопроса, чтобы не ходить по кругу.
  *
@@ -189,7 +187,7 @@ function settings() {
  *  - меняем ОДНУ вещь за раз и каждую проверяем отдельно, иначе при регрессии
  *    непонятно, что откатывать (в прошлый раз в одном батче уехало полтора
  *    десятка правок, и на разбор ушло три круга);
- *  - формулировки собираем из MONTHS_LORE и прочих таблиц, чтобы промпт не
+ *  - формулировки собираем из MONTHS и прочих таблиц, чтобы промпт не
  *    разъезжался с парсером, но текст вокруг них не трогаем;
  *  - «улучшения», которые нельзя проверить, не делаем вовсе.
  * ============================================================ */
@@ -201,7 +199,7 @@ function settings() {
  * остальной текст: модуль тела добавит свой блок и одно поле в маркер, ничего
  * вокруг не трогая.
  *
- * Объясняем только то, чего модель не угадает: эйкты и лорный календарь.
+ * Объясняем только то, чего модель не угадает: эйкты и древнеисландский календарь.
  * Локация, погода и одежда пояснений не требуют — там одна строка про то, что
  * писать, и всё. Лишнее объяснение модель репетирует вслух наравне с нужным.
  *
@@ -227,14 +225,14 @@ function settings() {
    из роли» маркер подавляют. */
 const BLOCK_HEADER = [
     "<norse_calendar>",
-    "[SYSTEM CHANNEL — Norse Calendar. This configures a UI panel and stands outside the fiction. Characters cannot perceive it, and nothing written here happens in the scene.]",
+    "[SYSTEM CHANNEL — NORNIR. This configures a UI panel and stands outside the fiction. Characters cannot perceive it, and nothing written here happens in the scene.]",
     "",
     "Alongside the roleplay you keep a calendar panel up to date for the reader. It refreshes from a single hidden block that you place after your prose, every single time.",
     "Wrapped in <!-- and -->, the block is a comment: the chat renders nothing for it, so not one word of it reaches the reader. Treat it as machine-readable output that sits apart from the narrative — do not restate its contents in prose and do not turn it into a visible status header.",
     "",
     /* Главная строка всей перестройки. Любое число, посчитанное моделью,
        она считает вслух в рассуждениях — и в каждом свайпе по-своему.
-       Раньше строка отсылала за посчитанным к [NORSE CALENDAR STATE] — то есть
+       Раньше строка отсылала за посчитанным к общему блоку состояния — то есть
        к блоку, в котором ничего посчитанного и нет: день, луна и срок приезжают
        в <norse_time> и <norse_body>. */
     "Report what the scene shows. Never work anything out: days, dates, counts, terms and the child's age are the panel's own reckoning, and it hands them to you in <norse_time>, <norse_body> and <norse_child>.",
@@ -278,14 +276,14 @@ const BLOCK_SKIP = [
  * Блока [DATE] здесь больше нет, и это самая крупная правка за всю отладку.
  *
  * Дата была единственным полем маркера, которое модель не наблюдала в сцене,
- * а ВЫЧИСЛЯЛА: переводила современный месяц в лорный, спорила сама с собой,
+ * а ВЫЧИСЛЯЛА: переводила современный месяц в древнеисландский, спорила сама с собой,
  * сольмануд это июль или сентябрь, и делала это вслух — по-разному в каждом
  * свайпе. Полтабличных 472 символа объяснений уходили только на то, чтобы она
  * могла посчитать то, что мы и так знаем.
  *
  * Теперь дату ставит пользователь через Tímatal, расширение везёт её вперёд
  * и перелистывает по смене эйкты, а модели она приезжает готовой строкой
- * в [NORSE CALENDAR STATE] — чтобы персонажи могли на неё ссылаться в речи.
+ * в <norse_time> — чтобы персонажи могли на неё ссылаться в речи.
  */
 
 /* Погода перед локацией: в маркере они стоят так же, и порядок чтения теперь
@@ -446,7 +444,7 @@ const BLOCK_ASSEMBLY = [
     "[THE BLOCK — the last thing in every reply, after all the prose]",
     "Put the lines you gathered, in the order they were given, into one comment:",
     "",
-    "<!-- [YORNI:",
+    "<!-- [URD:",
     "… the lines you gathered, one per line …",
     "] -->",
     "",
@@ -512,7 +510,7 @@ function exampleBlock({ withBody, nearBirth, known, born, unnamed }) {
         "EXAMPLE (end of an ordinary reply):",
         "…и он опустил точильный камень, не отводя от неё взгляда.",
         "",
-        "<!-- [YORNI:",
+        "<!-- [URD:",
         ...lines,
         "] -->",
         "",
@@ -632,7 +630,7 @@ function sceneContext() {
         "How the last scene stood when it ended:",
         carried.join("; ") + ".",
     ];
-    if (settings().loreHints) out.push(loreHints(s));
+    if (settings().calendarHints) out.push(reckoningLine(s));
     out.push(
         "Carry these over unless your scene changes them. Time moves forward or stays the same, never backward.",
         "</norse_scene>",
@@ -659,18 +657,18 @@ function timeContext() {
         "<norse_time>",
         "This story keeps time the Norse way, and so do the people in it.",
         "",
-        "The year runs twelve months of thirty days, winter first: гормануд, юлир, морсугур, торри, гоа, эйнмануд, then харпа, скерпла, сольмануд, хейаннир, твимануд, хаустмануд. Four аукнэтр stand at midsummer, between сольмануд and хейаннир. The half-years are Vetr and Sumar; a week is a vika.",
+        "The year runs twelve months of thirty days, winter first: гормануд, юлир, морсуг, торри, гои, эйнмануд, then харпа, скерпла, сольмануд, хейаннир, твимануд, хаустмануд. Four аукнэтр stand at midsummer, between сольмануд and хейаннир. The half-years are Vetr and Sumar; a week is a vika.",
     /* Год перещёлкивает посреди осени, а не в январе, — и это единственное
        место, где модель ошибалась молча: хейаннир 1015 у неё переходил
        в гормануд 1015. Строка стоит десяток токенов и снимает весь класс. */
         "The year turns with the winter: the first day of гормануд opens a new one. So хейаннир 1015 is followed, three months on, by гормануд 1016 — not 1015. These people count years in winters, not from midwinter as we do.",
-        "The day runs eight eyktir of three hours: миднатти, отта, моргун, дагмал, хадеги, ундорн, мидафтан, наттмал. Хадеги is noon and the sun stands due south; наттмал is the late evening.",
+        "The day runs eight eyktir of three hours: миднэтти, отта, моргун, дагмал, хадеги, ундорн, мидафтан, наттмал. Хадеги is noon and the sun stands due south; наттмал is the late evening.",
     ];
 
     const d = sceneDate();
     if (d) {
-        const name = isAuk(d.month) ? "аукнэтр" : MONTHS_LORE[d.month - 1].ru.toLowerCase();
-        const weekday = WEEKDAYS_LORE[weekdayOf(d.year, d.month, d.day)].ru.toLowerCase();
+        const name = isAuk(d.month) ? "аукнэтр" : MONTHS[d.month - 1].ru.toLowerCase();
+        const weekday = WEEKDAYS[weekdayOf(d.year, d.month, d.day)].ru.toLowerCase();
         const { phase } = moonPhase(d.year, d.month, d.day);
         out.push(
             "",
@@ -752,7 +750,7 @@ function holidaySummary() {
  * в метаданных с самого начала и работает исправно — ручное состояние тела
  * такой же авторский акт, ему туда же.
  */
-const META_BODY = "norseManualBody";
+const META_BODY = "nornirManualBody";
 
 function manualBody() {
     return getContext()?.chatMetadata?.[META_BODY] ?? null;
@@ -787,7 +785,7 @@ function readOptions() {
  * настройками и писали в msg.extra разное — чат считался изменённым и
  * сохранялся на каждой перерисовке.
  *
- * Теперь чтение одно на такт. Такт открывают refresh() и injectNorsePrompt();
+ * Теперь чтение одно на такт. Такт открывают refresh() и injectPrompt();
  * всё, что внутри, берёт готовое. Сбрасывать кэш надо после любой записи
  * в чат или метаданные — для этого forgetChat().
  */
@@ -858,7 +856,7 @@ function cycleControls(repaint = () => {}) {
     const done = (record) => {
         if (!record || !setManualBody(record)) return false;
         refresh();
-        injectNorsePrompt();
+        injectPrompt();
         repaint();
         return true;
     };
@@ -908,19 +906,19 @@ function sameSex(pregnancy) {
 /**
  * Та же дата в DD.MM.YYYY — не для нас, а для соседей по промпту.
  *
- * Наш маркер принимает лорную дату, но рядом живут трекеры, которым нужен
+ * Наш маркер принимает древнеисландскую дату, но рядом живут трекеры, которым нужен
  * числовой формат. Модель, зная только «5 сольмануд 1015», переводит его
  * сама — и делает это вслух, посреди рассуждений: «сольмануд седьмой месяц,
  * значит 05.07». В прогонах пользователя один и тот же день превращался то
  * в 05.07.1015, то в 05.06.1015, то в 05.09.1015 — три разных ответа на один
  * вопрос, и каждый со своим абзацем размышлений.
  *
- * Номер известен нам из MONTHS_LORE, так что арифметику делаем здесь.
+ * Номер известен нам из MONTHS, так что арифметику делаем здесь.
  * Аукнэтр в григорианский месяц не ложится вовсе — отдаём номер сольмануда,
  * после которого эти дни и стоят.
  */
 function numericDate(s) {
-    const month = isAuk(s.month) ? MONTHS_LORE[AUK_AFTER_MONTH - 1] : MONTHS_LORE[s.month - 1];
+    const month = isAuk(s.month) ? MONTHS[AUK_AFTER_MONTH - 1] : MONTHS[s.month - 1];
     const dd = String(s.day).padStart(2, "0");
     const mm = String(month.modernNum).padStart(2, "0");
     return `${dd}.${mm}.${s.year}`;
@@ -940,13 +938,20 @@ function numericDate(s) {
  * а названный запретный токен выписывает именно там, где его запретили.
  * Поэтому здесь обычные русские слова, без жаргона и без единого запрета.
  */
-function loreHints(s) {
+/** «зимы» / «лета» — полугодие в родительном, для счёта недель. */
+function seasonGenitive(month) {
+    return seasonOf(month).norse === "Vetr" ? "зимы" : "лета";
+}
+
+function reckoningLine(s) {
     const bits = [];
     if (hasDate(s)) {
         const { year, month, day } = s;
-        bits.push(WEEKDAYS_LORE[weekdayOf(year, month, day)].ru.toLowerCase());
-        bits.push(`неделя ${vikaOf(year, month, day)} из ${weeksInYear(year)}`);
-        bits.push(seasonOf(month).ru.toLowerCase());
+        bits.push(WEEKDAYS[weekdayOf(year, month, day)].ru.toLowerCase());
+        /* «9-я неделя зимы», а не «неделя 9 из 52»: вики считали внутри
+           полугодия, и персонаж скажет именно так. Полугодие тут же и названо,
+           поэтому отдельной строкой про зиму или лето больше не нужно. */
+        bits.push(`${vikaOf(year, month, day)}-я неделя ${seasonGenitive(month)}`);
         /* ru уже самодостаточно: «Растущая луна», «Новолуние» — без приставок. */
         bits.push(moonPhase(year, month, day).phase.ru.toLowerCase());
     }
@@ -968,7 +973,7 @@ function buildPrompt() {
 /**
  * Что с телом героини — отдельным блоком, рядом с устройством времени.
  *
- * Раньше эта строка стояла последней в [NORSE CALENDAR STATE], между погодой
+ * Раньше эта строка стояла последней в общем блоке состояния, между погодой
  * и одеждой. Формально модель её получала — и всё-таки пролистывала: у
  * пользователя первый ответ на восьмой луне не заметил живота вовсе, а
  * соседние свайпы кричали о нём в голос.
@@ -1111,7 +1116,7 @@ function childContext() {
  * у пользователя работала, так что его удаление относится к «улучшениям без
  * подтверждения». Трогать только вместе с проверкой в живой ролевой.
  */
-function injectNorsePrompt() {
+function injectPrompt() {
     const context = getContext();
     if (!context || typeof context.setExtensionPrompt !== "function") return;
 
@@ -1184,7 +1189,7 @@ function coalesced(fn, delay) {
  * Ручные поправки посреди игры — по-прежнему якоря на сообщениях: те откат
  * переживать не должны, а начало чата должно.
  */
-const META_START = "norseStartDate";
+const META_START = "nornirStartDate";
 
 function chatStartDate() {
     const d = getContext()?.chatMetadata?.[META_START];
@@ -1242,7 +1247,7 @@ function stripMarkersFromDom() {
         for (const el of document.querySelectorAll("#chat .mes .mes_text")) {
             const html = el.innerHTML;
             /*
-             * Ищем начало маркера, а не просто слово «yorni».
+             * Ищем начало маркера, а не просто слово «urd».
              *
              * Прежняя проверка срабатывала на любое вхождение в любом регистре —
              * в том числе на слово посреди прозы. А дальше шло переприсвоение
@@ -1251,7 +1256,7 @@ function stripMarkersFromDom() {
              * хоть сырой, хоть экранированный таверной.
              */
             if (!MARKER_IN_DOM_RE.test(html)) continue;
-            const clean = stripYorniMarkers(html.replace(/&lt;!--/g, "<!--").replace(/--&gt;/g, "-->"));
+            const clean = stripUrd(html.replace(/&lt;!--/g, "<!--").replace(/--&gt;/g, "-->"));
             if (clean !== html) el.innerHTML = clean;
         }
     } catch (e) {
@@ -1259,9 +1264,9 @@ function stripMarkersFromDom() {
     }
 }
 
-/* Начало маркера в уже отрисованном HTML: сырое, экранированное Encode Tags
-   и старый видимый блок. Регистр не важен, «yorni» само по себе — важно. */
-const MARKER_IN_DOM_RE = /(?:<|&lt;)!--\s*\[YORNI:|<yorni>/i;
+/* Начало маркера в уже отрисованном HTML: сырое и экранированное Encode Tags.
+   Регистр не важен, «urd» само по себе — важно. */
+const MARKER_IN_DOM_RE = /(?:<|&lt;)!--\s*\[URD:/i;
 
 /* ============================================================
  * 4. RENDER
@@ -1277,11 +1282,11 @@ function el(selector) {
 
 /** Меняет текст слова на адаптацию на 5 секунд, затем возвращает. */
 function swapHint($el) {
-    $el.text($el.data("alt")).addClass("ncw-hint");
+    $el.text($el.data("alt")).addClass("nrn-hint");
     const key = $el.data("key");
     clearTimeout(hintTimers[key]);
     hintTimers[key] = setTimeout(() => {
-        $el.text($el.data("base")).removeClass("ncw-hint");
+        $el.text($el.data("base")).removeClass("nrn-hint");
     }, 5000);
 }
 
@@ -1290,12 +1295,12 @@ function clearHints() {
         clearTimeout(hintTimers[key]);
         delete hintTimers[key];
     }
-    el(".ncw-hint").removeClass("ncw-hint");
+    el(".nrn-hint").removeClass("nrn-hint");
 }
 
 function hintSpan(key, base, alt) {
     return $("<span>", {
-        "class": "ncw-hintable",
+        "class": "nrn-hintable",
         "data-key": key,
         "data-base": base,
         "data-alt": alt,
@@ -1312,7 +1317,7 @@ function plainSpan(text) {
  *
  * Пустой элемент нарочно: файл подставляет CSS по `data-icon`, а цвет знак
  * берёт из строки, в которой стоит. Отсюда два даровых свойства — он сам
- * попадает в тему и сам краснеет вместе с `.ncw-alarm`, — и ни одного пути
+ * попадает в тему и сам краснеет вместе с `.nrn-alarm`, — и ни одного пути
  * к файлу в коде: из JS папку расширения видно только через
  * `renderExtensionTemplateAsync`, а CSS считает `url()` от себя, как уже
  * делает `@font-face`.
@@ -1322,7 +1327,7 @@ function plainSpan(text) {
  */
 function icon(name, extraClass) {
     return $("<span>", {
-        "class": extraClass ? `ncw-icon ${extraClass}` : "ncw-icon",
+        "class": extraClass ? `nrn-icon ${extraClass}` : "nrn-icon",
         "data-icon": name,
         "aria-hidden": "true",
     });
@@ -1337,11 +1342,11 @@ function icon(name, extraClass) {
  * с одного взгляда, ради чего панель и висит, было нельзя.
  */
 function factRow(iconName, label, value, hint) {
-    const row = $("<div>", { "class": "ncw-fact" }).append(icon(iconName));
-    if (label) row.append($("<span>", { "class": "ncw-fact-label", text: `${label}:` }));
+    const row = $("<div>", { "class": "nrn-fact" }).append(icon(iconName));
+    if (label) row.append($("<span>", { "class": "nrn-fact-label", text: `${label}:` }));
     row.append(hint
-        ? hintSpan(`fact-${label ?? iconName}`, value, hint).addClass("ncw-fact-value")
-        : $("<span>", { "class": "ncw-fact-value", text: value }));
+        ? hintSpan(`fact-${label ?? iconName}`, value, hint).addClass("nrn-fact-value")
+        : $("<span>", { "class": "nrn-fact-value", text: value }));
     return row;
 }
 
@@ -1390,7 +1395,7 @@ const HOUSE_FIELDS = [
 function fillGroup(selector, title, rows) {
     const box = el(selector).empty();
     if (!rows.length) { box.hide(); return false; }
-    box.append($("<div>", { "class": "ncw-group-title", text: title }), ...rows).show();
+    box.append($("<div>", { "class": "nrn-group-title", text: title }), ...rows).show();
     return true;
 }
 
@@ -1423,7 +1428,7 @@ function feastHint(holiday) {
 }
 
 function renderFeast() {
-    const row = el("#ncw-feast").empty();
+    const row = el("#nrn-feast").empty();
     const feast = holidaySummary();
     if (!feast) { row.hide(); return; }
 
@@ -1443,9 +1448,9 @@ function renderFeast() {
 
 /** Сетка календаря (дни 1–30), только когда есть дата из чата. */
 function buildGrid() {
-    const grid = el("#ncw-grid");
+    const grid = el("#nrn-grid");
     grid.empty();
-    grid.toggleClass("ncw-hidden", !hasDate(state));
+    grid.toggleClass("nrn-hidden", !hasDate(state));
     if (!hasDate(state)) return;
 
     const { year, month, day } = state;
@@ -1453,30 +1458,43 @@ function buildGrid() {
     if (isAuk(month)) {
         const total = aukDays(year);
         grid.append(
-            $("<div>", { "class": "ncw-auk-title" }).append(
+            $("<div>", { "class": "nrn-auk-title" }).append(
                 icon("cal-auknaetr"),
                 plainSpan(t`Sumarauki · Auknætr`),
             ),
         );
-        const row = $("<div>", { "class": "ncw-row" });
+        const row = $("<div>", { "class": "nrn-row" });
         for (let d = 1; d <= total; d++) {
-            const cls = d === day ? "ncw-cell ncw-day ncw-aukday ncw-today" : "ncw-cell ncw-day ncw-aukday";
+            const cls = d === day ? "nrn-cell nrn-day nrn-aukday nrn-today" : "nrn-cell nrn-day nrn-aukday";
             row.append($("<div>", { "class": cls, text: d }));
         }
         grid.append(row);
         return;
     }
 
-    const headRow = $("<div>", { "class": "ncw-row" });
-    for (let i = 0; i < WEEKDAYS_SHORT_NORSE.length; i++) {
-        const tip = `${WEEKDAY_DESC_RU[i]} — ${WEEKDAYS_FULL_RU[i]}`;
-        headRow.append($("<div>", { "class": "ncw-cell ncw-wd", text: WEEKDAYS_SHORT_NORSE[i], title: tip }));
+    /*
+     * Полоса идёт от первого дня вики, а вика — от первого дня полугодия.
+     * Значит зимой она открывается Laugardagr, а летом Þórsdagr, и заголовок
+     * колонок разворачивается вслед за ней. Иначе подпись «vika N» врала бы
+     * про крайние клетки всё лето: летние вики считаются от четверга.
+     */
+    const first = vikaFirstDay(year, month, day);
+    const days = Array.from({ length: 7 },
+        (_, i) => addDays(first.year, first.month, first.day, i));
+
+    const headRow = $("<div>", { "class": "nrn-row" });
+    for (const d of days) {
+        const wd = WEEKDAYS[weekdayOf(d.year, d.month, d.day)];
+        const tip = `${wd.desc} — ${wd.ru}`;
+        headRow.append($("<div>", { "class": "nrn-cell nrn-wd", text: wd.short, title: tip }));
     }
     grid.append(headRow);
 
-    // weekdayOf уже считает от понедельника — пересчитывать нечего
-    const offsetToday = weekdayOf(year, month, day);
-    const days = Array.from({ length: 7 }, (_, i) => addDays(year, month, day, i - offsetToday));
+    /* Последняя вика полугодия короче семи дней — зимой их пять, летом два.
+       Хвост показываем приглушённым: он уже принадлежит другой половине года,
+       и полоса не должна прыгать в ширине от недели к неделе. */
+    const vika = vikaOf(year, month, day);
+    const offsetToday = days.findIndex((d) => d.month === month && d.day === day);
 
     /* Праздничные дни красятся все подряд, а не только первый: трое суток
        зимних ночей — это трое суток, и по полосе это должно быть видно
@@ -1484,16 +1502,21 @@ function buildGrid() {
        с началом и концом, а середину оставил сплошной. */
     const feasts = settings().holidays ? markWeek(days, holidayOpts()) : days.map(() => null);
 
-    const weekRow = $("<div>", { "class": "ncw-row" });
+    const weekRow = $("<div>", { "class": "nrn-row" });
     for (let i = 0; i < 7; i++) {
         const d = days[i];
-        let cls = "ncw-cell ncw-day";
-        if (d.month !== month) cls += " ncw-dim";
-        if (i === offsetToday) cls += " ncw-today";
+        let cls = "nrn-cell nrn-day";
+        /* Гасим и чужой месяц, и день, уехавший за край полугодия: вика там
+           уже кончилась, хотя клетка в полосе ещё есть. */
+        const sameVika = !isAuk(d.month) && !isAuk(month)
+            && vikaOf(d.year, d.month, d.day) === vika
+            && seasonOf(d.month).norse === seasonOf(month).norse;
+        if (d.month !== month || !sameVika) cls += " nrn-dim";
+        if (i === offsetToday) cls += " nrn-today";
         if (feasts[i]) {
-            cls += " ncw-feast-day";
-            if (feasts[i].first) cls += " ncw-feast-first";
-            if (feasts[i].last) cls += " ncw-feast-last";
+            cls += " nrn-feast-day";
+            if (feasts[i].first) cls += " nrn-feast-first";
+            if (feasts[i].last) cls += " nrn-feast-last";
         }
         const cell = $("<div>", { "class": cls, text: d.day });
         if (feasts[i]) {
@@ -1525,24 +1548,24 @@ function renderAll() {
     const showDate = hasDate(state);
     const showDetails = hasDetails(state);
 
-    const stub = el("#ncw-stub");
+    const stub = el("#nrn-stub");
     if (!showTime && !showDate && !showDetails) {
         // Чистим содержимое, а не только прячем: иначе прошлая сцена остаётся
         // в DOM и попадает в текст сообщения при копировании или озвучке.
-        el("#ncw-eykt-name, #ncw-week, #ncw-date, #ncw-lore, #ncw-feast, #ncw-grid, #ncw-mood-chips, #ncw-children, #ncw-draught-name").empty();
-        el("#ncw-sun, #ncw-eykt-num, #ncw-weather-value, #ncw-location-value").text("");
-        const arc = el("#ncw-weather-text").find("textPath")[0];
+        el("#nrn-eykt-name, #nrn-week, #nrn-date, #nrn-moon, #nrn-feast, #nrn-grid, #nrn-mood-chips, #nrn-children, #nrn-draught-name").empty();
+        el("#nrn-sun, #nrn-eykt-num, #nrn-weather-value, #nrn-location-value").text("");
+        const arc = el("#nrn-weather-text").find("textPath")[0];
         if (arc) arc.textContent = "";
-        el("#ncw-attire-user-text, #ncw-attire-char-text, #ncw-thought-text, #ncw-cycle-text, #ncw-cycle-status, #ncw-cycle-kicks, #ncw-cycle-extra, #ncw-cycle-kin, #ncw-cycle-house, #ncw-cycle-signs, #ncw-cycle-debug, #ncw-char-state-text, #ncw-user-state-text, #ncw-advice-text").text("");
-        el("#ncw-beam, #ncw-wood, #ncw-book").hide();
-        el("#ncw-grid").addClass("ncw-hidden");
+        el("#nrn-attire-user-text, #nrn-attire-char-text, #nrn-thought-text, #nrn-cycle-text, #nrn-cycle-status, #nrn-cycle-kicks, #nrn-cycle-extra, #nrn-cycle-kin, #nrn-cycle-house, #nrn-cycle-signs, #nrn-cycle-debug, #nrn-char-state-text, #nrn-user-state-text, #nrn-advice-text").text("");
+        el("#nrn-beam, #nrn-wood, #nrn-book").hide();
+        el("#nrn-grid").addClass("nrn-hidden");
         stub.show();
         return;
     }
     stub.hide();
     /* Балку и книгу показываем целиком: что в них пусто, решают сами
        надписи и страницы — каждая своим toggle. */
-    el("#ncw-beam, #ncw-book").show();
+    el("#nrn-beam, #nrn-book").show();
 
     renderTimeAndDate(showTime, showDate);
     renderExtraFields();
@@ -1552,19 +1575,19 @@ function renderAll() {
 
 /** Левая половина доски: эйкта, положение солнца, дата, день недели и Луна. */
 function renderTimeAndDate(showTime, showDate) {
-    el("#ncw-wood").toggle(showTime || showDate);
+    el("#nrn-wood").toggle(showTime || showDate);
 
-    const timeLine = el("#ncw-time-line");
-    const vegvisir = el("#ncw-vegvisir");
-    const sunEl = el("#ncw-sun");
+    const timeLine = el("#nrn-time-line");
+    const vegvisir = el("#nrn-vegvisir");
+    const sunEl = el("#nrn-sun");
     if (showTime) {
         const idx = eyktForHour(state.hour);
         const e = EYKTIR[idx];
         const hh = String(state.hour).padStart(2, "0");
         const mm = String(state.minute ?? 0).padStart(2, "0");
 
-        el("#ncw-eykt-name").empty().append(hintSpan("eykt", e.ru, `${hh}:${mm}`));
-        el("#ncw-eykt-num").text(t`eykt ${idx + 1}`);
+        el("#nrn-eykt-name").empty().append(hintSpan("eykt", e.ru, `${hh}:${mm}`));
+        el("#nrn-eykt-num").text(t`eykt ${idx + 1}`);
         timeLine.show();
 
         /* Вегвизир знает свою эйкту одним числом: по нему CSS и зажигает
@@ -1584,13 +1607,13 @@ function renderTimeAndDate(showTime, showDate) {
         sunEl.hide();
     }
 
-    const weekEl = el("#ncw-week").empty();
-    const dateEl = el("#ncw-date").empty();
-    const loreEl = el("#ncw-lore").empty();
+    const weekEl = el("#nrn-week").empty();
+    const dateEl = el("#nrn-date").empty();
+    const moonEl = el("#nrn-moon").empty();
     if (!showDate) {
         weekEl.hide();
         dateEl.hide();
-        loreEl.hide();
+        moonEl.hide();
         return;
     }
 
@@ -1600,13 +1623,17 @@ function renderTimeAndDate(showTime, showDate) {
     /* Строка 1 — где мы в неделе: «Frjádagr · vika 48».
        Точек-разделителей больше нет: факты разводит знак перед каждым,
        а не серая точка между ними. */
-    const wd = WEEKDAYS_LORE[weekdayOf(year, month, day)];
+    const wd = WEEKDAYS[weekdayOf(year, month, day)];
     const vika = vikaOf(year, month, day);
     weekEl.append(
         icon("cal-weekday"),
         hintSpan("wd", wd.norse, wd.ru),
         icon("cal-vika"),
-        hintSpan("vika", `vika ${vika}`, `${t`day`} ${dayOfYear(year, month, day)}/${yearLength(year)}`),
+        /* Подсказка показывает день внутри полугодия, а не сквозной по году:
+           вика теперь считается оттуда же, и два разных счёта рядом сбивали бы
+           с толку. Полугодие названо строкой ниже, у даты. */
+        hintSpan("vika", `vika ${vika}/${weeksInMisseri(year, month)}`,
+            `${t`day`} ${dayOfMisseri(year, month, day)}/${misseriLength(year, month)}`),
     ).show();
 
     /* Строка 2 — сама дата: «7 Ýlir · í Vetr · 998».
@@ -1624,7 +1651,7 @@ function renderTimeAndDate(showTime, showDate) {
         dateEl.append(
             icon("cal-date"),
             plainSpan(`${day} `),
-            hintSpan("date", MONTHS_LORE[month - 1].norse, MONTHS_RU_NOM[month - 1]),
+            hintSpan("date", MONTHS[month - 1].norse, MONTHS[month - 1].modern),
         );
     }
     dateEl.append(
@@ -1636,7 +1663,7 @@ function renderTimeAndDate(showTime, showDate) {
 
     /* Строка 3 — Луна */
     const { phase } = moonPhase(year, month, day);
-    loreEl.append(
+    moonEl.append(
         icon(phase.iconName),
         hintSpan("moon", phase.norse, phase.ru),
         plainSpan(` ${phase.desc}`),
@@ -1673,39 +1700,39 @@ function textRow(rowSelector, textSelector, value) {
  * чтобы совет был всегда, как и просили.
  */
 function renderAdvice() {
-    textRow("#ncw-advice", "#ncw-advice-text", state.advice || bodySummary()?.advice || null);
+    textRow("#nrn-advice", "#nrn-advice-text", state.advice || bodySummary()?.advice || null);
 }
 
 function renderCycle() {
-    const row = el("#ncw-cycle");
+    const row = el("#nrn-cycle");
     const s = bodySummary();
-    if (!s) { row.hide(); el("#ncw-cycle-cols").hide(); return; }
+    if (!s) { row.hide(); el("#nrn-cycle-cols").hide(); return; }
 
     /* Две обязательные строки: где мы в счёте и что с телом. Обе кликабельны.
        Ещё две необязательные — приметы и гадание — появляются только когда
        героиня знает о дитяти. Что показывать, решено в bodyView(): здесь
        только раскладка, иначе панель и промпт разъедутся. */
-    el("#ncw-cycle-text").empty().append(
+    el("#nrn-cycle-text").empty().append(
         icon(s.icon),
         hintSpan("cyclePhase", s.title, s.titleHint),
         ...(s.count ? [plainSpan(` · ${s.count}`)] : []),
     );
-    el("#ncw-cycle-status").empty().append(hintSpan("cycleStatus", s.status, s.statusHint));
+    el("#nrn-cycle-status").empty().append(hintSpan("cycleStatus", s.status, s.statusHint));
 
     /* Шевеления — во всю ширину, сразу под словами о теле. Тревога висит на
        самой строке, а не на соседях: раньше затишье дитяти красило заодно и
        обереги, и имя, и число женщин в доме — восемь строк кричали об одном,
        и кричать переставало быть заметным. */
-    const kicks = el("#ncw-cycle-kicks").empty();
+    const kicks = el("#nrn-cycle-kicks").empty();
     if (s.kicks) {
         kicks.append(
-            factRow("watch-kicks", null, s.kicks.text).toggleClass("ncw-alarm", !!s.kicks.alarm),
+            factRow("watch-kicks", null, s.kicks.text).toggleClass("nrn-alarm", !!s.kicks.alarm),
         ).show();
     } else {
         kicks.hide();
     }
 
-    const extra = el("#ncw-cycle-extra").empty();
+    const extra = el("#nrn-cycle-extra").empty();
     if (s.extra) extra.append(factRow(s.extraIcon, null, s.extra)).show(); else extra.hide();
 
     /* Род. Отец и гадание — двумя строками, не одной: признание отцовства
@@ -1714,9 +1741,9 @@ function renderCycle() {
     const kin = [];
     if (s.father) kin.push(factRow("body-father", "Отец", s.father));
     if (s.guess) {
-        kin.push($("<div>", { "class": "ncw-fact" }).append(
+        kin.push($("<div>", { "class": "nrn-fact" }).append(
             icon("body-divination"),
-            $("<span>", { "class": "ncw-fact-label", text: "Толкуют:" }),
+            $("<span>", { "class": "nrn-fact-label", text: "Толкуют:" }),
             hintSpan("cycleGuess", s.guess, s.guessHint),
         ));
     }
@@ -1727,18 +1754,18 @@ function renderCycle() {
         kin.push(factRow(iconName, label, state[key],
             key === "childRank" ? childRankHint(state[key]) : null));
     }
-    const hasKin = fillGroup("#ncw-cycle-kin", "Род", kin);
+    const hasKin = fillGroup("#nrn-cycle-kin", "Род", kin);
 
     const house = HOUSE_FIELDS
         .filter(([, , key]) => state[key])
         .map(([iconName, label, key]) => factRow(iconName, label, state[key]));
-    const hasHouse = fillGroup("#ncw-cycle-house", "Дом", house);
+    const hasHouse = fillGroup("#nrn-cycle-house", "Дом", house);
 
     /* Приметы — по строке на примету, каждая со своим знаком. Вид приметы
        считает bodyView(): что грудь, что дурнота, что кровь — знать это
        раскладке неоткуда. Своим столбцом напротив рода и дома: к девятой
        части их набирается десяток, и в общем потоке они топили всё под собой. */
-    const signs = el("#ncw-cycle-signs").empty();
+    const signs = el("#nrn-cycle-signs").empty();
     if (s.signs?.length) {
         for (const sign of s.signs) signs.append(factRow(`sign-${sign.kind}`, null, sign.text));
         signs.show();
@@ -1746,9 +1773,9 @@ function renderCycle() {
         signs.hide();
     }
 
-    el("#ncw-cycle-cols").toggle(hasKin || hasHouse);
+    el("#nrn-cycle-cols").toggle(hasKin || hasHouse);
 
-    const debug = el("#ncw-cycle-debug").empty();
+    const debug = el("#nrn-cycle-debug").empty();
     if (s.hidden?.length) debug.append(plainSpan(s.hidden.join(" · "))).show(); else debug.hide();
 
     row.show();
@@ -1769,37 +1796,37 @@ function renderCycle() {
  * не различила.
  */
 function renderDraught() {
-    const row = el("#ncw-draught");
+    const row = el("#nrn-draught");
     const d = bodySummary()?.draught;
     if (!d) { row.hide(); return; }
 
-    el("#ncw-draught-name").empty().append(
+    el("#nrn-draught-name").empty().append(
         hintSpan("draught", d.title, `${d.herb.ru} · ${d.toll.ru} откат`),
     );
-    const text = el("#ncw-draught-text").text(d.status);
-    text.toggleClass("ncw-alarm", d.fatal || d.toll.id === "dire");
+    const text = el("#nrn-draught-text").text(d.status);
+    text.toggleClass("nrn-alarm", d.fatal || d.toll.id === "dire");
     row.show();
 }
 
 function renderChildren() {
-    const box = el("#ncw-children").empty();
+    const box = el("#nrn-children").empty();
     const kids = bodySummary()?.children;
     if (!kids?.length) { box.hide(); return; }
 
     for (const kid of kids) {
-        const line = $("<div>", { "class": "ncw-child" });
+        const line = $("<div>", { "class": "nrn-child" });
         line.append(
-            icon("child", "ncw-child-icon"),
+            icon("child", "nrn-child-icon"),
             hintSpan(`child-${kid.title}`, kid.title, kid.stage.ru),
             plainSpan(` · ${kid.age}`),
         );
         if (kid.need) {
-            const need = factRow("child-need", null, kid.need).addClass("ncw-child-need");
-            if (kid.alarm) need.addClass("ncw-alarm");
+            const need = factRow("child-need", null, kid.need).addClass("nrn-child-need");
+            if (kid.alarm) need.addClass("nrn-alarm");
             line.append(need);
         }
         for (const mark of kid.marks) {
-            line.append(factRow("child-mark", null, mark).addClass("ncw-child-mark"));
+            line.append(factRow("child-mark", null, mark).addClass("nrn-child-mark"));
         }
         box.append(line);
     }
@@ -1819,23 +1846,23 @@ const WEATHER_CURVE_MAX = 19;
  *
  * Раскладку здесь не спрашиваем. Погода пишется сразу в оба места — и в
  * дугу медальона, и прямой строкой, — а какое из них показать, решают
- * стили по классу `ncw-weather-curved` и по самой раскладке. Иначе рендер
+ * стили по классу `nrn-weather-curved` и по самой раскладке. Иначе рендер
  * пришлось бы учить различать доску и плоскую вёрстку, а он о них не знает
  * и знать не должен.
  */
 function renderScene() {
-    const weather = el("#ncw-weather-text");
+    const weather = el("#nrn-weather-text");
     const arc = weather.find("textPath")[0] ?? null;
     const curved = !!state.weather && state.weather.length <= WEATHER_CURVE_MAX;
 
     /* Погоду в дуге чистим отдельно: она живёт в SVG, и jQuery её текстом
        не достать. */
     if (arc) arc.textContent = curved ? state.weather : "";
-    el("#ncw-weather-value").text(state.weather || "");
-    weather.toggleClass("ncw-weather-curved", curved).toggle(!!state.weather);
+    el("#nrn-weather-value").text(state.weather || "");
+    weather.toggleClass("nrn-weather-curved", curved).toggle(!!state.weather);
 
-    el("#ncw-location-value").text(state.location || "");
-    el("#ncw-location-text").toggle(!!state.location);
+    el("#nrn-location-value").text(state.location || "");
+    el("#nrn-location-text").toggle(!!state.location);
 }
 
 /**
@@ -1860,13 +1887,13 @@ function renderExtraFields() {
      * ровно в ту секунду, когда на неё наводят. Держим его и в aria-label,
      * иначе для чтения с экрана кнопка осталась бы безымянной.
      */
-    figureLabel("#ncw-fig-user", userName);
-    figureLabel("#ncw-fig-char", charName);
+    figureLabel("#nrn-fig-user", userName);
+    figureLabel("#nrn-fig-char", charName);
 
     /* --- страница {{user}} --- */
-    textRow("#ncw-attire-user", "#ncw-attire-user-text", state.userAttire);
-    textRow("#ncw-user-state", "#ncw-user-state-text", state.userState);
-    leafEmpty("#ncw-user-empty", !!(state.userAttire || state.userState),
+    textRow("#nrn-attire-user", "#nrn-attire-user-text", state.userAttire);
+    textRow("#nrn-user-state", "#nrn-user-state-text", state.userState);
+    leafEmpty("#nrn-user-empty", !!(state.userAttire || state.userState),
         "Сцена о ней ничего не сказала.");
 
     /* --- лист нити Фрейи --- */
@@ -1876,23 +1903,23 @@ function renderExtraFields() {
     renderChildren();
     const hasBody = !!bodySummary();
     const hasAdvice = !!(state.advice || bodySummary()?.advice);
-    leafEmpty("#ncw-freyja-empty", hasBody || hasAdvice,
+    leafEmpty("#nrn-freyja-empty", hasBody || hasAdvice,
         settings().bodyTracking ? "Счёт тела ещё не начат." : "Счёт тела выключен в настройках.");
 
     /* --- страница {{char}} --- */
     const moods = state.charMood
         ? state.charMood.split(",").map((s) => s.trim()).filter(Boolean)
         : [];
-    const moodEl = el("#ncw-mood-chips").empty();
+    const moodEl = el("#nrn-mood-chips").empty();
     for (const m of moods) {
-        moodEl.append($("<span>", { "class": "ncw-chip", text: m }));
+        moodEl.append($("<span>", { "class": "nrn-chip", text: m }));
     }
     moodEl.toggle(moods.length > 0);
 
-    textRow("#ncw-attire-char", "#ncw-attire-char-text", state.charAttire);
-    textRow("#ncw-char-state", "#ncw-char-state-text", state.charState);
-    textRow("#ncw-thought", "#ncw-thought-text", state.thought);
-    leafEmpty("#ncw-char-empty",
+    textRow("#nrn-attire-char", "#nrn-attire-char-text", state.charAttire);
+    textRow("#nrn-char-state", "#nrn-char-state-text", state.charState);
+    textRow("#nrn-thought", "#nrn-thought-text", state.thought);
+    leafEmpty("#nrn-char-empty",
         moods.length > 0 || !!state.charAttire || !!state.thought || !!state.charState,
         "Сцена о нём ничего не сказала.");
 
@@ -1914,8 +1941,8 @@ function leafEmpty(selector, hasContent, words) {
 function figureLabel(selector, name) {
     const fig = el(selector);
     fig.attr({ "aria-label": name, title: name });
-    fig.find(".ncw-fig-hit").attr("title", name);
-    fig.find(".ncw-fig-name").text(name);
+    fig.find(".nrn-fig-hit").attr("title", name);
+    fig.find(".nrn-fig-name").text(name);
 }
 
 /* --- фигурки: какая страница открыта --- */
@@ -1936,11 +1963,11 @@ function activeTab() {
 
 function applyTab() {
     const tab = activeTab();
-    el("#ncw-page").attr("data-tab", tab);
-    el(".ncw-fig").each(function () {
+    el("#nrn-page").attr("data-tab", tab);
+    el(".nrn-fig").each(function () {
         const fig = $(this);
         const on = fig.attr("data-tab") === tab;
-        fig.toggleClass("ncw-fig-on", on).attr("aria-pressed", on ? "true" : "false");
+        fig.toggleClass("nrn-fig-on", on).attr("aria-pressed", on ? "true" : "false");
     });
 }
 
@@ -1969,7 +1996,7 @@ function remountIfWiped() {
     const lastBot = lastBotMessageEl();
     if (!lastBot) return;
     if (lastBot.querySelector(".edit_textarea")) return;      // сообщение правят
-    if (lastBot.querySelector("#norse-calendar-widget")) return; // уже на месте
+    if (lastBot.querySelector("#nrn-widget")) return; // уже на месте
     mountWidget();
     renderAll();
 }
@@ -2031,11 +2058,11 @@ function svgEl(tag, attrs) {
  * круг: см. WEATHER_CURVE_MAX в renderScene(). На доске-картинке круга нет
  * вовсе, и там прямая строка показывается всегда.
  */
-const WEATHER_ARC_ID = "ncw-weather-arc";
+const WEATHER_ARC_ID = "nrn-weather-arc";
 
 function weatherArc() {
     const svg = svgEl("svg", {
-        "class": "ncw-medallion-svg",
+        "class": "nrn-medallion-svg",
         viewBox: "0 0 120 120",
         "aria-hidden": "true",
     });
@@ -2045,7 +2072,7 @@ function weatherArc() {
         d: "M 18 62 A 42 42 0 0 0 102 62",
         fill: "none",
     }));
-    const text = svgEl("text", { "class": "ncw-medallion-text" });
+    const text = svgEl("text", { "class": "nrn-medallion-text" });
     text.appendChild(svgEl("textPath", {
         href: `#${WEATHER_ARC_ID}`,
         startOffset: "50%",
@@ -2066,7 +2093,7 @@ function weatherArc() {
  * Видна всегда одна, та, в чьей эйкте идёт сцена.
  *
  * Координаты — в «пикселях рисунка»: квадрат 240×240 стоит серединой на
- * перекрестье знака (см. --ncw-vegvisir-* в разделе 5 стилей), полоска идёт
+ * перекрестье знака (см. --nrn-vegvisir-* в разделе 5 стилей), полоска идёт
  * от 16 до 96 единиц от середины — это ровно длина прямой части луча, без
  * его концевых завитков. Углы не считаем: восемь эйкт — восемь румбов, и
  * каждый следующий луч просто довёрнут на 45°.
@@ -2075,21 +2102,21 @@ const VEGVISIR_RAYS = 8;
 
 function vegvisirOverlay() {
     const svg = svgEl("svg", {
-        "class": "ncw-vegvisir-svg",
+        "class": "nrn-vegvisir-svg",
         viewBox: "0 0 240 240",
         "aria-hidden": "true",
     });
 
     for (let i = 0; i < VEGVISIR_RAYS; i++) {
         const ray = svgEl("g", {
-            "class": "ncw-vegvisir-ray",
+            "class": "nrn-vegvisir-ray",
             "data-ray": i,
             transform: `rotate(${i * 45} 120 120)`,
         });
         /* Две линии одна на другой: широкая тусклая — свечение вокруг луча,
            узкая яркая — сам огонёк. Фильтров нет нарочно: размытие в SVG
            считается в пикселях экрана и на широкой доске расплылось бы. */
-        for (const cls of ["ncw-ray-halo", "ncw-ray-core"]) {
+        for (const cls of ["nrn-ray-halo", "nrn-ray-core"]) {
             ray.appendChild(svgEl("line", {
                 "class": cls, x1: 120, y1: 104, x2: 120, y2: 24,
             }));
@@ -2105,14 +2132,14 @@ function vegvisirOverlay() {
      * держит стрелку со знаком времени суток. На доске сердцевина спрятана —
      * там середину знака рисует сама картинка.
      */
-    const hub = $("<div>", { "class": "ncw-dial-hub" }).append(
-        $("<span>", { "class": "ncw-dial-pointer" }),
-        $("<span>", { "class": "ncw-dial-core" }).append(
-            icon("time-eykt", "ncw-dial-icon"),
+    const hub = $("<div>", { "class": "nrn-dial-hub" }).append(
+        $("<span>", { "class": "nrn-dial-pointer" }),
+        $("<span>", { "class": "nrn-dial-core" }).append(
+            icon("time-eykt", "nrn-dial-icon"),
         ),
     );
 
-    return $("<div>", { id: "ncw-vegvisir", "class": "ncw-vegvisir" }).append(svg, hub);
+    return $("<div>", { id: "nrn-vegvisir", "class": "nrn-vegvisir" }).append(svg, hub);
 }
 
 /**
@@ -2130,16 +2157,16 @@ function vegvisirOverlay() {
 function figureButton(tab, id, label) {
     return $("<button>", {
         id,
-        "class": `ncw-fig ncw-fig-${tab}`,
+        "class": `nrn-fig nrn-fig-${tab}`,
         type: "button",
         "data-tab": tab,
         "aria-label": label,
         title: label,
     }).append(
-        $("<span>", { "class": "ncw-fig-hit", title: label }),
+        $("<span>", { "class": "nrn-fig-hit", title: label }),
         /* Подпись — для плоской раскладки: там фигурок нет, а есть
            деревяшка с именем, и узнать её можно только по нему. */
-        $("<span>", { "class": "ncw-fig-name", text: label }),
+        $("<span>", { "class": "nrn-fig-name", text: label }),
     );
 }
 
@@ -2149,8 +2176,8 @@ function buildWidget() {
 
     const s = settings();
 
-    $widget = $("<div>", { id: "norse-calendar-widget", "class": "nc-themed" }).append(
-        $("<div>", { id: "ncw-board", "class": "ncw-board" }).append(
+    $widget = $("<div>", { id: "nrn-widget", "class": "nrn-themed" }).append(
+        $("<div>", { id: "nrn-board", "class": "nrn-board" }).append(
 
             /*
              * Верхняя балка: обстановка сцены.
@@ -2163,27 +2190,27 @@ function buildWidget() {
              * Знаков у них больше нет. На доске, где всё нарисовано, знак
              * рядом с надписью — это второй рисунок поверх первого.
              */
-            $("<div>", { id: "ncw-beam", "class": "ncw-beam" }).append(
+            $("<div>", { id: "nrn-beam", "class": "nrn-beam" }).append(
                 /* Погода и время — одной стопкой, а не двумя надписями по
                    своим местам: длинная погода занимает две строки, и время
                    должно съехать вниз вместе с ней, а не оказаться под ней. */
-                $("<div>", { "class": "ncw-beam-left" }).append(
+                $("<div>", { "class": "nrn-beam-left" }).append(
                     /* Дуга и знаки нужны только плоской раскладке — там это
                        круглый медальон с надписью по дуге. На доске они
                        спрятаны стилями, и погода читается прямой строкой. */
-                    $("<div>", { id: "ncw-weather-text", "class": "ncw-beam-line" }).append(
+                    $("<div>", { id: "nrn-weather-text", "class": "nrn-beam-line" }).append(
                         weatherArc(),
-                        icon("scene-weather", "ncw-medallion-icon"),
-                        $("<span>", { id: "ncw-weather-value" }),
+                        icon("scene-weather", "nrn-medallion-icon"),
+                        $("<span>", { id: "nrn-weather-value" }),
                     ),
-                    $("<div>", { id: "ncw-time-line", "class": "ncw-beam-line" }).append(
-                        $("<span>", { id: "ncw-eykt-name" }),
-                        $("<span>", { id: "ncw-eykt-num" }),
+                    $("<div>", { id: "nrn-time-line", "class": "nrn-beam-line" }).append(
+                        $("<span>", { id: "nrn-eykt-name" }),
+                        $("<span>", { id: "nrn-eykt-num" }),
                     ),
                 ),
-                $("<div>", { id: "ncw-location-text", "class": "ncw-beam-line" }).append(
-                    icon("scene-location", "ncw-plate-icon"),
-                    $("<span>", { id: "ncw-location-value" }),
+                $("<div>", { id: "nrn-location-text", "class": "nrn-beam-line" }).append(
+                    icon("scene-location", "nrn-plate-icon"),
+                    $("<span>", { id: "nrn-location-value" }),
                 ),
             ),
 
@@ -2193,20 +2220,20 @@ function buildWidget() {
              * Вегвизир на ней уже нарисован; сверху лежит только подсветка
              * активной эйкты. Под знаком дата, у нижнего края — календарик.
              */
-            $("<div>", { id: "ncw-wood", "class": "ncw-wood" }).append(
+            $("<div>", { id: "nrn-wood", "class": "nrn-wood" }).append(
                 vegvisirOverlay(),
 
-                $("<div>", { id: "ncw-datebox" }).append(
-                    $("<div>", { id: "ncw-sun", "class": "ncw-sun-line" }),
-                    $("<div>", { id: "ncw-week", "class": "ncw-cal-line" }),
-                    $("<div>", { id: "ncw-date", "class": "ncw-cal-line" }),
-                    $("<div>", { id: "ncw-lore", "class": "ncw-cal-line" }),
+                $("<div>", { id: "nrn-datebox" }).append(
+                    $("<div>", { id: "nrn-sun", "class": "nrn-sun-line" }),
+                    $("<div>", { id: "nrn-week", "class": "nrn-cal-line" }),
+                    $("<div>", { id: "nrn-date", "class": "nrn-cal-line" }),
+                    $("<div>", { id: "nrn-moon", "class": "nrn-cal-line" }),
 
                     /* Праздник — прямо над календариком, где он и покрашен. */
-                    $("<div>", { id: "ncw-feast", "class": "ncw-cal-line" }),
+                    $("<div>", { id: "nrn-feast", "class": "nrn-cal-line" }),
                 ),
 
-                $("<div>", { id: "ncw-grid" }),
+                $("<div>", { id: "nrn-grid" }),
             ),
 
             /*
@@ -2216,20 +2243,20 @@ function buildWidget() {
              * обрезана краем доски, и на ней то, чем сводку переключают:
              * фигурки {{user}} и {{char}}, медальон нити Фрейи и дети.
              */
-            $("<div>", { id: "ncw-book", "class": "ncw-book" }).append(
+            $("<div>", { id: "nrn-book", "class": "nrn-book" }).append(
 
-                $("<div>", { id: "ncw-page", "class": "ncw-page", "data-tab": "freyja" }).append(
+                $("<div>", { id: "nrn-page", "class": "nrn-page", "data-tab": "freyja" }).append(
 
-                        $("<div>", { id: "ncw-page-user", "class": "ncw-leaf", "data-leaf": "user" }).append(
-                            $("<div>", { id: "ncw-attire-user", "class": "ncw-attire" }).append(
-                                icon("char-attire", "ncw-attire-icon"),
-                                $("<span>", { id: "ncw-attire-user-text" }),
+                        $("<div>", { id: "nrn-page-user", "class": "nrn-leaf", "data-leaf": "user" }).append(
+                            $("<div>", { id: "nrn-attire-user", "class": "nrn-attire" }).append(
+                                icon("char-attire", "nrn-attire-icon"),
+                                $("<span>", { id: "nrn-attire-user-text" }),
                             ),
-                            $("<div>", { id: "ncw-user-state", "class": "ncw-state" }).append(
-                                icon("char-state", "ncw-state-icon"),
-                                $("<span>", { id: "ncw-user-state-text" }),
+                            $("<div>", { id: "nrn-user-state", "class": "nrn-state" }).append(
+                                icon("char-state", "nrn-state-icon"),
+                                $("<span>", { id: "nrn-user-state-text" }),
                             ),
-                            $("<div>", { id: "ncw-user-empty", "class": "ncw-leaf-empty" }),
+                            $("<div>", { id: "nrn-user-empty", "class": "nrn-leaf-empty" }),
                         ),
 
                         /* Нить Фрейи — то, ради чего расширение и писалось.
@@ -2247,65 +2274,65 @@ function buildWidget() {
                          * срока набирается десяток, стоят своим столбцом
                          * напротив: так лист выходит вдвое короче.
                          */
-                        $("<div>", { id: "ncw-page-freyja", "class": "ncw-leaf", "data-leaf": "freyja" }).append(
-                            $("<div>", { id: "ncw-cycle", "class": "ncw-cycle" }).append(
+                        $("<div>", { id: "nrn-page-freyja", "class": "nrn-leaf", "data-leaf": "freyja" }).append(
+                            $("<div>", { id: "nrn-cycle", "class": "nrn-cycle" }).append(
                                 /* Фаза со счётом — заголовок листа, слова о теле
                                    под ним подзаголовком. */
-                                $("<div>", { id: "ncw-cycle-text", "class": "ncw-cycle-head" }),
-                                $("<div>", { id: "ncw-cycle-status", "class": "ncw-cycle-sub" }),
+                                $("<div>", { id: "nrn-cycle-text", "class": "nrn-cycle-head" }),
+                                $("<div>", { id: "nrn-cycle-status", "class": "nrn-cycle-sub" }),
                                 /* Шевеления — во всю ширину и сразу под словами
                                    о теле: затишье дитяти единственное, о чём
                                    здесь тревожатся, и прятать его в столбец
                                    значило бы обменять тревогу на стройность. */
-                                $("<div>", { id: "ncw-cycle-kicks", "class": "ncw-cycle-line ncw-cycle-dim" }),
+                                $("<div>", { id: "nrn-cycle-kicks", "class": "nrn-cycle-line nrn-cycle-dim" }),
                                 /* Срок и размер дитяти — часть заголовка: это
                                    тот же счёт, что и «Ношение: 6/9», только
                                    словами. */
-                                $("<div>", { id: "ncw-cycle-extra", "class": "ncw-cycle-dim" }),
+                                $("<div>", { id: "nrn-cycle-extra", "class": "nrn-cycle-dim" }),
                             ),
                             /* Род и дом — двумя столбцами сразу под сроком:
                                это короткие «подпись: значение», и они дают
                                обзор быстрее длинных примет. */
-                            $("<div>", { id: "ncw-cycle-cols", "class": "ncw-cycle-cols" }).append(
-                                $("<div>", { "class": "ncw-cycle-col" }).append(
-                                    $("<div>", { id: "ncw-cycle-kin", "class": "ncw-cycle-group" }),
+                            $("<div>", { id: "nrn-cycle-cols", "class": "nrn-cycle-cols" }).append(
+                                $("<div>", { "class": "nrn-cycle-col" }).append(
+                                    $("<div>", { id: "nrn-cycle-kin", "class": "nrn-cycle-group" }),
                                 ),
-                                $("<div>", { "class": "ncw-cycle-col" }).append(
-                                    $("<div>", { id: "ncw-cycle-house", "class": "ncw-cycle-group" }),
+                                $("<div>", { "class": "nrn-cycle-col" }).append(
+                                    $("<div>", { id: "nrn-cycle-house", "class": "nrn-cycle-group" }),
                                 ),
                             ),
                             /* Приметы — под ними и во всю ширину листа: к концу
                                срока их десяток, и целыми фразами они ложатся
                                лучше в широкую строку, чем в узкий столбец. */
-                            $("<div>", { id: "ncw-cycle-signs", "class": "ncw-cycle-dim" }),
-                            $("<div>", { id: "ncw-cycle-debug", "class": "ncw-cycle-line ncw-cycle-debug" }),
-                            $("<div>", { id: "ncw-draught", "class": "ncw-draught" }).append(
-                                icon("draught", "ncw-draught-icon"),
-                                $("<span>", { id: "ncw-draught-name" }),
-                                $("<span>", { id: "ncw-draught-text", "class": "ncw-draught-text" }),
+                            $("<div>", { id: "nrn-cycle-signs", "class": "nrn-cycle-dim" }),
+                            $("<div>", { id: "nrn-cycle-debug", "class": "nrn-cycle-line nrn-cycle-debug" }),
+                            $("<div>", { id: "nrn-draught", "class": "nrn-draught" }).append(
+                                icon("draught", "nrn-draught-icon"),
+                                $("<span>", { id: "nrn-draught-name" }),
+                                $("<span>", { id: "nrn-draught-text", "class": "nrn-draught-text" }),
                             ),
-                            $("<div>", { id: "ncw-advice", "class": "ncw-advice" }).append(
-                                icon("advice", "ncw-advice-icon"),
-                                $("<span>", { id: "ncw-advice-text" }),
+                            $("<div>", { id: "nrn-advice", "class": "nrn-advice" }).append(
+                                icon("advice", "nrn-advice-icon"),
+                                $("<span>", { id: "nrn-advice-text" }),
                             ),
-                            $("<div>", { id: "ncw-freyja-empty", "class": "ncw-leaf-empty" }),
+                            $("<div>", { id: "nrn-freyja-empty", "class": "nrn-leaf-empty" }),
                         ),
 
-                        $("<div>", { id: "ncw-page-char", "class": "ncw-leaf", "data-leaf": "char" }).append(
-                            $("<div>", { id: "ncw-mood-chips", "class": "ncw-chips" }),
-                            $("<div>", { id: "ncw-attire-char", "class": "ncw-attire" }).append(
-                                icon("char-attire", "ncw-attire-icon"),
-                                $("<span>", { id: "ncw-attire-char-text" }),
+                        $("<div>", { id: "nrn-page-char", "class": "nrn-leaf", "data-leaf": "char" }).append(
+                            $("<div>", { id: "nrn-mood-chips", "class": "nrn-chips" }),
+                            $("<div>", { id: "nrn-attire-char", "class": "nrn-attire" }).append(
+                                icon("char-attire", "nrn-attire-icon"),
+                                $("<span>", { id: "nrn-attire-char-text" }),
                             ),
-                            $("<div>", { id: "ncw-char-state", "class": "ncw-state" }).append(
-                                icon("char-state", "ncw-state-icon"),
-                                $("<span>", { id: "ncw-char-state-text" }),
+                            $("<div>", { id: "nrn-char-state", "class": "nrn-state" }).append(
+                                icon("char-state", "nrn-state-icon"),
+                                $("<span>", { id: "nrn-char-state-text" }),
                             ),
-                            $("<div>", { id: "ncw-thought", "class": "ncw-thought" }).append(
-                                icon("char-thought", "ncw-thought-icon"),
-                                $("<span>", { id: "ncw-thought-text" }),
+                            $("<div>", { id: "nrn-thought", "class": "nrn-thought" }).append(
+                                icon("char-thought", "nrn-thought-icon"),
+                                $("<span>", { id: "nrn-thought-text" }),
                             ),
-                            $("<div>", { id: "ncw-char-empty", "class": "ncw-leaf-empty" }),
+                            $("<div>", { id: "nrn-char-empty", "class": "nrn-leaf-empty" }),
                         ),
                 ),
 
@@ -2314,17 +2341,17 @@ function buildWidget() {
                  * внахлёст, и {{char}} нарисован поверх медальона, медальон —
                  * поверх хозяйки. Так же они лежали и в макете.
                  */
-                figureButton("user", "ncw-fig-user", "{{user}}"),
-                figureButton("freyja", "ncw-fig-freyja", "Нить Фрейи"),
-                figureButton("char", "ncw-fig-char", "{{char}}"),
+                figureButton("user", "nrn-fig-user", "{{user}}"),
+                figureButton("freyja", "nrn-fig-freyja", "Нить Фрейи"),
+                figureButton("char", "nrn-fig-char", "{{char}}"),
 
                 /* Дети вписаны в саму книгу, под фигурками, и видны на любой
                    странице: дитя не перестаёт просить есть оттого, что
                    смотрят на {{char}}. */
-                $("<div>", { id: "ncw-children", "class": "ncw-children" }),
+                $("<div>", { id: "nrn-children", "class": "nrn-children" }),
             ),
 
-            $("<div>", { id: "ncw-stub", text: `ᚱ ${t`Waiting for the infoblock…`}` }),
+            $("<div>", { id: "nrn-stub", text: `ᚱ ${t`Waiting for the infoblock…`}` }),
         ),
     );
 
@@ -2355,14 +2382,14 @@ function bindWidgetHandlers() {
     if (handlersBound) return;
     handlersBound = true;
 
-    $(document).on("click", "#norse-calendar-widget .ncw-hintable", function () {
+    $(document).on("click", "#nrn-widget .nrn-hintable", function () {
         swapHint($(this));
     });
 
     /* Фигурки на правой странице. Клик приходит с «горячего места» внутри
        кнопки и всплывает сюда: сама кнопка помечена pointer-events: none,
        чтобы прямоугольники рисунков не воровали клики друг у друга. */
-    $(document).on("click", "#norse-calendar-widget button[data-tab]", function () {
+    $(document).on("click", "#nrn-widget button[data-tab]", function () {
         const tab = $(this).attr("data-tab");
         if (!TABS.includes(tab)) return;
         settings().activeTab = tab;
@@ -2471,8 +2498,8 @@ function applySceneDate(date) {
  * ему не приходится дописывать !important к каждой строке.
  * ============================================================ */
 
-const USER_CSS_PREFIX = "norse-calendar-css:";
-const USER_CSS_STYLE_ID = "norse-calendar-user-css";
+const USER_CSS_PREFIX = "nornir-css:";
+const USER_CSS_STYLE_ID = "nornir-user-css";
 
 /**
  * Темы и раскладки — списком, а не только блоками в CSS.
@@ -2595,7 +2622,7 @@ function originalThemeCss(theme) {
     const chunks = [];
 
     for (const sheet of document.styleSheets) {
-        if (!(sheet.href ?? "").includes("Norse-Calendar")) continue;
+        if (!(sheet.href ?? "").includes("NORNIR")) continue;
         let rules;
         /* Чужой источник читать нельзя — браузер бросит SecurityError. */
         try { rules = sheet.cssRules; } catch { continue; }
@@ -2699,7 +2726,7 @@ async function openTimatal() {
         allowVerticalScrolling: true,
         leftAlign: true,
     });
-    popup.dlg.classList.add("nc-popup", "nc-themed");
+    popup.dlg.classList.add("nrn-popup", "nrn-themed");
     popup.dlg.dataset.theme = currentTheme();
     dialog = popup.dlg;
 
@@ -2709,14 +2736,14 @@ async function openTimatal() {
 /** Добавляет пункт Tímatal в меню «волшебной палочки». */
 function addWandMenuItem() {
     const menu = document.getElementById("extensionsMenu");
-    if (!menu || document.getElementById("norse_timatal_button")) return;
+    if (!menu || document.getElementById("nrn_timatal_button")) return;
 
     const container = document.createElement("div");
-    container.id = "norse_timatal_wand_container";
+    container.id = "nrn_timatal_wand_container";
     container.className = "extension_container";
 
     const item = document.createElement("div");
-    item.id = "norse_timatal_button";
+    item.id = "nrn_timatal_button";
     item.className = "list-group-item flex-container flexGap5 interactable";
     item.tabIndex = 0;
     item.title = t`Norse reckoning of time: eykts, months, weekdays, the Moon`;
@@ -2744,12 +2771,12 @@ function addWandMenuItem() {
  * 8. SLASH COMMANDS (STscript)
  * ============================================================ */
 
-/** Дата строкой в формате YORNIE, либо пустая строка. */
+/** Дата строкой, как её показывает панель, либо пустая строка. */
 function formatDate() {
     if (!hasDate(state)) return "";
     const { year, month, day } = state;
     if (isAuk(month)) return `Sumarauki ${day} из ${aukDays(year)}, ${year}`;
-    return `${day} ${MONTHS_LORE[month - 1].ru} ${year}`;
+    return `${day} ${MONTHS[month - 1].ru} ${year}`;
 }
 
 /** Название текущей эйкты, либо пустая строка. */
@@ -2761,25 +2788,25 @@ function formatEykt() {
 function registerSlashCommands() {
     const commands = [
         {
-            name: "norse-date",
+            name: "nornir-date",
             callback: () => formatDate(),
-            returns: "текущая дата в формате YORNIE, либо пустая строка",
+            returns: "текущую дату сцены, либо пустую строку",
             helpString: "Возвращает дату сцены (например «13 Гормануд 1015»).",
         },
         {
-            name: "norse-eykt",
+            name: "nornir-eykt",
             callback: () => formatEykt(),
             returns: "название текущей эйкты, либо пустая строка",
             helpString: "Возвращает эйкту из последнего маркера (например «Хадеги»).",
         },
         {
-            name: "norse-state",
+            name: "nornir-state",
             callback: () => JSON.stringify(state),
             returns: "весь распознанный инфоблок в JSON",
             helpString: "Возвращает всё состояние панели: дату, время, погоду, локацию, настроение, одежду, мысль, состояния тел, совет и всё, что сказано про дитя.",
         },
         {
-            name: "norse-refresh",
+            name: "nornir-refresh",
             callback: () => {
                 refresh();
                 return "";
@@ -2788,7 +2815,7 @@ function registerSlashCommands() {
             helpString: "Принудительно перечитывает чат и перерисовывает виджет.",
         },
         {
-            name: "norse-lore",
+            name: "nornir-timatal",
             callback: () => {
                 openTimatal();
                 return "";
@@ -2864,7 +2891,7 @@ function applySkin(skin) {
 }
 
 function bindSettings() {
-    bindCheckbox("#nc_enabled", "enabled", (v) => {
+    bindCheckbox("#nrn_enabled", "enabled", (v) => {
         if (v) {
             refresh();
         } else if ($widget) {
@@ -2872,16 +2899,16 @@ function bindSettings() {
         }
     });
 
-    bindCheckbox("#nc_inject", "inject", () => injectNorsePrompt());
-    bindCheckbox("#nc_lore_hints", "loreHints", () => injectNorsePrompt());
+    bindCheckbox("#nrn_inject", "inject", () => injectPrompt());
+    bindCheckbox("#nrn_calendar_hints", "calendarHints", () => injectPrompt());
 
     /* Праздники: показ, слои и край света. Каждая правка перетряхивает и
        панель, и инжект — праздник виден в обоих, и разъехаться им нельзя. */
-    const feastsChanged = () => { injectNorsePrompt(); refresh(); };
-    bindCheckbox("#nc_holidays", "holidays", feastsChanged);
+    const feastsChanged = () => { injectPrompt(); refresh(); };
+    bindCheckbox("#nrn_holidays", "holidays", feastsChanged);
 
     for (const tier of HOLIDAY_TIERS) {
-        const $box = $(`#nc_holiday_${tier.id}`);
+        const $box = $(`#nrn_holiday_${tier.id}`);
         $box.prop("checked", (settings().holidayTiers ?? DEFAULT_TIERS).includes(tier.id));
         $box.on("input", function () {
             const on = Boolean($(this).prop("checked"));
@@ -2896,7 +2923,7 @@ function bindSettings() {
         });
     }
 
-    const regionSel = $("#nc_holiday_region");
+    const regionSel = $("#nrn_holiday_region");
     regionSel.val(settings().holidayRegion || "all");
     regionSel.on("input", function () {
         settings().holidayRegion = String($(this).val());
@@ -2904,16 +2931,16 @@ function bindSettings() {
         feastsChanged();
     });
 
-    bindCheckbox("#nc_body", "bodyTracking", () => { injectNorsePrompt(); refresh(); });
-    bindCheckbox("#nc_body_debug", "bodyDebug", () => refresh());
-    bindCheckbox("#nc_herb_death", "herbDeath", () => { injectNorsePrompt(); refresh(); });
+    bindCheckbox("#nrn_body", "bodyTracking", () => { injectPrompt(); refresh(); });
+    bindCheckbox("#nrn_body_debug", "bodyDebug", () => refresh());
+    bindCheckbox("#nrn_herb_death", "herbDeath", () => { injectPrompt(); refresh(); });
 
     /* Раскладки и темы здесь нет: оформление живёт в Tímatal, рядом с
        полем правки CSS — см. раздел 7a. */
 
-    bindCheckbox("#nc_debug_markers", "debugKeepMarkers", () => refresh());
+    bindCheckbox("#nrn_debug_markers", "debugKeepMarkers", () => refresh());
 
-    $("#nc_purge_markers").on("click", () => {
+    $("#nrn_purge_markers").on("click", () => {
         const context = getContext();
         const n = syncWholeChat(context?.chat, { keepMarker: false });
         if (n && typeof context?.saveChat === "function") {
@@ -2950,11 +2977,11 @@ jQuery(async () => {
     addWandMenuItem();
     registerSlashCommands();
 
-    injectNorsePrompt();
-    eventSource.on(event_types.GENERATION_STARTED, injectNorsePrompt);
+    injectPrompt();
+    eventSource.on(event_types.GENERATION_STARTED, injectPrompt);
 
-    // Миграция: в старых чатах маркеры лежат видимым блоком <yorni> прямо
-    // в тексте. Разбираем их в extra и вырезаем — молча, один раз на чат.
+    // Чат мог набрать маркеры, пока расширение было выключено. Разбираем их
+    // в extra и вырезаем из текста — молча, один раз на чат.
     eventSource.on(event_types.CHAT_CHANGED, () => {
         forgetChat();
         const context = getContext();
@@ -2962,7 +2989,7 @@ jQuery(async () => {
         const n = syncWholeChat(context?.chat, { keepMarker: settings().debugKeepMarkers });
         if (n && typeof context?.saveChat === "function") {
             try { context.saveChat(); } catch (e) {
-                console.error(`[${extensionName}] не удалось сохранить чат после миграции:`, e);
+                console.error(`[${extensionName}] не удалось сохранить разобранный чат:`, e);
             }
         }
         forgetChat();

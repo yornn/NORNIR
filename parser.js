@@ -1,25 +1,25 @@
 /*
- * Norse Calendar — лор и парсер блока <yorni>.
+ * NORNIR — календарные таблицы и парсер маркера <!-- [URD: … ] -->.
  *
  * Чистый ES-модуль без зависимостей от SillyTavern: его импортирует и
  * расширение (index.js), и автономный тест (test-parse.mjs). Единственный
- * источник правды для лорных данных и разбора инфоблока.
+ * источник правды для календарных данных и разбора инфоблока.
  *
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
- * 1. Lore Data .......... Месяцы, дни недели, эйкты, фазы Луны
+ * 1. Calendar Data ...... Месяцы, дни недели, эйкты, фазы Луны
  * 2. Calendar Math ...... Серийные дни, дни недели, addDays, фаза Луны
  * 3. Placeholders ....... Отбраковка литеральных плейсхолдеров из шаблона
  * 4. Date Parsing ....... Распознавание даты и времени
- * 5. Yorni Parser ....... Разбор блока <yorni>...</yorni>
+ * 5. Urd Parser ......... Разбор маркера <!-- [URD: … ] -->
  */
 
 /* ============================================================
- * 1. LORE DATA
+ * 1. CALENDAR DATA
  *
- * Год исландского счёта времени (misseri) начинается с зимы, с Gormánaður,
- * поэтому индекс месяца здесь — порядковый номер в ЛОРНОМ году, а не в
- * григорианском: 1 = Gormánaður, 12 = Haustmánuður.
+ * Год древнеисландского счёта времени (misseri) начинается с зимы, с Gormánuðr,
+ * поэтому индекс месяца здесь — порядковый номер в ДРЕВНЕИСЛАНДСКОМ году, а не в
+ * григорианском: 1 = Gormánuðr, 12 = Haustmánuðr.
  *
  * Устройство года:
  *   12 месяцев × 30 дней                     = 360
@@ -28,69 +28,80 @@
  *
  * Обе вставки дают целое число недель, поэтому год всегда начинается с одного
  * и того же дня — с Laugardagr, первого дня зимы. Оттуда же само собой выходит,
- * что лето (1 Harpa) всегда приходится на Þórsdagr — тот самый sumardagurinn
+ * что лето (1 Harpa) всегда приходится на Þórsdagr — тот самый sumardagrinn
  * fyrsti. Это проверяется тестом, а не задано вручную.
  *
- * Дни недели: индекс 0 = понедельник.
+ * Дни недели: индекс 0 = Laugardagr, с него же начинается и вика.
  * Эйкты: 8 × 3 часа.
  * ============================================================ */
 
 /**
- * Месяцы лорного года по порядку. Зима (Vetr) — 1–6, лето (Sumar) — 7–12.
+ * Месяцы древнеисландского года по порядку. Зима (Vetr) — 1–6, лето (Sumar) — 7–12.
+ *
+ * Написание древнескандинавское, а не современное исландское: `mánuðr`, а не
+ * `mánuður`; `Gói`, а не `Góa`. Разница — ровно та эпоха, ради которой всё
+ * и затевалось: окончание `-uður` и форма `Góa` сложились много позже X века.
+ * Дни недели ниже по той же причине оставлены языческими: имена богов ушли из
+ * исландской недели только с церковной реформой начала XII века, а на материке
+ * держались и дольше.
+ *
+ * Одно сознательное отступление от академической нормы: пишем `ö`, а не `ǫ`
+ * (`Mörsugr`, не `Mǫrsugr`). O-ogonek роняет половина шрифтов, его не набрать
+ * с обычной раскладки, и в поиске по тексту он не совпадёт ни с чем, что
+ * напишет пользователь или модель.
  *
  * `modern` — примерное соответствие григорианскому месяцу, только для справки
  * и для разбора числовых дат. `stems` — по чему месяц узнаётся в тексте;
  * они лежат здесь же, чтобы порядок и распознавание не могли разъехаться.
+ * Поздние написания в основах оставлены намеренно: модель вполне может выдать
+ * «Góa» или «Haustmánuður», и не узнать их было бы глупо.
  */
-export const MONTHS_LORE = [
-    { norse: "Gormánaður",   translit: "Gormanud",   ru: "Гормануд",   modern: "Ноябрь",   modernNum: 11,
+export const MONTHS = [
+    { norse: "Gormánuðr",   translit: "Gormanudr",   ru: "Гормануд",   modern: "Ноябрь",   modernNum: 11,
       stems: ["nov", "ноя", "ной", "gorm", "горм"],
       gloss: "«месяц забоя» — время резать скот на зиму" },
-    { norse: "Ýlir",         translit: "Ylir",       ru: "Юлир",       modern: "Декабрь",  modernNum: 12,
+    { norse: "Ýlir",        translit: "Ylir",        ru: "Юлир",       modern: "Декабрь",  modernNum: 12,
       stems: ["dec", "дек", "ýl", "ylir", "юлир"],
       gloss: "«месяц Юля» — время середины зимы" },
-    { norse: "Mörsugur",     translit: "Morsugur",   ru: "Морсугур",   modern: "Январь",   modernNum: 1,
+    { norse: "Mörsugr",     translit: "Morsugr",     ru: "Морсуг",     modern: "Январь",   modernNum: 1,
       stems: ["jan", "янв", "mörs", "mors", "морс"],
       gloss: "«сосущий жир» — время жить запасами" },
-    { norse: "Þorri",        translit: "Thorri",     ru: "Торри",      modern: "Февраль",  modernNum: 2,
+    { norse: "Þorri",       translit: "Thorri",      ru: "Торри",      modern: "Февраль",  modernNum: 2,
       stems: ["feb", "фев", "þor", "thor", "торр"],
       gloss: "по имени зимнего духа Торри; месяц самых злых холодов" },
-    { norse: "Góa",          translit: "Goa",        ru: "Гоа",        modern: "Март",     modernNum: 3,
-      stems: ["mar", "мар", "góa", "goa", "гоа"],
+    { norse: "Gói",         translit: "Goi",         ru: "Гои",        modern: "Март",     modernNum: 3,
+      stems: ["mar", "мар", "gói", "goi", "góa", "goa", "гои", "гоа"],
       gloss: "по имени Гои, дочери Торри" },
-    { norse: "Einmánuður",   translit: "Einmanud",   ru: "Эйнмануд",   modern: "Апрель",   modernNum: 4,
+    { norse: "Einmánuðr",   translit: "Einmanudr",   ru: "Эйнмануд",   modern: "Апрель",   modernNum: 4,
       stems: ["apr", "апр", "einm", "эйн"],
       gloss: "«одинокий месяц» — последний месяц зимы" },
-    { norse: "Harpa",        translit: "Harpa",      ru: "Харпа",      modern: "Май",      modernNum: 5,
+    { norse: "Harpa",       translit: "Harpa",       ru: "Харпа",      modern: "Май",      modernNum: 5,
       stems: ["may", "мая", "май", "harp", "харп"],
       gloss: "по имени Харпы; первый день — начало лета" },
-    { norse: "Skerpla",      translit: "Skerpla",    ru: "Скерпла",    modern: "Июнь",     modernNum: 6,
+    { norse: "Skerpla",     translit: "Skerpla",     ru: "Скерпла",    modern: "Июнь",     modernNum: 6,
       stems: ["jun", "июн", "skerp", "скерп"],
       gloss: "происхождение названия неясно" },
-    { norse: "Sólmánuður",   translit: "Solmanud",   ru: "Сольмануд",  modern: "Июль",     modernNum: 7,
+    { norse: "Sólmánuðr",   translit: "Solmanudr",   ru: "Сольмануд",  modern: "Июль",     modernNum: 7,
       stems: ["jul", "июл", "sólm", "solm", "сольм"],
       gloss: "«солнечный месяц» — самые длинные дни" },
-    { norse: "Heyannir",     translit: "Heyannir",   ru: "Хейаннир",   modern: "Август",   modernNum: 8,
+    { norse: "Heyannir",    translit: "Heyannir",    ru: "Хейаннир",   modern: "Август",   modernNum: 8,
       stems: ["aug", "авг", "heyan", "хейан"],
       gloss: "«сенокосные хлопоты» — время косить и сушить сено" },
-    { norse: "Tvímánuður",   translit: "Tvimanud",   ru: "Твимануд",   modern: "Сентябрь", modernNum: 9,
+    { norse: "Tvímánuðr",   translit: "Tvimanudr",   ru: "Твимануд",   modern: "Сентябрь", modernNum: 9,
       stems: ["sep", "сен", "tvím", "tvim", "твим"],
       gloss: "«второй месяц» — второй месяц жатвы" },
-    { norse: "Haustmánuður", translit: "Haustmanud", ru: "Хаустмануд", modern: "Октябрь",  modernNum: 10,
+    { norse: "Haustmánuðr", translit: "Haustmanudr", ru: "Хаустмануд", modern: "Октябрь",  modernNum: 10,
       stems: ["oct", "окт", "haust", "хауст"],
       gloss: "«осенний месяц» — последний месяц лета" },
 ];
 
-export const MONTHS_NORSE_RU = MONTHS_LORE.map((m) => m.ru);
-export const MONTHS_RU_NOM = MONTHS_LORE.map((m) => m.modern);
-export const MONTH_STEMS = MONTHS_LORE.map((m) => m.stems);
-
-/** Григорианский номер месяца → номер в лорном году. */
-const MONTH_BY_MODERN = new Map(MONTHS_LORE.map((m, i) => [m.modernNum, i + 1]));
+/** Григорианский номер месяца → номер в календарном году. */
+const MONTH_BY_MODERN = new Map(MONTHS.map((m, i) => [m.modernNum, i + 1]));
 
 /**
  * Число из числовой даты («21.10.2023») — это григорианский месяц, а не номер
- * в лорном году: модель, скатившаяся на цифры, думает привычным календарём.
+ * в календарном году: модель, скатившаяся на цифры, думает привычным
+ * календарём.
  */
 export function monthFromModernNumber(n) {
     return MONTH_BY_MODERN.get(n) ?? null;
@@ -100,25 +111,31 @@ export function monthFromModernNumber(n) {
 export const WINTER_MONTHS = 6;
 
 /**
- * Дни недели, начиная с понедельника.
+ * Дни недели, начиная с Laugardagr.
  * Индекс совпадает с тем, что возвращает weekdayOf().
+ *
+ * Порядок не декоративный. Год открывается первым днём зимы — Laugardagr, —
+ * и состоит из целых недель, поэтому каждая вика идёт Laugardagr → Frjádagr.
+ * Считать отсюда же означает, что недельная сетка в панели совпадает с викой
+ * клетка в клетку; с понедельника она разъезжалась на два дня, и подпись
+ * «vika N» врала про крайние ячейки.
+ *
+ * Понедельник первым — норма XX века, к эпохе отношения не имеющая. Счёт же
+ * от воскресенья виден в поздних именах (þriðjudagr «третий день» — вторник),
+ * но это счёт христианской недели, пришедшей позже самого misseristal.
  */
-export const WEEKDAYS_LORE = [
+export const WEEKDAYS = [
+    { norse: "Laugardagr", en: "Saturday",  ru: "Суббота",      short: "Lau", desc: "«Банный день» — день омовения" },
+    { norse: "Sunnudagr",  en: "Sunday",    ru: "Воскресенье",  short: "Sun", desc: "День Солнца" },
     { norse: "Mánadagr",   en: "Monday",    ru: "Понедельник",  short: "Mán", desc: "День Луны" },
     { norse: "Týsdagr",    en: "Tuesday",   ru: "Вторник",      short: "Týs", desc: "День Тюра" },
     { norse: "Óðinsdagr",  en: "Wednesday", ru: "Среда",        short: "Óðn", desc: "День Одина" },
     { norse: "Þórsdagr",   en: "Thursday",  ru: "Четверг",      short: "Þór", desc: "День Тора" },
     { norse: "Frjádagr",   en: "Friday",    ru: "Пятница",      short: "Frj", desc: "День Фригг / Фрейи" },
-    { norse: "Laugardagr", en: "Saturday",  ru: "Суббота",      short: "Lau", desc: "«Банный день» — день омовения" },
-    { norse: "Sunnudagr",  en: "Sunday",    ru: "Воскресенье",  short: "Sun", desc: "День Солнца" },
 ];
 
-export const WEEKDAYS_FULL_RU = WEEKDAYS_LORE.map((w) => w.ru);
-export const WEEKDAY_DESC_RU = WEEKDAYS_LORE.map((w) => w.desc);
-export const WEEKDAYS_SHORT_NORSE = WEEKDAYS_LORE.map((w) => w.short);
-
-/** Первый день зимы, а значит и года, — суббота (fyrsti vetrardagur). */
-export const YEAR_STARTS_ON = WEEKDAYS_LORE.findIndex((w) => w.en === "Saturday");
+/** Первый день зимы, а значит и года, — суббота (fyrsti vetrardagr). */
+export const YEAR_START_WEEKDAY = WEEKDAYS.findIndex((w) => w.en === "Saturday");
 
 /*
  * Основы для распознавания вставных дней. Кириллица здесь обязательна:
@@ -130,7 +147,7 @@ export const AUK_STEMS = [
 ];
 
 export const EYKTIR = [
-    { norse: "Miðnætti",  translit: "Midnatti", alt: null,       ru: "Миднатти", desc: "Полночь",                dir: "С",  dirText: "Солнце строго на Севере",  start: 0,  mid: 1.5 },
+    { norse: "Miðnætti",  translit: "Midnatti", alt: null,       ru: "Миднэтти", desc: "Полночь",                dir: "С",  dirText: "Солнце строго на Севере",  start: 0,  mid: 1.5 },
     { norse: "Ótta",      translit: "Otta",     alt: null,       ru: "Отта",     desc: "Ночь перед рассветом",   dir: "СВ", dirText: "Солнце на Северо-Востоке", start: 3,  mid: 4.5 },
     { norse: "Morgun",    translit: "Morgun",   alt: "Rismál",   ru: "Моргун",   desc: "Утро, подъём",           dir: "В",  dirText: "Солнце строго на Востоке", start: 6,  mid: 7.5 },
     { norse: "Dagmál",    translit: "Dagmal",   alt: null,       ru: "Дагмал",   desc: "Дневное время, завтрак", dir: "ЮВ", dirText: "Солнце на Юго-Востоке",    start: 9,  mid: 10.5 },
@@ -179,12 +196,12 @@ export function monthFromName(name) {
     const n = String(name).toLowerCase().trim();
     if (AUK_STEMS.some((s) => n.startsWith(s))) return "AUK";
     // Голое число — это почти наверняка григорианский месяц из «21.10.2023»,
-    // а не порядковый номер в лорном году. Переводим.
+    // а не порядковый номер в календарном году. Переводим.
     if (/^\d{1,2}$/.test(n)) {
         return MONTH_BY_MODERN.get(parseInt(n, 10)) ?? null;
     }
-    for (let i = 0; i < MONTH_STEMS.length; i++) {
-        if (MONTH_STEMS[i].some((s) => n.startsWith(s))) return i + 1;
+    for (let i = 0; i < MONTHS.length; i++) {
+        if (MONTHS[i].stems.some((s) => n.startsWith(s))) return i + 1;
     }
     return null;
 }
@@ -234,7 +251,7 @@ export const COMMON_YEAR_DAYS = 364;
 export const AUKNAETR_DAYS = 4;
 /** Сумарауки: вставная неделя, туда же, раз в 5–6 лет. */
 export const SUMARAUKI_DAYS = 7;
-/** После какого месяца стоит вставка. Sólmánuður — девятый месяц лорного года. */
+/** После какого месяца стоит вставка. Sólmánuðr — девятый месяц древнеисландского года. */
 export const AUK_AFTER_MONTH = 9;
 
 /* Год из 364 дней короче солнечного примерно на 1.2425 суток. Как только
@@ -270,9 +287,54 @@ export function dayOfYear(year, month, day) {
     return (month - 1) * 30 + day + auk;
 }
 
-/** Номер недели (vika) в году, 1 … weeksInYear(). */
+/*
+ * Вики считаются внутри своего полугодия, а не сквозным номером по году.
+ *
+ * Так говорили: «в девятую неделю лета», а не «в тридцать пятую неделю года».
+ * Отсчёт идёт от первого дня мисcери — зима открывается Laugardagr, лето
+ * Þórsdagr (sumardagrinn fyrsti), — поэтому летние вики идут от четверга,
+ * а зимние от субботы.
+ *
+ * Ни одно полугодие не состоит из целых недель, и иначе быть не может: зима
+ * начинается субботой, лето четвергом, два разных дня. Зима — 180 дней, это
+ * 25 недель и ещё 5 дней; лето — 184 (или 191 в год сумарауки), это 26 недель
+ * и 2 дня. Значит последняя вика каждой половины короткая. Это не огрех
+ * модели, а прямое следствие того, где стоят границы полугодий.
+ */
+
+/** Длина зимнего полугодия в днях. Аукнэтр стоят в лете, зима всегда ровна. */
+const WINTER_DAYS = WINTER_MONTHS * 30;
+
+/** Сколько дней в полугодии, которому принадлежит месяц. */
+export function misseriLength(year, month) {
+    return seasonOf(month).norse === "Vetr" ? WINTER_DAYS : yearLength(year) - WINTER_DAYS;
+}
+
+/** Порядковый день внутри своего полугодия, 1 … misseriLength(). */
+export function dayOfMisseri(year, month, day) {
+    const doy = dayOfYear(year, month, day);
+    return doy <= WINTER_DAYS ? doy : doy - WINTER_DAYS;
+}
+
+/** Номер недели (vika) внутри полугодия, 1 … weeksInMisseri(). */
 export function vikaOf(year, month, day) {
-    return Math.ceil(dayOfYear(year, month, day) / 7);
+    return Math.ceil(dayOfMisseri(year, month, day) / 7);
+}
+
+/** Сколько вик в полугодии. Последняя из них короче семи дней. */
+export function weeksInMisseri(year, month) {
+    return Math.ceil(misseriLength(year, month) / 7);
+}
+
+/**
+ * Первый день той вики, в которую попала дата.
+ *
+ * Нужен недельной сетке: полоса обязана совпадать с викой, а вика начинается
+ * с первого дня полугодия, а не с фиксированного дня недели.
+ */
+export function vikaFirstDay(year, month, day) {
+    const into = (dayOfMisseri(year, month, day) - 1) % 7;
+    return addDays(year, month, day, -into);
 }
 
 /** Серийный номер дня, сквозной через все годы. */
@@ -301,13 +363,15 @@ export function serialToDate(serial) {
 }
 
 /**
- * День недели, 0 = понедельник.
+ * День недели, 0 = Laugardagr.
  *
  * Все годы состоят из целых недель, поэтому достаточно отсчитать от первого
- * дня года — а он всегда Laugardagr, первый день зимы.
+ * дня года — а он всегда Laugardagr, первый день зимы. Отсчёт с него же и
+ * ведётся, так что YEAR_START_WEEKDAY здесь равен нулю; слагаемое оставлено
+ * явным, чтобы порядок в таблице можно было тронуть, ничего тут не правя.
  */
 export function weekdayOf(year, month, day) {
-    return (dayOfYear(year, month, day) - 1 + YEAR_STARTS_ON) % 7;
+    return (dayOfYear(year, month, day) - 1 + YEAR_START_WEEKDAY) % 7;
 }
 
 /** Прибавляет n дней к дате. */
@@ -395,7 +459,7 @@ export function isValidDate(d) {
     return true;
 }
 
-/** Приводит дату к лорному календарю: в месяце ровно 30 дней, вставка короче. */
+/** Приводит дату к древнеисландскому календарю: в месяце ровно 30 дней, вставка короче. */
 function finalizeDate(d) {
     if (d.month === "AUK") {
         // Год известен — можно поджать до настоящей длины вставки этого года.
@@ -439,8 +503,8 @@ function monthFromTextLoose(text) {
         const p = t.indexOf(s);
         if (p !== -1 && p < bestPos) { bestPos = p; best = "AUK"; }
     }
-    for (let i = 0; i < MONTH_STEMS.length; i++) {
-        for (const s of MONTH_STEMS[i]) {
+    for (let i = 0; i < MONTHS.length; i++) {
+        for (const s of MONTHS[i].stems) {
             const p = t.indexOf(s);
             if (p !== -1 && p < bestPos) { bestPos = p; best = i + 1; }
         }
@@ -448,8 +512,8 @@ function monthFromTextLoose(text) {
     return best;
 }
 
-/** Ищет дату внутри поля date блока <yorni>. */
-export function findDateInYorni(text) {
+/** Ищет дату внутри поля date маркера. */
+export function findDateInUrd(text) {
     let d = findDateIn(text);
 
     if (!d) {
@@ -483,14 +547,14 @@ export function findDateInYorni(text) {
 }
 
 /* ============================================================
- * 5. YORNI PARSER
+ * 5. URD PARSER
  * ============================================================ */
 
 /*
  * Маркер — HTML-комментарий. Комментарий браузер не рисует, поэтому прятать
  * его регексами не нужно: он невидим сам по себе.
  *
- *   <!-- [YORNI:
+ *   <!-- [URD:
  *   eykt: хадеги
  *   date: 13 гормануд 1015
  *   ] -->
@@ -499,31 +563,25 @@ export function findDateInYorni(text) {
  * и хвост маркера станет виден в чате до того, как мы его вырежем. Промпт это
  * запрещает; сам разбор к таким значениям устойчив (проверено тестом).
  */
-export const YORNI_MARKER_RE = /<!--\s*\[YORNI:([\s\S]*?)\]\s*-->/i;
+export const URD_MARKER_RE = /<!--\s*\[URD:([\s\S]*?)\]\s*-->/i;
 
 /* Оборванная генерация: маркер начался, но закрыться не успел. */
-const YORNI_MARKER_OPEN_RE = /<!--\s*\[YORNI:([\s\S]{10,4000})$/i;
+const URD_MARKER_OPEN_RE = /<!--\s*\[URD:([\s\S]{10,4000})$/i;
 
-/* Прежний видимый формат — нужен для миграции старых чатов. */
-export const YORNI_LEGACY_RE = /<yorni>([\s\S]{10,4000}?)<\/yorni>/i;
-
-/** Все формы маркера — для вырезания из текста сообщения. */
-const YORNI_STRIP_RES = [
-    /<!--\s*\[YORNI:[\s\S]*?\]\s*-->/gi,
-    /<!--\s*\[YORNI:[\s\S]*$/i,
-    /<yorni>[\s\S]*?<\/yorni>/gi,
+/** Обе формы маркера — для вырезания из текста сообщения. */
+const URD_STRIP_RES = [
+    /<!--\s*\[URD:[\s\S]*?\]\s*-->/gi,
+    /<!--\s*\[URD:[\s\S]*$/i,
 ];
 
-/** Внутренности маркера в любом из форматов, либо null. */
+/** Внутренности маркера, либо null. */
 function extractMarker(text) {
     const s = String(text ?? "");
-    return (s.match(YORNI_MARKER_RE)
-        ?? s.match(YORNI_MARKER_OPEN_RE)
-        ?? s.match(YORNI_LEGACY_RE))?.[1] ?? null;
+    return (s.match(URD_MARKER_RE) ?? s.match(URD_MARKER_OPEN_RE))?.[1] ?? null;
 }
 
-/** Есть ли в тексте маркер календаря (в любом из форматов). */
-export function hasYorniMarker(text) {
+/** Есть ли в тексте маркер календаря. */
+export function hasUrd(text) {
     return extractMarker(text) !== null;
 }
 
@@ -534,10 +592,10 @@ export function hasYorniMarker(text) {
  * абзацами, там повисает лишняя пустая строка. Пробелы внутри самой прозы
  * не трогаем — они не наши, и подчищать чужой текст расширение не должно.
  */
-export function stripYorniMarkers(text) {
+export function stripUrd(text) {
     if (!text) return text;
     let out = String(text);
-    for (const re of YORNI_STRIP_RES) out = out.replace(re, "");
+    for (const re of URD_STRIP_RES) out = out.replace(re, "");
     return out.replace(/\n[ \t]*\n[ \t]*\n+/g, "\n\n").trim();
 }
 
@@ -797,8 +855,8 @@ function parseFields(inner) {
 /**
  * Разбирает маркер календаря — единственный источник метаданных.
  *
- * Понимает и невидимый `<!-- [YORNI: … ] -->`, и прежний видимый
- * `<yorni>…</yorni>`, чтобы старые чаты читались без миграции.
+ * Читает `<!-- [URD: … ] -->`, в том числе оборванный на полуслове: генерацию
+ * могло срезать до закрывающих скобок, и терять из-за этого всю сцену незачем.
  *
  * Возвращает объект, даже если дата не распозналась: поля сцены (погода,
  * локация, настроение, одежда, мысль) отдаются отдельно от даты, чтобы
@@ -807,7 +865,7 @@ function parseFields(inner) {
  * @param {string} rawText Текст сообщения
  * @returns {object|null} Результат разбора или null, если маркера нет либо он пуст
  */
-export function parseYorniTag(rawText) {
+export function parseUrd(rawText) {
     const inner = extractMarker(rawText);
     if (inner === null) return null;
 
@@ -824,7 +882,7 @@ export function parseYorniTag(rawText) {
         const jm = cand.match(/"output"\s*:\s*"([^"]+)"/i);
         if (jm) cand = jm[1].trim();
         if (isPlaceholder(cand)) continue;
-        const found = findDateInYorni(cand);
+        const found = findDateInUrd(cand);
         if (found) {
             result.year = found.year;
             result.month = found.month;

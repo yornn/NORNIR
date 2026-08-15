@@ -1,12 +1,12 @@
 <!--
-  Norse Calendar — панель настроек в UI SillyTavern
+  NORNIR — панель настроек в UI SillyTavern
 
   Исходный язык — английский (как в самой SillyTavern); переводы лежат
   в i18n/<locale>.json и подставляются по ключам data-i18n.
 
   Содержит:
     - Show widget: показывать/скрывать календарный виджет
-    - Inject tag prompt: инжектить инструкцию <yorni> в промпт
+    - Inject tag prompt: инжектить инструкцию про маркер [URD: … ] в промпт
     - Tell the model the week and moon phase: добавлять в инжект то, что
       посчитала панель, — день недели, номер недели, полугодие, фазу Луны
     - Keep markers visible: не вырезать маркер из сообщений (отладка)
@@ -17,75 +17,75 @@
   переключатели, у которых есть последствия помимо вида.
 -->
 
-<div class="norse-calendar-settings">
+<div class="nrn-settings">
     <div class="inline-drawer">
         <div class="inline-drawer-toggle inline-drawer-header">
-            <b>Norse Calendar</b>
+            <b>NORNIR</b>
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content">
-            <div class="nc-block">
-                <label class="checkbox_label" for="nc_enabled">
-                    <input id="nc_enabled" type="checkbox" />
+            <div class="nrn-block">
+                <label class="checkbox_label" for="nrn_enabled">
+                    <input id="nrn_enabled" type="checkbox" />
                     <span data-i18n="Show widget">Show widget</span>
                 </label>
-                <label class="checkbox_label" for="nc_inject">
-                    <input id="nc_inject" type="checkbox" />
+                <label class="checkbox_label" for="nrn_inject">
+                    <input id="nrn_inject" type="checkbox" />
                     <span data-i18n="Inject tag prompt (infoblock mode)">Inject tag prompt (infoblock mode)</span>
                 </label>
-                <label class="checkbox_label" for="nc_lore_hints">
-                    <input id="nc_lore_hints" type="checkbox" />
+                <label class="checkbox_label" for="nrn_calendar_hints">
+                    <input id="nrn_calendar_hints" type="checkbox" />
                     <span data-i18n="Tell the model the week and moon phase">Tell the model the week and moon phase</span>
                 </label>
-                <label class="checkbox_label" for="nc_body">
-                    <input id="nc_body" type="checkbox" />
+                <label class="checkbox_label" for="nrn_body">
+                    <input id="nrn_body" type="checkbox" />
                     <span data-i18n="Track the woman's cycle">Track the woman's cycle</span>
                 </label>
-                <label class="checkbox_label" for="nc_holidays">
-                    <input id="nc_holidays" type="checkbox" />
+                <label class="checkbox_label" for="nrn_holidays">
+                    <input id="nrn_holidays" type="checkbox" />
                     <span data-i18n="Show holidays">Show holidays</span>
                 </label>
                 <!-- Слои достоверности: включаются пластами, а не поштучно.
                      Современный по умолчанию выключен. -->
-                <div class="nc-sub">
-                    <label class="checkbox_label" for="nc_holiday_attested">
-                        <input id="nc_holiday_attested" type="checkbox" />
+                <div class="nrn-sub">
+                    <label class="checkbox_label" for="nrn_holiday_attested">
+                        <input id="nrn_holiday_attested" type="checkbox" />
                         <span data-i18n="Attested in the sagas and laws">Attested in the sagas and laws</span>
                     </label>
-                    <label class="checkbox_label" for="nc_holiday_probable">
-                        <input id="nc_holiday_probable" type="checkbox" />
+                    <label class="checkbox_label" for="nrn_holiday_probable">
+                        <input id="nrn_holiday_probable" type="checkbox" />
                         <span data-i18n="Probable, reconstructed">Probable, reconstructed</span>
                     </label>
-                    <label class="checkbox_label" for="nc_holiday_christian">
-                        <input id="nc_holiday_christian" type="checkbox" />
+                    <label class="checkbox_label" for="nrn_holiday_christian">
+                        <input id="nrn_holiday_christian" type="checkbox" />
                         <span data-i18n="Christian, from about the year 1000">Christian, from about the year 1000</span>
                     </label>
-                    <label class="checkbox_label" for="nc_holiday_modern">
-                        <input id="nc_holiday_modern" type="checkbox" />
+                    <label class="checkbox_label" for="nrn_holiday_modern">
+                        <input id="nrn_holiday_modern" type="checkbox" />
                         <span data-i18n="Modern heathen (not of the age)">Modern heathen (not of the age)</span>
                     </label>
-                    <label class="nc-theme-label" for="nc_holiday_region">
+                    <label class="nrn-theme-label" for="nrn_holiday_region">
                         <span data-i18n="Where the story is set">Where the story is set</span>
-                        <select id="nc_holiday_region" class="text_pole">
+                        <select id="nrn_holiday_region" class="text_pole">
                             <option value="all" data-i18n="All of Scandinavia">All of Scandinavia</option>
                             <option value="iceland" data-i18n="Iceland">Iceland</option>
                             <option value="sweden" data-i18n="Sweden">Sweden</option>
                         </select>
                     </label>
                 </div>
-                <label class="checkbox_label" for="nc_herb_death">
-                    <input id="nc_herb_death" type="checkbox" />
+                <label class="checkbox_label" for="nrn_herb_death">
+                    <input id="nrn_herb_death" type="checkbox" />
                     <span data-i18n="Women's draught can kill">Women's draught can kill</span>
                 </label>
-                <label class="checkbox_label" for="nc_body_debug">
-                    <input id="nc_body_debug" type="checkbox" />
+                <label class="checkbox_label" for="nrn_body_debug">
+                    <input id="nrn_body_debug" type="checkbox" />
                     <span data-i18n="Show the hidden layer (debug)">Show the hidden layer (debug)</span>
                 </label>
-                <label class="checkbox_label" for="nc_debug_markers">
-                    <input id="nc_debug_markers" type="checkbox" />
+                <label class="checkbox_label" for="nrn_debug_markers">
+                    <input id="nrn_debug_markers" type="checkbox" />
                     <span data-i18n="Keep markers visible (debug)">Keep markers visible (debug)</span>
                 </label>
-                <input id="nc_purge_markers" class="menu_button nc-regex-restore" type="button"
+                <input id="nrn_purge_markers" class="menu_button nrn-regex-restore" type="button"
                        value="Clean markers from this chat"
                        data-i18n="[value]Clean markers from this chat" />
             </div>

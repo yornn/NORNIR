@@ -1,5 +1,5 @@
 /*
- * Norse Calendar — состояние сцены, привязанное к сообщениям чата.
+ * NORNIR — состояние сцены, привязанное к сообщениям чата.
  *
  * Источник правды — последнее актуальное сообщение {{char}}, а не какое-то
  * «текущее состояние» внутри расширения. Разобранный снимок сцены лежит
@@ -30,11 +30,11 @@ import {
     eyktForHour,
     hasDate,
     hasTime,
-    hasYorniMarker,
-    parseYorniTag,
+    hasUrd,
+    parseUrd,
     serialOf,
     serialToDate,
-    stripYorniMarkers,
+    stripUrd,
 } from "./parser.js";
 
 import {
@@ -62,11 +62,11 @@ import {
  * ============================================================ */
 
 /** Разобранный снимок сцены. */
-const KEY_STATE = "norseCalendar";
+const KEY_STATE = "nornirState";
 /** Исходный маркер — чтобы перечитать его, если парсер поумнеет. */
-const KEY_MARKER = "norseMarker";
+const KEY_MARKER = "nornirMarker";
 /** Отпечаток генерации, которой принадлежит снимок. */
-const KEY_STAMP = "norseStamp";
+const KEY_STAMP = "nornirStamp";
 /**
  * Дата сцены — отдельно от снимка, и не случайно.
  *
@@ -79,14 +79,14 @@ const KEY_STAMP = "norseStamp";
  * или пришёл из старого маркера, он неприкосновенен. Остальные выведены
  * переносом и пересчитываются, если якорь сдвинули.
  */
-const KEY_DATE = "norseDate";
+const KEY_DATE = "nornirDate";
 /**
  * Состояние тела: от какого дня идёт счёт цикла.
  *
  * Тоже отдельным ключом и по той же причине, что дата, — снимок из маркера
  * при каждой пересборке переписывается заново, а тело переносится по чату.
  */
-const KEY_BODY = "norseBody";
+const KEY_BODY = "nornirBody";
 
 /** Глубина поиска состояния вверх по чату. */
 export const SCAN_DEPTH = 25;
@@ -156,12 +156,12 @@ function clearKeys(msg) {
 
 /** Вырезает сам маркер из текста — то, что показывается в чате. */
 function markerOf(text) {
-    const clean = stripYorniMarkers(text);
+    const clean = stripUrd(text);
     const raw = String(text ?? "");
     // Маркер — это разница между исходником и очищенным текстом. Хранить его
     // отдельно надёжнее, чем весь сырой текст: правка прозы его не затрагивает.
     if (clean === raw) return null;
-    const m = raw.match(/<!--\s*\[YORNI:[\s\S]*?\]\s*-->|<!--\s*\[YORNI:[\s\S]*$|<yorni>[\s\S]*?<\/yorni>/i);
+    const m = raw.match(/<!--\s*\[URD:[\s\S]*?\]\s*-->|<!--\s*\[URD:[\s\S]*$/i);
     return m ? m[0] : null;
 }
 
@@ -187,8 +187,8 @@ export function syncMessage(msg, { keepMarker = false } = {}) {
     msg.extra = msg.extra || {};
 
     // 1. В тексте есть маркер — свежая генерация, она и есть источник.
-    if (hasYorniMarker(msg.mes)) {
-        const parsed = parseYorniTag(msg.mes);
+    if (hasUrd(msg.mes)) {
+        const parsed = parseUrd(msg.mes);
         const marker = markerOf(msg.mes);
         if (!parsed) {
             // Маркер есть, но пустой или сплошь плейсхолдеры — данных нет.
@@ -225,7 +225,7 @@ export function syncMessage(msg, { keepMarker = false } = {}) {
         // снимок подтянется сам, без повторной генерации.
         const marker = msg.extra[KEY_MARKER];
         if (typeof marker === "string") {
-            const reparsed = parseYorniTag(marker);
+            const reparsed = parseUrd(marker);
             if (reparsed && JSON.stringify(reparsed) !== JSON.stringify(msg.extra[KEY_STATE])) {
                 msg.extra[KEY_STATE] = reparsed;
                 return true;
@@ -241,13 +241,13 @@ export function syncMessage(msg, { keepMarker = false } = {}) {
 /** Убирает маркер из видимого текста и из копии текущего свайпа. */
 function stripMarker(msg, keepMarker) {
     if (keepMarker) return false;
-    const clean = stripYorniMarkers(msg.mes);
+    const clean = stripUrd(msg.mes);
     if (clean === msg.mes) return false;
     msg.mes = clean;
     // Свайпы держат собственную копию текста — иначе маркер вернётся при переключении.
     if (Array.isArray(msg.swipes) && typeof msg.swipe_id === "number") {
         const current = msg.swipes[msg.swipe_id];
-        if (typeof current === "string") msg.swipes[msg.swipe_id] = stripYorniMarkers(current);
+        if (typeof current === "string") msg.swipes[msg.swipe_id] = stripUrd(current);
     }
     return true;
 }
@@ -274,8 +274,8 @@ function stripMarker(msg, keepMarker) {
  * Всё, что известно из истории чата, за один проход.
  *
  * Сначала скан с конца до первого сообщения {{char}} со снимком — по дороге
- * сообщения лениво синхронизируются, так подхватываются старые чаты с видимыми
- * блоками <yorni> без отдельной миграции. Потом один проход вперёд, который
+ * сообщения лениво синхронизируются, так подхватывается чат, в котором маркеры
+ * ещё не разобраны. Потом один проход вперёд, который
  * раскладывает даты, ведёт тело и собирает сказанное однажды.
  *
  * @param {Array} chat Массив сообщений
@@ -354,7 +354,7 @@ export function findLatestState(chat, options = {}) {
 /**
  * Потерянная смена года в дате из старого маркера.
  *
- * Год здесь начинается первым гормануда — первым днём зимы (см. MONTHS_LORE).
+ * Год здесь начинается первым гормануда — первым днём зимы (см. MONTHS).
  * Значит счёт года перещёлкивает посреди осени, а модель, которая писала даты
  * в старых чатах, думает привычным календарём, где год меняется в январе.
  * Отсюда ровно одна ошибка: после «4 хейаннир 1015» она пишет «1 гормануд
@@ -1332,8 +1332,8 @@ export function syncWholeChat(chat, options = {}) {
     return count;
 }
 
-/** Есть ли в истории необработанные маркеры (в том числе старые <yorni>). */
+/** Есть ли в истории необработанные маркеры. */
 export function chatHasRawMarkers(chat) {
     if (!Array.isArray(chat)) return false;
-    return chat.some((m) => m && !m.is_user && typeof m.mes === "string" && hasYorniMarker(m.mes));
+    return chat.some((m) => m && !m.is_user && typeof m.mes === "string" && hasUrd(m.mes));
 }

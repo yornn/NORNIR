@@ -1,5 +1,5 @@
 /*
- * Norse Calendar — тест праздников.
+ * NORNIR — тест праздников.
  *
  * Главное, что здесь проверяется, — то, ради чего праздники вообще привязаны
  * к дню недели, а не к числу: даты не должны плыть от года к году. Прогон
@@ -25,8 +25,8 @@ import {
     nextHoliday,
 } from "./holidays.js";
 import {
-    MONTHS_LORE,
-    WEEKDAYS_LORE,
+    MONTHS,
+    WEEKDAYS,
     addDays,
     isAuk,
     isSumaraukiYear,
@@ -45,8 +45,8 @@ function check(label, got, want) {
 
 const ALL_TIERS = HOLIDAY_TIERS.map((t) => t.id);
 const everything = { tiers: ALL_TIERS, region: "all" };
-const wdName = (d) => WEEKDAYS_LORE[weekdayOf(d.year, d.month, d.day)].en;
-const monthName = (d) => (isAuk(d.month) ? "аукнэтр" : MONTHS_LORE[d.month - 1].norse);
+const wdName = (d) => WEEKDAYS[weekdayOf(d.year, d.month, d.day)].en;
+const monthName = (d) => (isAuk(d.month) ? "аукнэтр" : MONTHS[d.month - 1].norse);
 
 /* Десять лет подряд: 1015 и 1021 — годы сумарауки, с лишней неделей. */
 const YEARS = Array.from({ length: 10 }, (_, i) => 1010 + i);
@@ -158,7 +158,7 @@ check("на четвёртый праздник кончился",
 const jol = holidayById("jol");
 check("Йоль длится тринадцать суток", jol.days, 13);
 check("последний его день", holidayEnd(jol, 1015).day, 13);
-check("а ночь перед ним — последнее число морсугура",
+check("а ночь перед ним — последнее число морсуга",
     `${holidayStart(holidayById("hokunott"), 1015).day}.${holidayStart(holidayById("hokunott"), 1015).month}`, "30.3");
 
 /*
@@ -233,7 +233,7 @@ check("у однодневного счёта дней нет",
 
 const empty = holidayView(1015, 2, 5, { tiers: DEFAULT_TIERS });
 check("в будний день праздника нет", empty.none, true);
-check("но ближайший назван", empty.next.norse, "Hǫkunótt");
+check("но ближайший назван", empty.next.norse, "Hökunótt");
 check("и сказано, через сколько дней", empty.next.days, 55);
 
 const soon = nextHoliday(1015, 12, 29, everything);

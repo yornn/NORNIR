@@ -1,5 +1,5 @@
 /*
- * Norse Calendar — стили виджета
+ * NORNIR — стили виджета
  *
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
@@ -11,7 +11,7 @@
  *
  * 1. Fonts .............. Подключение шрифта Norse
  * 2. Themes ............. CSS-переменные тем (data-theme на виджете)
- * 3. Widget Base ........ Доска-картинка и пиксель макета (--ncw-px)
+ * 3. Widget Base ........ Доска-картинка и пиксель макета (--nrn-px)
  * 4. Beam ............... Верхняя балка: погода, время суток, место
  * 5. Wood ............... Вегвизир, дата, календарик — по дереву
  * 6. Book ............... Книга: страница сводки, фигурки, дети
@@ -59,7 +59,7 @@
  * 2. THEMES (CSS-переменные)
  *
  * Тема выбирается в панели настроек расширения (кубики) и вешается
- * атрибутом data-theme на всё, что помечено классом .nc-themed:
+ * атрибутом data-theme на всё, что помечено классом .nrn-themed:
  * виджет, окно Tímatal и его <dialog>-подложку. Благодаря общему
  * классу подложка красится нашими цветами, а не темой таверны.
  *
@@ -69,7 +69,7 @@
  * Чтобы добавить новую тему — скопируйте блок [data-theme="..."]
  * и переопределите переменные.
  *
- * --- про --ncw-art-filter ---
+ * --- про --nrn-art-filter ---
  *
  * На резной доске цвет темы почти не за что зацепиться: дерево, книга и
  * фигурки нарисованы раз и навсегда, и тема красила бы одни надписи.
@@ -77,7 +77,7 @@
  * картинка: тёплый закат, холодная ночь, серый туман.
  *
  * Значение по умолчанию — `opacity(1)`, а не `none`: фильтр подставляется
- * в общий список (`brightness(0.78) saturate(0.7) var(--ncw-art-filter)`),
+ * в общий список (`brightness(0.78) saturate(0.7) var(--nrn-art-filter)`),
  * и `none` посреди списка сделал бы всё правило недействительным.
  *
  * На бумагу книги фильтр ложится тоже — иначе страница осталась бы белой
@@ -85,35 +85,35 @@
  * рисунками, а текст лежит поверх них.
  * ============================================================ */
 
-.nc-themed,
-.nc-themed[data-theme="default"] {
-    --ncw-bg: #16151d;
-    --ncw-bg-raised: #201e29;
-    --ncw-bg-open: #262330;
-    --ncw-bg-hover: #2c2937;
-    --ncw-border: #57503f;
-    --ncw-border-soft: #3a352a;
-    --ncw-text: #d8cdb4;
-    --ncw-text-bright: #e5d5b0;
-    --ncw-text-dim: #8a8069;
-    --ncw-text-muted: #a89a7d;
-    --ncw-text-lore: #8fa3b8;
-    --ncw-text-panel: #c4b694;
-    --ncw-text-weather: #a8b6c9;
-    --ncw-text-day: #cfc4a8;
-    --ncw-accent: #b8946a;
-    --ncw-accent-contrast: #16151d;
-    --ncw-accent-glow: rgba(184, 148, 106, 0.5);
-    --ncw-accent-glow-strong: rgba(184, 148, 106, 0.8);
-    --ncw-accent-border-dim: rgba(184, 148, 106, 0.4);
-    --ncw-chip-text: #c9a06a;
-    --ncw-chip-bg: rgba(201, 160, 106, 0.08);
-    --ncw-chip-border: rgba(201, 160, 106, 0.25);
+.nrn-themed,
+.nrn-themed[data-theme="default"] {
+    --nrn-bg: #16151d;
+    --nrn-bg-raised: #201e29;
+    --nrn-bg-open: #262330;
+    --nrn-bg-hover: #2c2937;
+    --nrn-border: #57503f;
+    --nrn-border-soft: #3a352a;
+    --nrn-text: #d8cdb4;
+    --nrn-text-bright: #e5d5b0;
+    --nrn-text-dim: #8a8069;
+    --nrn-text-muted: #a89a7d;
+    --nrn-text-soft: #8fa3b8;
+    --nrn-text-panel: #c4b694;
+    --nrn-text-weather: #a8b6c9;
+    --nrn-text-day: #cfc4a8;
+    --nrn-accent: #b8946a;
+    --nrn-accent-contrast: #16151d;
+    --nrn-accent-glow: rgba(184, 148, 106, 0.5);
+    --nrn-accent-glow-strong: rgba(184, 148, 106, 0.8);
+    --nrn-accent-border-dim: rgba(184, 148, 106, 0.4);
+    --nrn-chip-text: #c9a06a;
+    --nrn-chip-bg: rgba(201, 160, 106, 0.08);
+    --nrn-chip-border: rgba(201, 160, 106, 0.25);
     /* Праздник — своим цветом, не акцентным: рядом стоит «сегодня». */
-    --ncw-feast: #c96a4a;
-    --ncw-feast-bg: rgba(201, 106, 74, 0.18);
+    --nrn-feast: #c96a4a;
+    --nrn-feast-bg: rgba(201, 106, 74, 0.18);
     /* Рисунки доски — как нарисованы. */
-    --ncw-art-filter: opacity(1);
+    --nrn-art-filter: opacity(1);
     /*
      * Ореол под надписями по дереву (раздел 3).
      *
@@ -122,240 +122,240 @@
      * там и дерево высветлено фильтром, и буквы тёмные, и чёрная тень
      * под ними превращала бы строку в грязь.
      */
-    --ncw-text-halo: rgba(0, 0, 0, 0.85);
-    --ncw-text-halo-soft: rgba(0, 0, 0, 0.55);
+    --nrn-text-halo: rgba(0, 0, 0, 0.85);
+    --nrn-text-halo-soft: rgba(0, 0, 0, 0.55);
 }
 
 /* Светлая тема — выбеленная кость и береста */
-.nc-themed[data-theme="light"] {
-    --ncw-bg: #efe9db;
-    --ncw-bg-raised: #e3dccb;
-    --ncw-bg-open: #ddd4c0;
-    --ncw-bg-hover: #d4cab4;
-    --ncw-border: #a89a7d;
-    --ncw-border-soft: #c6bba3;
-    --ncw-text: #3d372a;
-    --ncw-text-bright: #2a251b;
-    --ncw-text-dim: #7d7461;
-    --ncw-text-muted: #5d5545;
-    --ncw-text-lore: #4a6076;
-    --ncw-text-panel: #4c4433;
-    --ncw-text-weather: #4a6076;
-    --ncw-text-day: #4c4433;
-    --ncw-accent: #8a6538;
-    --ncw-accent-contrast: #f7f2e6;
-    --ncw-accent-glow: rgba(138, 101, 56, 0.4);
-    --ncw-accent-glow-strong: rgba(138, 101, 56, 0.6);
-    --ncw-accent-border-dim: rgba(138, 101, 56, 0.45);
-    --ncw-chip-text: #7a5526;
-    --ncw-chip-bg: rgba(138, 101, 56, 0.10);
-    --ncw-chip-border: rgba(138, 101, 56, 0.35);
-    --ncw-feast: #a8452c;
-    --ncw-feast-bg: rgba(168, 69, 44, 0.16);
-    --ncw-art-filter: brightness(1.16) saturate(0.78);
+.nrn-themed[data-theme="light"] {
+    --nrn-bg: #efe9db;
+    --nrn-bg-raised: #e3dccb;
+    --nrn-bg-open: #ddd4c0;
+    --nrn-bg-hover: #d4cab4;
+    --nrn-border: #a89a7d;
+    --nrn-border-soft: #c6bba3;
+    --nrn-text: #3d372a;
+    --nrn-text-bright: #2a251b;
+    --nrn-text-dim: #7d7461;
+    --nrn-text-muted: #5d5545;
+    --nrn-text-soft: #4a6076;
+    --nrn-text-panel: #4c4433;
+    --nrn-text-weather: #4a6076;
+    --nrn-text-day: #4c4433;
+    --nrn-accent: #8a6538;
+    --nrn-accent-contrast: #f7f2e6;
+    --nrn-accent-glow: rgba(138, 101, 56, 0.4);
+    --nrn-accent-glow-strong: rgba(138, 101, 56, 0.6);
+    --nrn-accent-border-dim: rgba(138, 101, 56, 0.45);
+    --nrn-chip-text: #7a5526;
+    --nrn-chip-bg: rgba(138, 101, 56, 0.10);
+    --nrn-chip-border: rgba(138, 101, 56, 0.35);
+    --nrn-feast: #a8452c;
+    --nrn-feast-bg: rgba(168, 69, 44, 0.16);
+    --nrn-art-filter: brightness(1.16) saturate(0.78);
 }
 
 /* Полуночное море — глубокая синева и серебро */
-.nc-themed[data-theme="midnight"] {
-    --ncw-bg: #0d1420;
-    --ncw-bg-raised: #141d2e;
-    --ncw-bg-open: #18223a;
-    --ncw-bg-hover: #1f2c47;
-    --ncw-border: #33445e;
-    --ncw-border-soft: #24324a;
-    --ncw-text: #c3cfe2;
-    --ncw-text-bright: #e2ecfa;
-    --ncw-text-dim: #66778f;
-    --ncw-text-muted: #8fa0b8;
-    --ncw-text-lore: #9db6d4;
-    --ncw-text-panel: #aebdd3;
-    --ncw-text-weather: #9fc0dd;
-    --ncw-text-day: #b7c6da;
-    --ncw-accent: #6f9fd0;
-    --ncw-accent-contrast: #0d1420;
-    --ncw-accent-glow: rgba(111, 159, 208, 0.5);
-    --ncw-accent-glow-strong: rgba(111, 159, 208, 0.8);
-    --ncw-accent-border-dim: rgba(111, 159, 208, 0.4);
-    --ncw-chip-text: #8ab4de;
-    --ncw-chip-bg: rgba(111, 159, 208, 0.10);
-    --ncw-chip-border: rgba(111, 159, 208, 0.30);
-    --ncw-feast: #cf7a92;
-    --ncw-feast-bg: rgba(207, 122, 146, 0.18);
-    --ncw-art-filter: hue-rotate(168deg) saturate(0.62) brightness(0.78);
+.nrn-themed[data-theme="midnight"] {
+    --nrn-bg: #0d1420;
+    --nrn-bg-raised: #141d2e;
+    --nrn-bg-open: #18223a;
+    --nrn-bg-hover: #1f2c47;
+    --nrn-border: #33445e;
+    --nrn-border-soft: #24324a;
+    --nrn-text: #c3cfe2;
+    --nrn-text-bright: #e2ecfa;
+    --nrn-text-dim: #66778f;
+    --nrn-text-muted: #8fa0b8;
+    --nrn-text-soft: #9db6d4;
+    --nrn-text-panel: #aebdd3;
+    --nrn-text-weather: #9fc0dd;
+    --nrn-text-day: #b7c6da;
+    --nrn-accent: #6f9fd0;
+    --nrn-accent-contrast: #0d1420;
+    --nrn-accent-glow: rgba(111, 159, 208, 0.5);
+    --nrn-accent-glow-strong: rgba(111, 159, 208, 0.8);
+    --nrn-accent-border-dim: rgba(111, 159, 208, 0.4);
+    --nrn-chip-text: #8ab4de;
+    --nrn-chip-bg: rgba(111, 159, 208, 0.10);
+    --nrn-chip-border: rgba(111, 159, 208, 0.30);
+    --nrn-feast: #cf7a92;
+    --nrn-feast-bg: rgba(207, 122, 146, 0.18);
+    --nrn-art-filter: hue-rotate(168deg) saturate(0.62) brightness(0.78);
 }
 
 /* Жар очага — тёмное дерево, угли и медь */
-.nc-themed[data-theme="ember"] {
-    --ncw-bg: #1c100d;
-    --ncw-bg-raised: #281713;
-    --ncw-bg-open: #2e1b16;
-    --ncw-bg-hover: #3a231c;
-    --ncw-border: #5e3a2c;
-    --ncw-border-soft: #402720;
-    --ncw-text: #e0c9b6;
-    --ncw-text-bright: #f2dcc4;
-    --ncw-text-dim: #8f7261;
-    --ncw-text-muted: #b5947f;
-    --ncw-text-lore: #c99f8a;
-    --ncw-text-panel: #d3b49b;
-    --ncw-text-weather: #d0a68e;
-    --ncw-text-day: #d9c0a8;
-    --ncw-accent: #d97b3f;
-    --ncw-accent-contrast: #1c100d;
-    --ncw-accent-glow: rgba(217, 123, 63, 0.5);
-    --ncw-accent-glow-strong: rgba(217, 123, 63, 0.8);
-    --ncw-accent-border-dim: rgba(217, 123, 63, 0.4);
-    --ncw-chip-text: #e0915a;
-    --ncw-chip-bg: rgba(217, 123, 63, 0.10);
-    --ncw-chip-border: rgba(217, 123, 63, 0.30);
-    --ncw-feast: #e0c163;
-    --ncw-feast-bg: rgba(224, 193, 99, 0.16);
-    --ncw-art-filter: saturate(1.35) hue-rotate(-8deg) brightness(0.94);
+.nrn-themed[data-theme="ember"] {
+    --nrn-bg: #1c100d;
+    --nrn-bg-raised: #281713;
+    --nrn-bg-open: #2e1b16;
+    --nrn-bg-hover: #3a231c;
+    --nrn-border: #5e3a2c;
+    --nrn-border-soft: #402720;
+    --nrn-text: #e0c9b6;
+    --nrn-text-bright: #f2dcc4;
+    --nrn-text-dim: #8f7261;
+    --nrn-text-muted: #b5947f;
+    --nrn-text-soft: #c99f8a;
+    --nrn-text-panel: #d3b49b;
+    --nrn-text-weather: #d0a68e;
+    --nrn-text-day: #d9c0a8;
+    --nrn-accent: #d97b3f;
+    --nrn-accent-contrast: #1c100d;
+    --nrn-accent-glow: rgba(217, 123, 63, 0.5);
+    --nrn-accent-glow-strong: rgba(217, 123, 63, 0.8);
+    --nrn-accent-border-dim: rgba(217, 123, 63, 0.4);
+    --nrn-chip-text: #e0915a;
+    --nrn-chip-bg: rgba(217, 123, 63, 0.10);
+    --nrn-chip-border: rgba(217, 123, 63, 0.30);
+    --nrn-feast: #e0c163;
+    --nrn-feast-bg: rgba(224, 193, 99, 0.16);
+    --nrn-art-filter: saturate(1.35) hue-rotate(-8deg) brightness(0.94);
 }
 
 /* Кровь и железо — тёмная сталь и запёкшийся багрец */
-.nc-themed[data-theme="blood"] {
-    --ncw-bg: #171314;
-    --ncw-bg-raised: #211a1b;
-    --ncw-bg-open: #281f20;
-    --ncw-bg-hover: #322627;
-    --ncw-border: #5a4144;
-    --ncw-border-soft: #3a2b2d;
-    --ncw-text: #d5c5c2;
-    --ncw-text-bright: #efe0dc;
-    --ncw-text-dim: #8b7370;
-    --ncw-text-muted: #ab9391;
-    --ncw-text-lore: #b08f96;
-    --ncw-text-panel: #c8b4b1;
-    --ncw-text-weather: #b9a3a4;
-    --ncw-text-day: #cbb9b6;
-    --ncw-accent: #b23b32;
-    --ncw-accent-contrast: #f4e7e3;
-    --ncw-accent-glow: rgba(178, 59, 50, 0.5);
-    --ncw-accent-glow-strong: rgba(178, 59, 50, 0.8);
-    --ncw-accent-border-dim: rgba(178, 59, 50, 0.45);
-    --ncw-chip-text: #cf6a5c;
-    --ncw-chip-bg: rgba(178, 59, 50, 0.10);
-    --ncw-chip-border: rgba(178, 59, 50, 0.3);
-    --ncw-feast: #d9a05a;
-    --ncw-feast-bg: rgba(217, 160, 90, 0.16);
-    --ncw-art-filter: hue-rotate(-18deg) saturate(1.25) brightness(0.82);
+.nrn-themed[data-theme="blood"] {
+    --nrn-bg: #171314;
+    --nrn-bg-raised: #211a1b;
+    --nrn-bg-open: #281f20;
+    --nrn-bg-hover: #322627;
+    --nrn-border: #5a4144;
+    --nrn-border-soft: #3a2b2d;
+    --nrn-text: #d5c5c2;
+    --nrn-text-bright: #efe0dc;
+    --nrn-text-dim: #8b7370;
+    --nrn-text-muted: #ab9391;
+    --nrn-text-soft: #b08f96;
+    --nrn-text-panel: #c8b4b1;
+    --nrn-text-weather: #b9a3a4;
+    --nrn-text-day: #cbb9b6;
+    --nrn-accent: #b23b32;
+    --nrn-accent-contrast: #f4e7e3;
+    --nrn-accent-glow: rgba(178, 59, 50, 0.5);
+    --nrn-accent-glow-strong: rgba(178, 59, 50, 0.8);
+    --nrn-accent-border-dim: rgba(178, 59, 50, 0.45);
+    --nrn-chip-text: #cf6a5c;
+    --nrn-chip-bg: rgba(178, 59, 50, 0.10);
+    --nrn-chip-border: rgba(178, 59, 50, 0.3);
+    --nrn-feast: #d9a05a;
+    --nrn-feast-bg: rgba(217, 160, 90, 0.16);
+    --nrn-art-filter: hue-rotate(-18deg) saturate(1.25) brightness(0.82);
 }
 
 /* Чаща — мокрая хвоя, мох и потемневшая бронза */
-.nc-themed[data-theme="forest"] {
-    --ncw-bg: #121711;
-    --ncw-bg-raised: #1a211a;
-    --ncw-bg-open: #202920;
-    --ncw-bg-hover: #283227;
-    --ncw-border: #46543f;
-    --ncw-border-soft: #2f3a2c;
-    --ncw-text: #c9d3c0;
-    --ncw-text-bright: #e3ecd9;
-    --ncw-text-dim: #77856f;
-    --ncw-text-muted: #9aa791;
-    --ncw-text-lore: #9dbb9e;
-    --ncw-text-panel: #bccbb2;
-    --ncw-text-weather: #a8bcae;
-    --ncw-text-day: #c0cdb6;
-    --ncw-accent: #8fae5c;
-    --ncw-accent-contrast: #121711;
-    --ncw-accent-glow: rgba(143, 174, 92, 0.5);
-    --ncw-accent-glow-strong: rgba(143, 174, 92, 0.8);
-    --ncw-accent-border-dim: rgba(143, 174, 92, 0.4);
-    --ncw-chip-text: #a3c46c;
-    --ncw-chip-bg: rgba(143, 174, 92, 0.10);
-    --ncw-chip-border: rgba(143, 174, 92, 0.3);
-    --ncw-feast: #d8a24e;
-    --ncw-feast-bg: rgba(216, 162, 78, 0.16);
-    --ncw-art-filter: hue-rotate(48deg) saturate(0.72) brightness(0.86);
+.nrn-themed[data-theme="forest"] {
+    --nrn-bg: #121711;
+    --nrn-bg-raised: #1a211a;
+    --nrn-bg-open: #202920;
+    --nrn-bg-hover: #283227;
+    --nrn-border: #46543f;
+    --nrn-border-soft: #2f3a2c;
+    --nrn-text: #c9d3c0;
+    --nrn-text-bright: #e3ecd9;
+    --nrn-text-dim: #77856f;
+    --nrn-text-muted: #9aa791;
+    --nrn-text-soft: #9dbb9e;
+    --nrn-text-panel: #bccbb2;
+    --nrn-text-weather: #a8bcae;
+    --nrn-text-day: #c0cdb6;
+    --nrn-accent: #8fae5c;
+    --nrn-accent-contrast: #121711;
+    --nrn-accent-glow: rgba(143, 174, 92, 0.5);
+    --nrn-accent-glow-strong: rgba(143, 174, 92, 0.8);
+    --nrn-accent-border-dim: rgba(143, 174, 92, 0.4);
+    --nrn-chip-text: #a3c46c;
+    --nrn-chip-bg: rgba(143, 174, 92, 0.10);
+    --nrn-chip-border: rgba(143, 174, 92, 0.3);
+    --nrn-feast: #d8a24e;
+    --nrn-feast-bg: rgba(216, 162, 78, 0.16);
+    --nrn-art-filter: hue-rotate(48deg) saturate(0.72) brightness(0.86);
 }
 
 /* Иней — светлая тема: седое утро, стылая вода */
-.nc-themed[data-theme="frost"] {
-    --ncw-bg: #eef2f5;
-    --ncw-bg-raised: #e0e7ec;
-    --ncw-bg-open: #d5dee5;
-    --ncw-bg-hover: #c7d3dc;
-    --ncw-border: #93a5b2;
-    --ncw-border-soft: #bcc8d1;
-    --ncw-text: #2e3a44;
-    --ncw-text-bright: #1b2630;
-    --ncw-text-dim: #71818e;
-    --ncw-text-muted: #4d5b67;
-    --ncw-text-lore: #3d6079;
-    --ncw-text-panel: #37444f;
-    --ncw-text-weather: #3d6079;
-    --ncw-text-day: #3a4854;
-    --ncw-accent: #2f6d8f;
-    --ncw-accent-contrast: #f2f7fa;
-    --ncw-accent-glow: rgba(47, 109, 143, 0.4);
-    --ncw-accent-glow-strong: rgba(47, 109, 143, 0.65);
-    --ncw-accent-border-dim: rgba(47, 109, 143, 0.45);
-    --ncw-chip-text: #2b6480;
-    --ncw-chip-bg: rgba(47, 109, 143, 0.10);
-    --ncw-chip-border: rgba(47, 109, 143, 0.35);
-    --ncw-feast: #a8452c;
-    --ncw-feast-bg: rgba(168, 69, 44, 0.16);
-    --ncw-art-filter: hue-rotate(158deg) saturate(0.34) brightness(1.16);
+.nrn-themed[data-theme="frost"] {
+    --nrn-bg: #eef2f5;
+    --nrn-bg-raised: #e0e7ec;
+    --nrn-bg-open: #d5dee5;
+    --nrn-bg-hover: #c7d3dc;
+    --nrn-border: #93a5b2;
+    --nrn-border-soft: #bcc8d1;
+    --nrn-text: #2e3a44;
+    --nrn-text-bright: #1b2630;
+    --nrn-text-dim: #71818e;
+    --nrn-text-muted: #4d5b67;
+    --nrn-text-soft: #3d6079;
+    --nrn-text-panel: #37444f;
+    --nrn-text-weather: #3d6079;
+    --nrn-text-day: #3a4854;
+    --nrn-accent: #2f6d8f;
+    --nrn-accent-contrast: #f2f7fa;
+    --nrn-accent-glow: rgba(47, 109, 143, 0.4);
+    --nrn-accent-glow-strong: rgba(47, 109, 143, 0.65);
+    --nrn-accent-border-dim: rgba(47, 109, 143, 0.45);
+    --nrn-chip-text: #2b6480;
+    --nrn-chip-bg: rgba(47, 109, 143, 0.10);
+    --nrn-chip-border: rgba(47, 109, 143, 0.35);
+    --nrn-feast: #a8452c;
+    --nrn-feast-bg: rgba(168, 69, 44, 0.16);
+    --nrn-art-filter: hue-rotate(158deg) saturate(0.34) brightness(1.16);
 }
 
 /* Пергамент — светлая тема: телячья кожа и ореховые чернила */
-.nc-themed[data-theme="parchment"] {
-    --ncw-bg: #f3e7cd;
-    --ncw-bg-raised: #e9dab9;
-    --ncw-bg-open: #e0cea6;
-    --ncw-bg-hover: #d6c294;
-    --ncw-border: #a58f62;
-    --ncw-border-soft: #c9b48a;
-    --ncw-text: #40331e;
-    --ncw-text-bright: #2b2113;
-    --ncw-text-dim: #877550;
-    --ncw-text-muted: #5c4b2c;
-    --ncw-text-lore: #5a5a3a;
-    --ncw-text-panel: #4a3b21;
-    --ncw-text-weather: #5a5a3a;
-    --ncw-text-day: #4a3b21;
-    --ncw-accent: #8a4f1c;
-    --ncw-accent-contrast: #f7eeda;
-    --ncw-accent-glow: rgba(138, 79, 28, 0.4);
-    --ncw-accent-glow-strong: rgba(138, 79, 28, 0.65);
-    --ncw-accent-border-dim: rgba(138, 79, 28, 0.45);
-    --ncw-chip-text: #7c4715;
-    --ncw-chip-bg: rgba(138, 79, 28, 0.10);
-    --ncw-chip-border: rgba(138, 79, 28, 0.35);
-    --ncw-feast: #9c3320;
-    --ncw-feast-bg: rgba(156, 51, 32, 0.16);
-    --ncw-art-filter: sepia(0.32) saturate(0.95) brightness(1.12);
+.nrn-themed[data-theme="parchment"] {
+    --nrn-bg: #f3e7cd;
+    --nrn-bg-raised: #e9dab9;
+    --nrn-bg-open: #e0cea6;
+    --nrn-bg-hover: #d6c294;
+    --nrn-border: #a58f62;
+    --nrn-border-soft: #c9b48a;
+    --nrn-text: #40331e;
+    --nrn-text-bright: #2b2113;
+    --nrn-text-dim: #877550;
+    --nrn-text-muted: #5c4b2c;
+    --nrn-text-soft: #5a5a3a;
+    --nrn-text-panel: #4a3b21;
+    --nrn-text-weather: #5a5a3a;
+    --nrn-text-day: #4a3b21;
+    --nrn-accent: #8a4f1c;
+    --nrn-accent-contrast: #f7eeda;
+    --nrn-accent-glow: rgba(138, 79, 28, 0.4);
+    --nrn-accent-glow-strong: rgba(138, 79, 28, 0.65);
+    --nrn-accent-border-dim: rgba(138, 79, 28, 0.45);
+    --nrn-chip-text: #7c4715;
+    --nrn-chip-bg: rgba(138, 79, 28, 0.10);
+    --nrn-chip-border: rgba(138, 79, 28, 0.35);
+    --nrn-feast: #9c3320;
+    --nrn-feast-bg: rgba(156, 51, 32, 0.16);
+    --nrn-art-filter: sepia(0.32) saturate(0.95) brightness(1.12);
 }
 
 /* Серый камень — ни тепла, ни цвета: гранит, зола и олово */
-.nc-themed[data-theme="stone"] {
-    --ncw-bg: #17181a;
-    --ncw-bg-raised: #202224;
-    --ncw-bg-open: #26292c;
-    --ncw-bg-hover: #2e3134;
-    --ncw-border: #4d5155;
-    --ncw-border-soft: #33363a;
-    --ncw-text: #c6c9cc;
-    --ncw-text-bright: #e6e9ec;
-    --ncw-text-dim: #7c8085;
-    --ncw-text-muted: #9ba0a5;
-    --ncw-text-lore: #93a2ad;
-    --ncw-text-panel: #b6babe;
-    --ncw-text-weather: #a4adb4;
-    --ncw-text-day: #bcc0c4;
-    --ncw-accent: #9aa6ae;
-    --ncw-accent-contrast: #17181a;
-    --ncw-accent-glow: rgba(154, 166, 174, 0.45);
-    --ncw-accent-glow-strong: rgba(154, 166, 174, 0.75);
-    --ncw-accent-border-dim: rgba(154, 166, 174, 0.4);
-    --ncw-chip-text: #aeb8c0;
-    --ncw-chip-bg: rgba(154, 166, 174, 0.10);
-    --ncw-chip-border: rgba(154, 166, 174, 0.28);
-    --ncw-feast: #c08a6a;
-    --ncw-feast-bg: rgba(192, 138, 106, 0.16);
-    --ncw-art-filter: grayscale(0.8) brightness(0.95);
+.nrn-themed[data-theme="stone"] {
+    --nrn-bg: #17181a;
+    --nrn-bg-raised: #202224;
+    --nrn-bg-open: #26292c;
+    --nrn-bg-hover: #2e3134;
+    --nrn-border: #4d5155;
+    --nrn-border-soft: #33363a;
+    --nrn-text: #c6c9cc;
+    --nrn-text-bright: #e6e9ec;
+    --nrn-text-dim: #7c8085;
+    --nrn-text-muted: #9ba0a5;
+    --nrn-text-soft: #93a2ad;
+    --nrn-text-panel: #b6babe;
+    --nrn-text-weather: #a4adb4;
+    --nrn-text-day: #bcc0c4;
+    --nrn-accent: #9aa6ae;
+    --nrn-accent-contrast: #17181a;
+    --nrn-accent-glow: rgba(154, 166, 174, 0.45);
+    --nrn-accent-glow-strong: rgba(154, 166, 174, 0.75);
+    --nrn-accent-border-dim: rgba(154, 166, 174, 0.4);
+    --nrn-chip-text: #aeb8c0;
+    --nrn-chip-bg: rgba(154, 166, 174, 0.10);
+    --nrn-chip-border: rgba(154, 166, 174, 0.28);
+    --nrn-feast: #c08a6a;
+    --nrn-feast-bg: rgba(192, 138, 106, 0.16);
+    --nrn-art-filter: grayscale(0.8) brightness(0.95);
 }
 
 /* ============================================================
@@ -371,10 +371,10 @@
  *
  * ВТОРОЕ. Буквы обязаны расти вместе с доской, иначе на широкой доске
  * дата потеряется, а на узкой вылезет за край дерева. Для этого заведён
- * --ncw-px — «пиксель макета»: их ровно 1186 в ширине доски, сколько бы
+ * --nrn-px — «пиксель макета»: их ровно 1186 в ширине доски, сколько бы
  * ни было настоящих. Всё, что написано по дереву, набрано им:
  *
- *     font-size: calc(30 * var(--ncw-px));   // 30 пикселей макета
+ *     font-size: calc(30 * var(--nrn-px));   // 30 пикселей макета
  *
  * Исключение одно — текст на страницах книги. Он не подпись, а сводка в
  * десяток строк; мельчить его вслед за доской нельзя, поэтому кегли там
@@ -386,7 +386,7 @@
  * сверить, не пересчитывая проценты обратно.
  * ============================================================ */
 
-#norse-calendar-widget {
+#nrn-widget {
     display: block;
     width: 100%;
     /* Шире своего рисунка доску не тянем: PNG начал бы мылиться. */
@@ -394,7 +394,7 @@
     margin: 0 auto 10px;
     position: relative;
     box-sizing: border-box;
-    color: var(--ncw-text);
+    color: var(--nrn-text);
     font-family: Georgia, "Times New Roman", serif;
     font-size: 16px;
     user-select: none;
@@ -403,18 +403,18 @@
      *
      * Виджет живёт в колонке чата: на широком мониторе с узкой колонкой
      * окно «широкое», а места нет. Контейнерный запрос смотрит на саму
-     * доску — и от него же считается --ncw-px.
+     * доску — и от него же считается --nrn-px.
      */
     container-type: inline-size;
     container-name: ncw;
 }
 
-#norse-calendar-widget,
-#norse-calendar-widget * {
+#nrn-widget,
+#nrn-widget * {
     box-sizing: border-box;
 }
 
-.ncw-board {
+.nrn-board {
     position: relative;
     width: 100%;
     aspect-ratio: 1186 / 877;
@@ -423,13 +423,13 @@
     overflow: hidden;
 
     /* Пиксель макета. Всё на дереве меряется им — см. заголовок раздела. */
-    --ncw-px: calc(100cqw / 1186);
+    --nrn-px: calc(100cqw / 1186);
 
     /* Свечение активного луча вегвизира и обвод выбранной фигурки. Цвет
        тёплый и свой: тема красит буквы, а огонь на дереве один на все
        темы — это отсвет очага, а не краска. */
-    --ncw-fire: rgba(255, 186, 110, 0.95);
-    --ncw-fire-soft: rgba(255, 150, 60, 0.35);
+    --nrn-fire: rgba(255, 186, 110, 0.95);
+    --nrn-fire-soft: rgba(255, 150, 60, 0.35);
 
     transition: opacity 0.25s ease;
 }
@@ -438,18 +438,18 @@
  * Само дерево — отдельным слоем под всем остальным.
  *
  * Не фоном доски, а псевдоэлементом, потому что на него ложится фильтр
- * темы (--ncw-art-filter): фон доски отфильтровать в одиночку нельзя,
+ * темы (--nrn-art-filter): фон доски отфильтровать в одиночку нельзя,
  * filter на самой доске покрасил бы заодно и все надписи на ней.
  *
  * Слой рисуется раньше балки, дерева и книги — те стоят в разметке ниже
  * и потому лежат поверх, — а кликов не ловит вовсе.
  */
-.ncw-board::before {
+.nrn-board::before {
     content: "";
     position: absolute;
     inset: 0;
     background: url("img/background.png") 50% 50% / 100% 100% no-repeat;
-    filter: var(--ncw-art-filter, opacity(1));
+    filter: var(--nrn-art-filter, opacity(1));
     pointer-events: none;
 }
 
@@ -460,24 +460,24 @@
  * по краям. Светлая буква без тени на светлом пятне пропадает целиком,
  * поэтому тень здесь не украшение, а условие читаемости.
  */
-.ncw-beam-line,
-#ncw-datebox,
-#ncw-grid,
-#ncw-stub {
+.nrn-beam-line,
+#nrn-datebox,
+#nrn-grid,
+#nrn-stub {
     text-shadow:
-        0 calc(1 * var(--ncw-px)) calc(3 * var(--ncw-px)) var(--ncw-text-halo, rgba(0, 0, 0, 0.85)),
-        0 0 calc(8 * var(--ncw-px)) var(--ncw-text-halo-soft, rgba(0, 0, 0, 0.55));
+        0 calc(1 * var(--nrn-px)) calc(3 * var(--nrn-px)) var(--nrn-text-halo, rgba(0, 0, 0, 0.85)),
+        0 0 calc(8 * var(--nrn-px)) var(--nrn-text-halo-soft, rgba(0, 0, 0, 0.55));
 }
 
 /* Ожидание инфоблока — посреди пустой доски. */
-#ncw-stub {
+#nrn-stub {
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
-    font-size: calc(22 * var(--ncw-px));
-    color: var(--ncw-text-dim);
+    font-size: calc(22 * var(--nrn-px));
+    color: var(--nrn-text-dim);
 }
 
 /*
@@ -488,16 +488,16 @@
  * напрямую. Кликов слои не ловят (pointer-events: none) — иначе пустое
  * дерево накрывало бы книгу под собой; ловят только те, кому положено.
  */
-.ncw-beam,
-.ncw-wood {
+.nrn-beam,
+.nrn-wood {
     position: absolute;
     inset: 0;
     pointer-events: none;
 }
 
-.ncw-beam .ncw-hintable,
-.ncw-wood .ncw-hintable,
-#ncw-grid {
+.nrn-beam .nrn-hintable,
+.nrn-wood .nrn-hintable,
+#nrn-grid {
     pointer-events: auto;
 }
 
@@ -513,11 +513,11 @@
  * Прячем, а не выкидываем из разметки: тогда раскладка переключается
  * одним атрибутом, мгновенно и без пересборки блока.
  */
-[data-skin="board"] .ncw-medallion-svg,
-[data-skin="board"] .ncw-medallion-icon,
-[data-skin="board"] .ncw-plate-icon,
-[data-skin="board"] .ncw-dial-hub,
-[data-skin="board"] .ncw-fig-name {
+[data-skin="board"] .nrn-medallion-svg,
+[data-skin="board"] .nrn-medallion-icon,
+[data-skin="board"] .nrn-plate-icon,
+[data-skin="board"] .nrn-dial-hub,
+[data-skin="board"] .nrn-fig-name {
     display: none;
 }
 
@@ -537,20 +537,20 @@
  * Правило перечисляет темы поимённо: добавите светлую — впишите сюда,
  * иначе её надписи утонут в дереве.
  */
-[data-skin="board"][data-theme="light"] .ncw-beam,
-[data-skin="board"][data-theme="light"] .ncw-wood,
-[data-skin="board"][data-theme="frost"] .ncw-beam,
-[data-skin="board"][data-theme="frost"] .ncw-wood,
-[data-skin="board"][data-theme="parchment"] .ncw-beam,
-[data-skin="board"][data-theme="parchment"] .ncw-wood {
-    --ncw-text: #e2d7bd;
-    --ncw-text-bright: #f4ead1;
-    --ncw-text-dim: #b3a68a;
-    --ncw-text-muted: #d8cbaf;
-    --ncw-text-lore: #cddbe6;
-    --ncw-text-panel: #ece2c9;
-    --ncw-text-weather: #d3dfe9;
-    --ncw-text-day: #ded2b6;
+[data-skin="board"][data-theme="light"] .nrn-beam,
+[data-skin="board"][data-theme="light"] .nrn-wood,
+[data-skin="board"][data-theme="frost"] .nrn-beam,
+[data-skin="board"][data-theme="frost"] .nrn-wood,
+[data-skin="board"][data-theme="parchment"] .nrn-beam,
+[data-skin="board"][data-theme="parchment"] .nrn-wood {
+    --nrn-text: #e2d7bd;
+    --nrn-text-bright: #f4ead1;
+    --nrn-text-dim: #b3a68a;
+    --nrn-text-muted: #d8cbaf;
+    --nrn-text-soft: #cddbe6;
+    --nrn-text-panel: #ece2c9;
+    --nrn-text-weather: #d3dfe9;
+    --nrn-text-day: #ded2b6;
 }
 
 /* ============================================================
@@ -561,14 +561,14 @@
  * где всё нарисовано, знак у надписи — это второй рисунок поверх первого.
  * ============================================================ */
 
-.ncw-beam-line {
+.nrn-beam-line {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 700 !important;
-    font-size: calc(34 * var(--ncw-px));
+    font-size: calc(34 * var(--nrn-px));
     line-height: 1.15;
-    letter-spacing: calc(1.5 * var(--ncw-px));
+    letter-spacing: calc(1.5 * var(--nrn-px));
     text-transform: uppercase;
-    color: var(--ncw-text-bright);
+    color: var(--nrn-text-bright);
     /* Длинное место («двор Торстейна у Лососьей реки») переносится на
        вторую строку, а не жуётся многоточием. Больше двух не даём: ниже
        балка кончается и начинается дерево. */
@@ -591,7 +591,7 @@
  * высоту, и в обоих случаях надписи не задевают ни верхний край доски,
  * ни дерево под балкой.
  */
-.ncw-beam-left {
+.nrn-beam-left {
     position: absolute;
     left: 8.85%;    /* 105 макета */
     top: 3.4%;      /* 30 */
@@ -600,35 +600,35 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: calc(3 * var(--ncw-px));
+    gap: calc(3 * var(--nrn-px));
 }
 
-#ncw-weather-text {
-    color: var(--ncw-text-weather);
+#nrn-weather-text {
+    color: var(--nrn-text-weather);
 }
 
 /* Время суток — всегда одной строкой: имя эйкты с номером коротки, а на
    вторую строку тут занимать нечего, её может попросить погода. */
-#ncw-time-line {
+#nrn-time-line {
     -webkit-line-clamp: 1;
-    color: var(--ncw-text-panel);
+    color: var(--nrn-text-panel);
 }
 
 /* Номер эйкты — тем же шрифтом и кеглем, что и её имя: это одна надпись,
    а не две. Отличается только цветом, потише. */
-#norse-calendar-widget #ncw-eykt-num {
-    margin-left: calc(10 * var(--ncw-px));
-    color: var(--ncw-text-dim);
+#nrn-widget #nrn-eykt-num {
+    margin-left: calc(10 * var(--nrn-px));
+    color: var(--nrn-text-dim);
 }
 
 /* Место — по другую сторону солнца.                    692×48 макета
    Ему под второй строкой пусто, поэтому оно стоит от своего верха. */
-#ncw-location-text {
+#nrn-location-text {
     position: absolute;
     left: 58.3%;
     top: 4.6%;
     width: 36.5%;
-    color: var(--ncw-text-panel);
+    color: var(--nrn-text-panel);
 }
 
 /* ============================================================
@@ -647,7 +647,7 @@
  * угла доски, перекрестье — 262×324). Он квадратный по построению:
  * ширина задана долей, высота повторяет её через aspect-ratio.
  */
-.ncw-vegvisir {
+.nrn-vegvisir {
     position: absolute;
     left: 11.97%;   /* 142 макета */
     top: 23.26%;    /* 204 макета */
@@ -656,7 +656,7 @@
     pointer-events: none;
 }
 
-.ncw-vegvisir-svg {
+.nrn-vegvisir-svg {
     display: block;
     width: 100%;
     height: 100%;
@@ -670,31 +670,31 @@
  * Фильтров и размытий нет нарочно: они считаются в пикселях экрана, и на
  * широкой доске свечение расплылось бы вдвое против узкой.
  */
-.ncw-vegvisir-ray {
+.nrn-vegvisir-ray {
     opacity: 0;
     transition: opacity 0.45s ease;
 }
 
-.ncw-ray-halo {
-    stroke: var(--ncw-fire-soft);
+.nrn-ray-halo {
+    stroke: var(--nrn-fire-soft);
     stroke-width: 7;
     stroke-linecap: round;
 }
 
-.ncw-ray-core {
-    stroke: var(--ncw-fire);
+.nrn-ray-core {
+    stroke: var(--nrn-fire);
     stroke-width: 2.2;
     stroke-linecap: round;
 }
 
-.ncw-vegvisir[data-eykt="0"] .ncw-vegvisir-ray[data-ray="0"],
-.ncw-vegvisir[data-eykt="1"] .ncw-vegvisir-ray[data-ray="1"],
-.ncw-vegvisir[data-eykt="2"] .ncw-vegvisir-ray[data-ray="2"],
-.ncw-vegvisir[data-eykt="3"] .ncw-vegvisir-ray[data-ray="3"],
-.ncw-vegvisir[data-eykt="4"] .ncw-vegvisir-ray[data-ray="4"],
-.ncw-vegvisir[data-eykt="5"] .ncw-vegvisir-ray[data-ray="5"],
-.ncw-vegvisir[data-eykt="6"] .ncw-vegvisir-ray[data-ray="6"],
-.ncw-vegvisir[data-eykt="7"] .ncw-vegvisir-ray[data-ray="7"] {
+.nrn-vegvisir[data-eykt="0"] .nrn-vegvisir-ray[data-ray="0"],
+.nrn-vegvisir[data-eykt="1"] .nrn-vegvisir-ray[data-ray="1"],
+.nrn-vegvisir[data-eykt="2"] .nrn-vegvisir-ray[data-ray="2"],
+.nrn-vegvisir[data-eykt="3"] .nrn-vegvisir-ray[data-ray="3"],
+.nrn-vegvisir[data-eykt="4"] .nrn-vegvisir-ray[data-ray="4"],
+.nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"],
+.nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"],
+.nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] {
     opacity: 1;
 }
 
@@ -706,8 +706,8 @@
  * места. Отсюда и ширина 258 пикселей макета — та же, что у календарика
  * под ним: это один столбец, а не два разных.
  */
-#ncw-datebox,
-#ncw-grid {
+#nrn-datebox,
+#nrn-grid {
     position: absolute;
     left: 10.88%;   /* 129 макета — от узора остаётся полсотни пикселей */
     width: 21.75%;  /* 258 макета — до корешка книги */
@@ -722,7 +722,7 @@
  * наезжала на календарик. Теперь лишнее прячется, а не сползает на
  * соседа; чтобы прятать приходилось пореже, луна набрана мельче даты.
  */
-#ncw-datebox {
+#nrn-datebox {
     top: 52.5%;     /* 460 макета */
     bottom: 27.5%;  /* 241 — на 120 макета выше календарика */
     display: flex;
@@ -733,37 +733,37 @@
 
 /* Календарик прижат к нижнему краю дерева, а не к дате: сколько бы строк
    ни набралось выше, неделя стоит на месте и не ездит вслед за ними. */
-#ncw-grid {
+#nrn-grid {
     bottom: 14%;    /* 123 макета до нижнего узора доски */
 }
 
-.ncw-sun-line {
-    font-size: calc(19 * var(--ncw-px));
+.nrn-sun-line {
+    font-size: calc(19 * var(--nrn-px));
     font-style: italic;
-    color: var(--ncw-text-dim);
-    margin-bottom: calc(6 * var(--ncw-px));
+    color: var(--nrn-text-dim);
+    margin-bottom: calc(6 * var(--nrn-px));
 }
 
 /* Строка недели: день недели · vika N.
    Стоит над датой и набрана мельче — это «где мы в году», а не сама дата. */
-#ncw-week {
-    font-size: calc(21 * var(--ncw-px));
-    color: var(--ncw-text-lore);
-    margin: calc(3 * var(--ncw-px)) 0;
+#nrn-week {
+    font-size: calc(21 * var(--nrn-px));
+    color: var(--nrn-text-soft);
+    margin: calc(3 * var(--nrn-px)) 0;
 }
 
-#ncw-date {
-    font-size: calc(28 * var(--ncw-px));
-    color: var(--ncw-text-muted);
-    margin: calc(3 * var(--ncw-px)) 0 calc(5 * var(--ncw-px));
+#nrn-date {
+    font-size: calc(28 * var(--nrn-px));
+    color: var(--nrn-text-muted);
+    margin: calc(3 * var(--nrn-px)) 0 calc(5 * var(--nrn-px));
 }
 
 /* Луна мельче даты и недели: она про то же самое время, но справочно —
    и лишние пиксели её строки выталкивали праздник на календарик. */
-#ncw-lore {
-    font-size: calc(18 * var(--ncw-px));
-    color: var(--ncw-text-lore);
-    margin-bottom: calc(4 * var(--ncw-px));
+#nrn-moon {
+    font-size: calc(18 * var(--nrn-px));
+    color: var(--nrn-text-soft);
+    margin-bottom: calc(4 * var(--nrn-px));
 }
 
 /*
@@ -772,19 +772,19 @@
  * Набрана вровень с луной, но своим цветом: праздник не факт о времени,
  * как день недели или фаза, а обстоятельство, в котором стоит вся сцена.
  */
-#ncw-feast {
-    font-size: calc(21 * var(--ncw-px));
-    color: var(--ncw-feast);
+#nrn-feast {
+    font-size: calc(21 * var(--nrn-px));
+    color: var(--nrn-feast);
 }
 
-#norse-calendar-widget #ncw-week,
-#norse-calendar-widget #ncw-date,
-#norse-calendar-widget #ncw-lore,
-#norse-calendar-widget #ncw-feast {
+#nrn-widget #nrn-week,
+#nrn-widget #nrn-date,
+#nrn-widget #nrn-moon,
+#nrn-widget #nrn-feast {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 700 !important;
     text-transform: uppercase;
-    letter-spacing: calc(0.5 * var(--ncw-px));
+    letter-spacing: calc(0.5 * var(--nrn-px));
     line-height: 1.2;
 }
 
@@ -797,7 +797,7 @@
  * нити Фрейи и дети.
  * ============================================================ */
 
-.ncw-book {
+.nrn-book {
     position: absolute;
     left: 32.55%;   /* 386 макета */
     top: 21.55%;    /* 189 макета */
@@ -819,61 +819,61 @@
  * в плоскую вёрстку через ту же книгу, оставшуюся в разметке.
  *
  * Цвета взяты из той же тёплой гаммы, что и вся доска: бурые чернила,
- * синеватая тушь на лор-строках, ржавый сурик на выделении.
+ * синеватая тушь на вторичных строках, ржавый сурик на выделении.
  */
-#norse-calendar-widget[data-skin="board"] .ncw-book {
-    --ncw-text: #33261a;
-    --ncw-text-bright: #1b120a;
-    --ncw-text-dim: #7b6a55;
-    --ncw-text-muted: #4a3a29;
-    --ncw-text-lore: #3d4a5e;
-    --ncw-text-panel: #33261a;
-    --ncw-text-weather: #3d4a5e;
-    --ncw-text-day: #3a2c1e;
-    --ncw-accent: #9a4318;
-    --ncw-accent-contrast: #f3ead6;
-    --ncw-accent-glow: rgba(154, 67, 24, 0.35);
-    --ncw-accent-glow-strong: rgba(154, 67, 24, 0.6);
-    --ncw-accent-border-dim: rgba(154, 67, 24, 0.4);
-    --ncw-border: rgba(80, 58, 36, 0.5);
-    --ncw-border-soft: rgba(80, 58, 36, 0.28);
-    --ncw-chip-text: #7a4a1c;
-    --ncw-chip-bg: rgba(122, 74, 28, 0.09);
-    --ncw-chip-border: rgba(122, 74, 28, 0.3);
-    --ncw-feast: #a8452c;
-    --ncw-feast-bg: rgba(168, 69, 44, 0.16);
+#nrn-widget[data-skin="board"] .nrn-book {
+    --nrn-text: #33261a;
+    --nrn-text-bright: #1b120a;
+    --nrn-text-dim: #7b6a55;
+    --nrn-text-muted: #4a3a29;
+    --nrn-text-soft: #3d4a5e;
+    --nrn-text-panel: #33261a;
+    --nrn-text-weather: #3d4a5e;
+    --nrn-text-day: #3a2c1e;
+    --nrn-accent: #9a4318;
+    --nrn-accent-contrast: #f3ead6;
+    --nrn-accent-glow: rgba(154, 67, 24, 0.35);
+    --nrn-accent-glow-strong: rgba(154, 67, 24, 0.6);
+    --nrn-accent-border-dim: rgba(154, 67, 24, 0.4);
+    --nrn-border: rgba(80, 58, 36, 0.5);
+    --nrn-border-soft: rgba(80, 58, 36, 0.28);
+    --nrn-chip-text: #7a4a1c;
+    --nrn-chip-bg: rgba(122, 74, 28, 0.09);
+    --nrn-chip-border: rgba(122, 74, 28, 0.3);
+    --nrn-feast: #a8452c;
+    --nrn-feast-bg: rgba(168, 69, 44, 0.16);
 
     /* Подложки. Тёмных заливок тем на бумаге быть не может вовсе, поэтому
-       вместо них — лёгкая тень чернил; --ncw-bg отдан цвету самой страницы:
+       вместо них — лёгкая тень чернил; --nrn-bg отдан цвету самой страницы:
        им закрашены зарубки ᚱ по краям таблички совета. */
-    --ncw-bg: #fdf1e6;
-    --ncw-board-bg: #fdf1e6;
-    --ncw-bg-raised: rgba(120, 90, 55, 0.07);
-    --ncw-bg-open: rgba(120, 90, 55, 0.12);
-    --ncw-bg-hover: rgba(120, 90, 55, 0.16);
-    --ncw-advice-bg: rgba(146, 108, 58, 0.11);
+    --nrn-bg: #fdf1e6;
+    --nrn-board-bg: #fdf1e6;
+    --nrn-bg-raised: rgba(120, 90, 55, 0.07);
+    --nrn-bg-open: rgba(120, 90, 55, 0.12);
+    --nrn-bg-hover: rgba(120, 90, 55, 0.16);
+    --nrn-advice-bg: rgba(146, 108, 58, 0.11);
 }
 
 /* Сама книга — слоем под своими страницами, ради фильтра темы: иначе
    бумага осталась бы белой посреди посиневшей или посеревшей доски. */
-.ncw-book::before {
+.nrn-book::before {
     content: "";
     position: absolute;
     inset: 0;
     background: url("img/book.png") 0 0 / 100% 100% no-repeat;
-    filter: var(--ncw-art-filter, opacity(1));
+    filter: var(--nrn-art-filter, opacity(1));
     pointer-events: none;
 }
 
 /*
  * Левая страница — сводка.
  *
- * Единственное место блока, где текст НЕ меряется --ncw-px: сводка о теле
+ * Единственное место блока, где текст НЕ меряется --nrn-px: сводка о теле
  * бывает и в двадцать строк, и мельчить её вслед за узкой колонкой чата
  * значило бы сделать её нечитаемой. Кегли здесь настоящие (см. разделы
  * 9 и 15), а что не поместилось на страницу — прокручивается.
  */
-.ncw-page {
+.nrn-page {
     position: absolute;
     left: 16.25%;   /* 131 от края книги */
     top: 8.66%;     /* 57 от края книги */
@@ -902,66 +902,66 @@
  * виджет живёт в колонке чата, и ширина окна о нём ничего не говорит.
  */
 @container ncw (max-width: 1050px) {
-    .ncw-page, .ncw-children { zoom: 0.92; }
+    .nrn-page, .nrn-children { zoom: 0.92; }
 }
 
 @container ncw (max-width: 900px) {
-    .ncw-page, .ncw-children { zoom: 0.84; }
+    .nrn-page, .nrn-children { zoom: 0.84; }
 }
 
 @container ncw (max-width: 750px) {
-    .ncw-page, .ncw-children { zoom: 0.76; }
+    .nrn-page, .nrn-children { zoom: 0.76; }
 }
 
 @container ncw (max-width: 620px) {
-    .ncw-page, .ncw-children { zoom: 0.68; }
+    .nrn-page, .nrn-children { zoom: 0.68; }
 }
 
 /* Полоса прокрутки — тонкая и в цвет чернил: на бумаге ей быть заметной
    незачем, но и прятать совсем нельзя, иначе не видно, что текст длиннее
    страницы. */
-.ncw-page,
-.ncw-children {
+.nrn-page,
+.nrn-children {
     scrollbar-width: thin;
     scrollbar-color: rgba(80, 58, 36, 0.35) transparent;
 }
 
-.ncw-page::-webkit-scrollbar,
-.ncw-children::-webkit-scrollbar {
-    width: calc(6 * var(--ncw-px));
+.nrn-page::-webkit-scrollbar,
+.nrn-children::-webkit-scrollbar {
+    width: calc(6 * var(--nrn-px));
 }
 
-.ncw-page::-webkit-scrollbar-track,
-.ncw-children::-webkit-scrollbar-track {
+.nrn-page::-webkit-scrollbar-track,
+.nrn-children::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.ncw-page::-webkit-scrollbar-thumb,
-.ncw-children::-webkit-scrollbar-thumb {
+.nrn-page::-webkit-scrollbar-thumb,
+.nrn-children::-webkit-scrollbar-thumb {
     background: rgba(80, 58, 36, 0.35);
-    border-radius: calc(3 * var(--ncw-px));
+    border-radius: calc(3 * var(--nrn-px));
 }
 
 /* Видна только та страница, чья фигурка нажата. */
-.ncw-leaf {
+.nrn-leaf {
     display: none;
     flex-direction: column;
     gap: 8px;
-    animation: ncw-fade-in 0.3s ease forwards;
+    animation: nrn-fade-in 0.3s ease forwards;
 }
 
 /* Сходство по атрибуту, а не по id: страница показывает ту же букву, что
    выбрана фигуркой. По id это работало бы ровно до второго виджета. */
-.ncw-page[data-tab="user"] .ncw-leaf[data-leaf="user"],
-.ncw-page[data-tab="freyja"] .ncw-leaf[data-leaf="freyja"],
-.ncw-page[data-tab="char"] .ncw-leaf[data-leaf="char"] {
+.nrn-page[data-tab="user"] .nrn-leaf[data-leaf="user"],
+.nrn-page[data-tab="freyja"] .nrn-leaf[data-leaf="freyja"],
+.nrn-page[data-tab="char"] .nrn-leaf[data-leaf="char"] {
     display: flex;
 }
 
-.ncw-leaf-empty {
+.nrn-leaf-empty {
     font-style: italic;
     font-size: 13.5px;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
 /* --- фигурки на правой странице --- */
@@ -976,21 +976,21 @@
  * клик уходил бы не туда, куда указывает глаз. Ловит вложенное «горячее
  * место» — оно обведено по самой фигурке, без шнурка.
  */
-.ncw-fig {
+.nrn-fig {
     position: absolute;
     padding: 0;
     border: 0;
     background: 0 0 / 100% 100% no-repeat;
-    background-image: var(--ncw-fig-img);
+    background-image: var(--nrn-fig-img);
     pointer-events: none;
     /* Невыбранная фигурка приглушена — как вещь, лежащая в тени. Фильтр
        темы приписан последним: фигурки должны выцветать и синеть вместе
        с доской, иначе повиснут ярким пятном на выстывшей картинке. */
-    filter: brightness(0.78) saturate(0.7) var(--ncw-art-filter, opacity(1));
+    filter: brightness(0.78) saturate(0.7) var(--nrn-art-filter, opacity(1));
     transition: filter 0.3s ease;
 }
 
-.ncw-fig-hit {
+.nrn-fig-hit {
     position: absolute;
     left: 0;
     right: 0;
@@ -1002,67 +1002,67 @@
     cursor: pointer;
 }
 
-.ncw-fig:hover {
-    filter: brightness(0.95) saturate(0.9) var(--ncw-art-filter, opacity(1));
+.nrn-fig:hover {
+    filter: brightness(0.95) saturate(0.9) var(--nrn-art-filter, opacity(1));
 }
 
 /* Выбранная — при свете и с тёплым обводом по самому силуэту: drop-shadow
    берёт форму из альфы рисунка, а не из прямоугольника кнопки. */
-.ncw-fig-on {
+.nrn-fig-on {
     filter:
         brightness(1.06)
-        var(--ncw-art-filter, opacity(1))
-        drop-shadow(0 0 calc(5 * var(--ncw-px)) var(--ncw-fire))
-        drop-shadow(0 0 calc(12 * var(--ncw-px)) var(--ncw-fire-soft));
+        var(--nrn-art-filter, opacity(1))
+        drop-shadow(0 0 calc(5 * var(--nrn-px)) var(--nrn-fire))
+        drop-shadow(0 0 calc(12 * var(--nrn-px)) var(--nrn-fire-soft));
 }
 
-.ncw-fig:focus-visible {
+.nrn-fig:focus-visible {
     outline: none;
     filter:
         brightness(1.06)
-        var(--ncw-art-filter, opacity(1))
-        drop-shadow(0 0 calc(4 * var(--ncw-px)) var(--ncw-fire));
+        var(--nrn-art-filter, opacity(1))
+        drop-shadow(0 0 calc(4 * var(--nrn-px)) var(--nrn-fire));
 }
 
 /* Хозяйка.                                            532×33 от края книги */
-#ncw-fig-user {
+#nrn-fig-user {
     left: 66%;
     top: 5.02%;
     width: 17.24%;
     height: 54.71%;
-    --ncw-fig-img: url("img/user.png");
+    --nrn-fig-img: url("img/user.png");
 }
 
 /* Медальон нити Фрейи — женское здоровье.             571×36 от края книги */
-#ncw-fig-freyja {
+#nrn-fig-freyja {
     left: 70.84%;
     top: 5.47%;
     width: 7.32%;
     height: 15.65%;
-    --ncw-fig-img: url("img/Freyas_threads.png");
+    --nrn-fig-img: url("img/Freyas_threads.png");
 }
 
 /* У медальона шнурок длиннее самого медальона, поэтому горячее место —
    кружок по его нижней половине. */
-#ncw-fig-freyja .ncw-fig-hit {
+#nrn-fig-freyja .nrn-fig-hit {
     top: 48%;
     border-radius: 50%;
 }
 
 /* {{char}}.                                           643×34 от края книги */
-#ncw-fig-char {
+#nrn-fig-char {
     left: 79.78%;
     top: 5.17%;
     width: 15.14%;
     height: 49.85%;
-    --ncw-fig-img: url("img/char.png");
+    --nrn-fig-img: url("img/char.png");
 }
 
 /*
  * Дети — вписаны в правую страницу под фигурками и видны на любой из трёх:
  * дитя не перестаёт просить есть оттого, что смотрят на {{char}}.
  */
-.ncw-children {
+.nrn-children {
     position: absolute;
     left: 66.5%;    /* 536 от края книги */
     top: 61.1%;     /* 402 */
@@ -1089,28 +1089,28 @@
  *   собственными («Léttari», «Торстейн»), и капс их калечит.
  *
  * Регистр наследуется, поэтому задан он на самих подписывающих блоках, а не
- * на кликабельном слове: раньше `.ncw-hintable` тащил капс с Norse всюду,
+ * на кликабельном слове: раньше `.nrn-hintable` тащил капс с Norse всюду,
  * куда попадал, и толкование живота на листе выходило криком.
  */
-#norse-calendar-widget .ncw-hintable {
+#nrn-widget .nrn-hintable {
     letter-spacing: inherit;
 }
 
 /* Подчёркивания под кликабельными словами нет нарочно: их в блоке
    несколько десятков, и пунктир под каждым читался как сплошная штриховка.
    Что слово живое, видно по курсору и по подсветке под мышью. */
-.ncw-hintable {
+.nrn-hintable {
     cursor: pointer;
     transition: color 0.15s ease;
 }
 
-.ncw-hintable:hover {
-    color: var(--ncw-text-bright);
+.nrn-hintable:hover {
+    color: var(--nrn-text-bright);
 }
 
-.ncw-hint {
-    color: var(--ncw-accent) !important;
-    text-shadow: 0 0 8px var(--ncw-accent-glow);
+.nrn-hint {
+    color: var(--nrn-accent) !important;
+    text-shadow: 0 0 8px var(--nrn-accent-glow);
 }
 
 /* ============================================================
@@ -1125,11 +1125,11 @@
  * (погода тоньше, место жирнее) больше нет — она разводила круг и
  * железную вставку, а ни того, ни другого на доске уже не осталось.
  *
- * Правила стоят отдельно от `.ncw-beam-line` не по забывчивости: в них
+ * Правила стоят отдельно от `.nrn-beam-line` не по забывчивости: в них
  * по два идентификатора, и одним классом их всё равно не перебить.
  */
-#norse-calendar-widget #ncw-weather-text,
-#norse-calendar-widget #ncw-location-text {
+#nrn-widget #nrn-weather-text,
+#nrn-widget #nrn-location-text {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 700 !important;
     text-transform: uppercase;
@@ -1144,47 +1144,47 @@
  * строки, они одинаковы на всех трёх листах.
  * ============================================================ */
 
-@keyframes ncw-fade-in {
+@keyframes nrn-fade-in {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.ncw-attire {
+.nrn-attire {
     display: flex;
     align-items: baseline;
     gap: 8px;
     font-size: 14.5px;
     line-height: 1.4;
-    color: var(--ncw-text-panel);
+    color: var(--nrn-text-panel);
     overflow-wrap: anywhere;
 }
 
-#norse-calendar-widget .ncw-attire-icon {
+#nrn-widget .nrn-attire-icon {
     width: 16px;
     height: 16px;
 }
 
-.ncw-chips {
+.nrn-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
     justify-content: center;
 }
 
-.ncw-chip {
+.nrn-chip {
     font-size: 13px;
     padding: 3px 11px;
     border-radius: 11px;
-    color: var(--ncw-chip-text);
-    background: var(--ncw-chip-bg);
-    border: 1px solid var(--ncw-chip-border);
+    color: var(--nrn-chip-text);
+    background: var(--nrn-chip-bg);
+    border: 1px solid var(--nrn-chip-border);
 }
 
-.ncw-chip:empty {
+.nrn-chip:empty {
     display: none;
 }
 
-.ncw-thought {
+.nrn-thought {
     display: flex;
     align-items: baseline;
     gap: 8px;
@@ -1192,17 +1192,17 @@
     font-size: 14.5px;
     font-style: italic;
     line-height: 1.45;
-    color: var(--ncw-text-lore);
-    border-top: 1px dashed var(--ncw-border-soft);
-    animation: ncw-fade-in 0.5s ease forwards;
+    color: var(--nrn-text-soft);
+    border-top: 1px dashed var(--nrn-border-soft);
+    animation: nrn-fade-in 0.5s ease forwards;
 }
 
-#norse-calendar-widget .ncw-thought-icon {
+#nrn-widget .nrn-thought-icon {
     width: 16px;
     height: 16px;
 }
 
-#ncw-thought-text {
+#nrn-thought-text {
     min-width: 0;
 }
 
@@ -1216,46 +1216,46 @@
  * `margin-top: auto` отжимает её к нижнему краю: сколько бы ни выросла сводка
  * о теле справа, календарик стоит на месте и не ездит вслед за ней.
  */
-#ncw-grid.ncw-hidden {
+#nrn-grid.nrn-hidden {
     display: none;
 }
 
-.ncw-row {
+.nrn-row {
     display: flex;
-    gap: calc(4 * var(--ncw-px));
-    margin-bottom: calc(4 * var(--ncw-px));
+    gap: calc(4 * var(--nrn-px));
+    margin-bottom: calc(4 * var(--nrn-px));
 }
 
-.ncw-cell {
+.nrn-cell {
     flex: 1 1 0;
     min-width: 0;
-    font-size: calc(19 * var(--ncw-px));
-    padding: calc(5 * var(--ncw-px)) 0;
-    border-radius: calc(4 * var(--ncw-px));
+    font-size: calc(19 * var(--nrn-px));
+    padding: calc(5 * var(--nrn-px)) 0;
+    border-radius: calc(4 * var(--nrn-px));
 }
 
-.ncw-wd {
-    color: var(--ncw-accent);
+.nrn-wd {
+    color: var(--nrn-accent);
     font-weight: bold;
-    font-size: calc(15 * var(--ncw-px));
-    border-bottom: 1px solid var(--ncw-border);
-    margin-bottom: calc(3 * var(--ncw-px));
-    padding-bottom: calc(4 * var(--ncw-px));
+    font-size: calc(15 * var(--nrn-px));
+    border-bottom: 1px solid var(--nrn-border);
+    margin-bottom: calc(3 * var(--nrn-px));
+    padding-bottom: calc(4 * var(--nrn-px));
 }
 
-.ncw-day {
-    color: var(--ncw-text-day);
+.nrn-day {
+    color: var(--nrn-text-day);
 }
 
-.ncw-dim {
+.nrn-dim {
     opacity: 0.35;
 }
 
-.ncw-today {
-    background: var(--ncw-accent);
-    color: var(--ncw-accent-contrast);
+.nrn-today {
+    background: var(--nrn-accent);
+    color: var(--nrn-accent-contrast);
     font-weight: bold;
-    box-shadow: 0 0 6px var(--ncw-accent-glow);
+    box-shadow: 0 0 6px var(--nrn-accent-glow);
 }
 
 /*
@@ -1268,74 +1268,74 @@
  * знака не должны спорить: сегодня — заливка акцентом, праздник — подложка
  * и черта снизу. Когда сегодня и есть праздник, видно оба.
  */
-.ncw-feast-day {
-    background: var(--ncw-feast-bg);
-    box-shadow: inset 0 -2px 0 var(--ncw-feast);
+.nrn-feast-day {
+    background: var(--nrn-feast-bg);
+    box-shadow: inset 0 -2px 0 var(--nrn-feast);
 }
 
 /* Первый день — тот, с которого праздник начался; отмечаем чертой и слева. */
-.ncw-feast-day.ncw-feast-first {
-    box-shadow: inset 0 -2px 0 var(--ncw-feast), inset 2px 0 0 var(--ncw-feast);
+.nrn-feast-day.nrn-feast-first {
+    box-shadow: inset 0 -2px 0 var(--nrn-feast), inset 2px 0 0 var(--nrn-feast);
 }
 
-.ncw-day.ncw-feast-day.ncw-today {
-    background: var(--ncw-accent);
-    color: var(--ncw-accent-contrast);
-    box-shadow: 0 0 6px var(--ncw-accent-glow), inset 0 -3px 0 var(--ncw-feast);
+.nrn-day.nrn-feast-day.nrn-today {
+    background: var(--nrn-accent);
+    color: var(--nrn-accent-contrast);
+    box-shadow: 0 0 6px var(--nrn-accent-glow), inset 0 -3px 0 var(--nrn-feast);
 }
 
 /* ============================================================
  * 11. AUKNÆTR (Sumarauki)
  * ============================================================ */
 
-.ncw-auk-title {
-    font-size: calc(17 * var(--ncw-px));
-    letter-spacing: calc(1 * var(--ncw-px));
-    color: var(--ncw-accent);
-    padding: calc(5 * var(--ncw-px)) 0 calc(7 * var(--ncw-px));
-    border-bottom: 1px solid var(--ncw-border);
-    margin-bottom: calc(4 * var(--ncw-px));
+.nrn-auk-title {
+    font-size: calc(17 * var(--nrn-px));
+    letter-spacing: calc(1 * var(--nrn-px));
+    color: var(--nrn-accent);
+    padding: calc(5 * var(--nrn-px)) 0 calc(7 * var(--nrn-px));
+    border-bottom: 1px solid var(--nrn-border);
+    margin-bottom: calc(4 * var(--nrn-px));
 }
 
-.ncw-aukday {
-    border: 1px dashed var(--ncw-border);
+.nrn-aukday {
+    border: 1px dashed var(--nrn-border);
 }
 
 /* ============================================================
  * 12. SETTINGS PANEL
  * ============================================================ */
 
-.norse-calendar-settings .inline-drawer-header {
+.nrn-settings .inline-drawer-header {
     width: 100%;
 }
 
-.norse-calendar-settings .nc-block {
+.nrn-settings .nrn-block {
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 8px 0;
 }
 
-.norse-calendar-settings .nc-theme-label {
+.nrn-settings .nrn-theme-label {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-top: 4px;
 }
 
-.norse-calendar-settings .nc-theme-label select {
+.nrn-settings .nrn-theme-label select {
     flex: 1 1 auto;
     min-width: 0;
 }
 
-.norse-calendar-settings .nc-regex-restore {
+.nrn-settings .nrn-regex-restore {
     margin-top: 8px;
     width: 100%;
 }
 
 /* Слои праздников — подчинённый список под своим флажком: отступом видно,
    что они не сами по себе, а уточняют то, что стоит над ними. */
-.norse-calendar-settings .nc-sub {
+.nrn-settings .nrn-sub {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -1355,51 +1355,51 @@
  *
  * По умолчанию <dialog> красится переменными таверны
  * (--SmartThemeBlurTintColor, --SmartThemeBorderColor, --SmartThemeBodyColor),
- * поэтому при смене темы UI менялась и наша коробка. Класс .nc-popup
+ * поэтому при смене темы UI менялась и наша коробка. Класс .nrn-popup
  * перебивает это нашими переменными.
  *
  * !important здесь не от лени: штатных правил хватило бы и специфичности
- * (dialog.popup.nc-popup[open] = 0,3,1 против .popup[open] = 0,2,0), но
+ * (dialog.popup.nrn-popup[open] = 0,3,1 против .popup[open] = 0,2,0), но
  * пользовательские темы и User CSS таверны сплошь и рядом пишут
  * `.popup { background-color: … !important }` — без !important окно
  * снова окрасилось бы чужой темой. Помечены только три свойства,
  * определяющие принадлежность окна; всё остальное перебивается обычно.
  */
 
-dialog.popup.nc-popup,
-dialog.popup.nc-popup[open] {
-    color: var(--ncw-text) !important;
-    background-color: var(--ncw-bg) !important;
-    border: 1px solid var(--ncw-border) !important;
+dialog.popup.nrn-popup,
+dialog.popup.nrn-popup[open] {
+    color: var(--nrn-text) !important;
+    background-color: var(--nrn-bg) !important;
+    border: 1px solid var(--nrn-border) !important;
     border-radius: 10px;
     box-shadow: 0 0 24px rgba(0, 0, 0, 0.55);
 }
 
-dialog.popup.nc-popup[open]::backdrop {
+dialog.popup.nrn-popup[open]::backdrop {
     background-color: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
 }
 
 /* Крестик закрытия — в цвет акцента темы */
-dialog.popup.nc-popup .popup-button-close {
-    color: var(--ncw-text-dim);
+dialog.popup.nrn-popup .popup-button-close {
+    color: var(--nrn-text-dim);
     transition: color 0.15s ease;
 }
 
-dialog.popup.nc-popup .popup-button-close:hover {
-    color: var(--ncw-accent);
+dialog.popup.nrn-popup .popup-button-close:hover {
+    color: var(--nrn-accent);
 }
 
-dialog.popup.nc-popup .popup-controls .menu_button {
-    color: var(--ncw-text);
-    background-color: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border);
+dialog.popup.nrn-popup .popup-controls .menu_button {
+    color: var(--nrn-text);
+    background-color: var(--nrn-bg-raised);
+    border: 1px solid var(--nrn-border);
 }
 
-dialog.popup.nc-popup .popup-controls .menu_button:hover {
-    color: var(--ncw-text-bright);
-    background-color: var(--ncw-bg-hover);
+dialog.popup.nrn-popup .popup-controls .menu_button:hover {
+    color: var(--nrn-text-bright);
+    background-color: var(--nrn-bg-hover);
 }
 
 /* --- содержимое --- */
@@ -1415,55 +1415,55 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Кегль поднят с 15 до 16.5: справочник читают с телефона, и мелочь
  * в 11–13 пунктов, которой тут было полстраницы, глаза не берут.
  */
-.norse-timatal {
-    color: var(--ncw-text);
+.nrn-timatal {
+    color: var(--nrn-text);
     font-family: "Cormorant Unicase", Georgia, serif;
     font-size: 16.5px;
     text-align: left;
 }
 
-.norse-timatal * {
+.nrn-timatal * {
     box-sizing: border-box;
 }
 
 /* --- шапка --- */
 
-.nct-header {
+.nrn-t-header {
     text-align: center;
     padding: 0 0 14px;
-    border-bottom: 1px solid var(--ncw-border);
+    border-bottom: 1px solid var(--nrn-border);
     margin-bottom: 14px;
 }
 
-.nct-runes {
+.nrn-t-runes {
     font-size: 18px;
     letter-spacing: 8px;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
     opacity: 0.75;
     margin-bottom: 6px;
 }
 
-.norse-timatal .nct-title {
+.nrn-timatal .nrn-t-title {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 32px;
     letter-spacing: 2px;
     line-height: 1.1;
-    color: var(--ncw-text-bright);
+    color: var(--nrn-text-bright);
 }
 
-.nct-subtitle {
+.nrn-t-subtitle {
     font-size: 16px;
     /* Курсива нет: настоящего курсивного начертания у Cormorant Unicase
        не существует, и браузер подделывает его наклоном — на капители
        это читается тяжелее прямого. Тише прочего эти строки и так:
        цветом и кеглем. */
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
     margin-top: 2px;
 }
 
 /* Кнопка сброса вида — появляется, только когда что-то свёрнуто или скрыто */
-.norse-timatal .nct-reset {
+.nrn-timatal .nrn-t-reset {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -1471,59 +1471,59 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     padding: 5px 13px;
     font-family: inherit;
     font-size: 12.5px;
-    color: var(--ncw-text-muted);
-    background: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border-soft);
+    color: var(--nrn-text-muted);
+    background: var(--nrn-bg-raised);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 14px;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.norse-timatal .nct-reset:hover {
-    color: var(--ncw-accent);
-    background: var(--ncw-bg-hover);
-    border-color: var(--ncw-accent-border-dim);
+.nrn-timatal .nrn-t-reset:hover {
+    color: var(--nrn-accent);
+    background: var(--nrn-bg-hover);
+    border-color: var(--nrn-accent-border-dim);
 }
 
-.nct-reset-icon {
+.nrn-t-reset-icon {
     font-size: 14px;
     line-height: 1;
 }
 
 /* --- «сейчас в сцене» --- */
 
-.nct-now {
+.nrn-t-now {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     gap: 6px 12px;
     padding: 9px 14px;
     margin-bottom: 14px;
-    border: 1px solid var(--ncw-accent-border-dim);
+    border: 1px solid var(--nrn-accent-border-dim);
     border-radius: 14px;
-    background: var(--ncw-bg-raised);
+    background: var(--nrn-bg-raised);
 }
 
-.nct-now-label {
+.nrn-t-now-label {
     font-size: 13.5px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
     flex-shrink: 0;
 }
 
-.norse-timatal .nct-now-value {
+.nrn-timatal .nrn-t-now-value {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 17px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
 }
 
 /* --- состояние тела и совет --- */
 
-.ncw-state,
+.nrn-state,
 /*
  * Слово повитухи — врезанная табличка, а не строка в потоке.
  *
@@ -1531,7 +1531,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * панелью, — и выделен он поэтому не цветом, а оправой: тонкая рамка,
  * подложка и руна ᚱ по краям, как зарубка на дереве.
  */
-.ncw-advice {
+.nrn-advice {
     position: relative;
     display: flex;
     align-items: baseline;
@@ -1542,61 +1542,61 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     font-size: 15.5px;
     line-height: 1.5;
     text-align: left;
-    background: var(--ncw-advice-bg, var(--ncw-bg-raised));
-    border: 1px solid var(--ncw-accent-border-dim);
+    background: var(--nrn-advice-bg, var(--nrn-bg-raised));
+    border: 1px solid var(--nrn-accent-border-dim);
     border-radius: 3px;
 }
 
 /* Зарубки по углам: две руны на подложке доски, поверх рамки. */
-.ncw-advice::before,
-.ncw-advice::after {
+.nrn-advice::before,
+.nrn-advice::after {
     content: "ᚱ";
     position: absolute;
     top: -9px;
     font-size: 12px;
     line-height: 1;
     padding: 0 4px;
-    color: var(--ncw-accent);
-    background: var(--ncw-board-bg, var(--ncw-bg));
+    color: var(--nrn-accent);
+    background: var(--nrn-board-bg, var(--nrn-bg));
     opacity: 0.9;
 }
 
-.ncw-advice::before { left: 10px; }
-.ncw-advice::after { right: 10px; }
+.nrn-advice::before { left: 10px; }
+.nrn-advice::after { right: 10px; }
 
-#norse-calendar-widget .ncw-state-icon,
-#norse-calendar-widget .ncw-advice-icon {
+#nrn-widget .nrn-state-icon,
+#nrn-widget .nrn-advice-icon {
     width: 16px;
     height: 16px;
 }
 
-#ncw-char-state-text,
-#ncw-user-state-text {
-    color: var(--ncw-text);
+#nrn-char-state-text,
+#nrn-user-state-text {
+    color: var(--nrn-text);
 }
 
 /* Совет — не факт сцены, а слово со стороны, потому и курсивом. */
-#ncw-advice-text {
+#nrn-advice-text {
     min-width: 0;
     font-style: italic;
-    color: var(--ncw-text-lore);
+    color: var(--nrn-text-soft);
 }
 
 /* --- цикл: строка в колонке {{user}} --- */
 
-.ncw-cycle {
+.nrn-cycle {
     margin-top: 6px;
     padding-top: 6px;
-    border-top: 1px solid var(--ncw-border-soft);
+    border-top: 1px solid var(--nrn-border-soft);
 }
 
 /* Строк в колонке стало больше — дозор и приметы разъехались по фактам, —
    поэтому интерлиньяж тише прежнего: иначе сводка вырастает вдвое. */
-.ncw-cycle-line {
+.nrn-cycle-line {
     font-size: 15px;
     line-height: 1.4;
     letter-spacing: 0.3px;
-    color: var(--ncw-text);
+    color: var(--nrn-text);
 }
 
 /*
@@ -1606,17 +1606,17 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * вкладок, а не о всей доске. Копия в колонке была ошибкой — id совпадали,
  * и рендер писал в оба места разом.
  */
-#norse-calendar-widget .ncw-cycle-head {
+#nrn-widget .nrn-cycle-head {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 700 !important;
     font-size: 27px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     line-height: 1.2;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
 }
 
-#norse-calendar-widget .ncw-cycle-sub {
+#nrn-widget .nrn-cycle-sub {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 400 !important;
     font-size: 19px;
@@ -1624,28 +1624,28 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     letter-spacing: 0.6px;
     line-height: 1.3;
     margin-top: 2px;
-    color: var(--ncw-text);
+    color: var(--nrn-text);
 }
 
 /* Скрытый слой отладки — моноширинным, он для сверки, а не для чтения. */
-.ncw-cycle-debug {
+.nrn-cycle-debug {
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
     font-size: 11.5px;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
     opacity: 0.75;
 }
 
 /* Затишье дитяти — единственное, что должно бросаться в глаза. */
-.ncw-alarm {
-    color: var(--ncw-accent) !important;
+.nrn-alarm {
+    color: var(--nrn-accent) !important;
     font-style: normal !important;
 }
 
 /* Приметы и срок — тише главного, но без курсива: курсивом набран целый
    столбец, и читать его строка за строкой тяжело. */
-.ncw-cycle-dim {
+.nrn-cycle-dim {
     font-size: 16.5px;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
 /* Особого правила для подсказок сводки больше нет: теперь всякое
@@ -1653,39 +1653,39 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 
 /* --- женское питьё: плашка отката --- */
 
-.ncw-draught {
+.nrn-draught {
     margin-top: 8px;
     padding-left: 8px;
-    border-left: 2px solid var(--ncw-border-soft);
+    border-left: 2px solid var(--nrn-border-soft);
     font-size: 15.5px;
     line-height: 1.5;
-    color: var(--ncw-text);
+    color: var(--nrn-text);
 }
 
 /* Плашка отвара и плашка дитяти не flex — знак отбиваем полем, не gap'ом. */
-.ncw-draught-icon {
+.nrn-draught-icon {
     margin-right: 5px;
 }
 
 /* Название травы — той же скандинавской латиницей, что фазы и имена. */
-.ncw-draught .ncw-hintable {
+.nrn-draught .nrn-hintable {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 15px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
 }
 
-.ncw-draught-text {
+.nrn-draught-text {
     display: block;
     font-style: italic;
-    color: var(--ncw-text-lore);
+    color: var(--nrn-text-soft);
 }
 
 /* Кнопка отвара: тише призыва Фригг — это дело обыденное, не обряд. */
-.nct-picker-herb {
-    border-color: var(--ncw-border-soft);
+.nrn-t-picker-herb {
+    border-color: var(--nrn-border-soft);
 }
 
 /* --- дитя: своя плашка под сводкой об утробе ---
@@ -1694,182 +1694,182 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
    сводки в одной колонке. */
 
 /* Место плашки задано в разделе 6, здесь — только раскладка её строк. */
-.ncw-children {
+.nrn-children {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.ncw-child {
+.nrn-child {
     padding-left: 8px;
-    border-left: 2px solid var(--ncw-border-soft);
+    border-left: 2px solid var(--nrn-border-soft);
     font-size: 14px;
     line-height: 1.5;
-    color: var(--ncw-text);
+    color: var(--nrn-text);
 }
 
-.ncw-child-icon {
+.nrn-child-icon {
     margin-right: 5px;
 }
 
 /* Имя дитяти — той же скандинавской латиницей, что и названия фаз. */
-.ncw-child .ncw-hintable {
+.nrn-child .nrn-hintable {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 15px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
 }
 
 /* Нужда — то, ради чего плашка и заведена: читается с одного взгляда. */
-.ncw-child-need .ncw-fact-value {
+.nrn-child-need .nrn-fact-value {
     font-style: italic;
-    color: var(--ncw-text-lore);
+    color: var(--nrn-text-soft);
 }
 
 /* Веха — новость на три дня, потом уходит. */
-.ncw-child-mark .ncw-fact-value {
+.nrn-child-mark .nrn-fact-value {
     font-size: 13px;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
 /* Призыв Фригг — кнопка, которую не отменить. Выделяем акцентом, но не
    красным: это не ошибка и не опасность, это решение автора. */
-.nct-picker-summon {
-    border-color: var(--ncw-accent-border-dim);
-    color: var(--ncw-accent);
+.nrn-t-picker-summon {
+    border-color: var(--nrn-accent-border-dim);
+    color: var(--nrn-accent);
 }
 
-.nct-picker-summon:disabled {
+.nrn-t-picker-summon:disabled {
     opacity: 0.45;
     cursor: default;
-    border-color: var(--ncw-border-soft);
-    color: var(--ncw-text-muted);
+    border-color: var(--nrn-border-soft);
+    color: var(--nrn-text-muted);
 }
 
 /* Оговорка под кнопкой: набрана тише самой кнопки, но не прячется. */
-.nct-picker-warn {
+.nrn-t-picker-warn {
     margin-top: 4px;
     /* Без курсива: подделанный наклон на капители не читается. */
     font-weight: 600;
-    color: var(--ncw-text-muted);
+    color: var(--nrn-text-muted);
 }
 
 /* Подзаголовок внутри блока: «Носит» отделяет ручную беременность от дня
    цикла. Полей стало много, и без отбивки они читались одной кашей. */
-.nct-picker-sub {
+.nrn-t-picker-sub {
     margin-top: 12px;
     margin-bottom: 4px;
     padding-top: 10px;
-    border-top: 1px solid var(--ncw-border-soft);
+    border-top: 1px solid var(--nrn-border-soft);
     font-size: 15px;
     letter-spacing: 0.6px;
     text-transform: uppercase;
-    color: var(--ncw-text-muted);
+    color: var(--nrn-text-muted);
 }
 
 /* Подпись перед списком в календарике цикла. */
-.nct-picker-label {
+.nrn-t-picker-label {
     font-size: 15px;
-    color: var(--ncw-text-muted);
+    color: var(--nrn-text-muted);
 }
 
 /* --- календарик: выбор даты сцены --- */
 
-.nct-picker {
+.nrn-t-picker {
     padding: 11px 14px 12px;
     margin-bottom: 14px;
-    border: 1px solid var(--ncw-border-soft);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 14px;
-    background: var(--ncw-bg-raised);
+    background: var(--nrn-bg-raised);
     transition: border-color 0.2s ease;
 }
 
-.nct-picker-done {
-    border-color: var(--ncw-accent-border-dim);
+.nrn-t-picker-done {
+    border-color: var(--nrn-accent-border-dim);
 }
 
-.nct-picker-title {
+.nrn-t-picker-title {
     margin-bottom: 8px;
     font-size: 13.5px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
-.nct-picker-row {
+.nrn-t-picker-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 7px;
 }
 
-.norse-timatal .nct-picker-select,
-.norse-timatal .nct-picker-year {
+.nrn-timatal .nrn-t-picker-select,
+.nrn-timatal .nrn-t-picker-year {
     padding: 5px 9px;
     font-family: inherit;
     font-size: 13px;
-    color: var(--ncw-text);
-    background: var(--ncw-bg);
-    border: 1px solid var(--ncw-border-soft);
+    color: var(--nrn-text);
+    background: var(--nrn-bg);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 9px;
 }
 
 /* Год — свободный ввод, но поле не должно растягиваться на всю строку. */
-.norse-timatal .nct-picker-year {
+.nrn-timatal .nrn-t-picker-year {
     width: 5.5em;
 }
 
-.norse-timatal .nct-picker-apply {
+.nrn-timatal .nrn-t-picker-apply {
     padding: 5px 14px;
     font-family: inherit;
     font-size: 12.5px;
-    color: var(--ncw-accent);
-    background: var(--ncw-bg);
-    border: 1px solid var(--ncw-accent-border-dim);
+    color: var(--nrn-accent);
+    background: var(--nrn-bg);
+    border: 1px solid var(--nrn-accent-border-dim);
     border-radius: 14px;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-.norse-timatal .nct-picker-apply:hover {
-    background: var(--ncw-bg-raised);
+.nrn-timatal .nrn-t-picker-apply:hover {
+    background: var(--nrn-bg-raised);
 }
 
 /* Сводка «что сейчас» над формой: то же, что в панели, чтобы править от неё. */
-.nct-picker-now {
+.nrn-t-picker-now {
     margin-bottom: 10px;
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--ncw-border-soft);
+    border-bottom: 1px solid var(--nrn-border-soft);
 }
 
 /* Строка «что сейчас» — это название фазы и счёт («Kviknat · Ношение 4/9»),
    то есть подпись, а не пояснение: Norse остаётся, только крупнее. */
-.nct-picker-now-line {
+.nrn-t-picker-now-line {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 17px;
     letter-spacing: 0.6px;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
 }
 
-.norse-timatal .nct-picker-text {
+.nrn-timatal .nrn-t-picker-text {
     flex: 1 1 8em;
     min-width: 7em;
     padding: 5px 9px;
     font-family: inherit;
     font-size: 15px;
-    color: var(--ncw-text);
-    background: var(--ncw-bg);
-    border: 1px solid var(--ncw-border-soft);
+    color: var(--nrn-text);
+    background: var(--nrn-bg);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 9px;
 }
 
 /* Сброс — действие разрушительное, и выглядеть должно иначе. */
-.norse-timatal .nct-picker-clear {
-    color: var(--ncw-text-muted);
-    border-color: var(--ncw-border-soft);
+.nrn-timatal .nrn-t-picker-clear {
+    color: var(--nrn-text-muted);
+    border-color: var(--nrn-border-soft);
 }
 
 /*
@@ -1880,44 +1880,44 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * а связная фраза в строку-полторы, и набранная капителью в тринадцать
  * пунктов она не читалась вовсе; ровно на неё и жаловались.
  */
-.nct-picker-echo {
+.nrn-t-picker-echo {
     margin-top: 8px;
     font-size: 15.5px;
     letter-spacing: 0.3px;
     line-height: 1.4;
-    color: var(--ncw-text-muted);
+    color: var(--nrn-text-muted);
     min-height: 1.2em;
 }
 
 /* --- подсказка про управление --- */
 
-.nct-hint {
+.nrn-t-hint {
     margin-bottom: 12px;
     font-size: 15px;
     /* Курсива нет: настоящего курсивного начертания у Cormorant Unicase
        не существует, и браузер подделывает его наклоном — на капители
        это читается тяжелее прямого. Тише прочего эти строки и так:
        цветом и кеглем. */
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
     opacity: 0.9;
 }
 
 /* --- разделы-аккордеон --- */
 
-.nct-hidden {
+.nrn-t-hidden {
     display: none;
 }
 
-.nct-section {
-    border-top: 1px solid var(--ncw-border-soft);
+.nrn-t-section {
+    border-top: 1px solid var(--nrn-border-soft);
 }
 
-.nct-section:last-child {
-    border-bottom: 1px solid var(--ncw-border-soft);
+.nrn-t-section:last-child {
+    border-bottom: 1px solid var(--nrn-border-soft);
 }
 
 /* Заголовок раздела — он же переключатель */
-.norse-timatal .nct-section-toggle {
+.nrn-timatal .nrn-t-section-toggle {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1925,41 +1925,41 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     padding: 13px 4px;
     font-family: inherit;
     text-align: left;
-    color: var(--ncw-text-bright);
+    color: var(--nrn-text-bright);
     background: none;
     border: none;
     cursor: pointer;
     transition: color 0.15s ease;
 }
 
-.norse-timatal .nct-section-toggle:hover {
-    color: var(--ncw-accent);
+.nrn-timatal .nrn-t-section-toggle:hover {
+    color: var(--nrn-accent);
 }
 
-.norse-timatal .nct-section-toggle:focus-visible {
-    outline: 2px solid var(--ncw-accent);
+.nrn-timatal .nrn-t-section-toggle:focus-visible {
+    outline: 2px solid var(--nrn-accent);
     outline-offset: -2px;
     border-radius: 6px;
 }
 
-.nct-chevron {
+.nrn-t-chevron {
     flex-shrink: 0;
     font-size: 12px;
     line-height: 1;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
     transition: transform 0.2s ease;
 }
 
-.nct-closed .nct-chevron {
+.nrn-t-closed .nrn-t-chevron {
     transform: rotate(-90deg);
 }
 
-.nct-section-icon {
+.nrn-t-section-icon {
     flex-shrink: 0;
     font-size: 15px;
 }
 
-.norse-timatal .nct-section-title {
+.nrn-timatal .nrn-t-section-title {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 20px;
@@ -1968,20 +1968,20 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     text-transform: uppercase;
 }
 
-.nct-section-body {
+.nrn-t-section-body {
     padding: 0 0 18px;
 }
 
-.nct-closed .nct-section-body {
+.nrn-t-closed .nrn-t-section-body {
     display: none;
 }
 
 /* Свёрнутый раздел бледнее — сразу видно, что он спрятан, а не пуст */
-.nct-closed .nct-section-toggle {
-    color: var(--ncw-text-dim);
+.nrn-t-closed .nrn-t-section-toggle {
+    color: var(--nrn-text-dim);
 }
 
-.nct-lead {
+.nrn-t-lead {
     margin-bottom: 12px;
     font-size: 16.5px;
     /* Курсива нет: настоящего курсивного начертания у Cormorant Unicase
@@ -1989,7 +1989,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
        это читается тяжелее прямого. Тише прочего эти строки и так:
        цветом и кеглем. */
     line-height: 1.5;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
 /* --- облачка выбора колонок ---
@@ -1998,22 +1998,22 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * здесь не бывает: их не выключить, и облачка у них нет.
  */
 
-.nct-chips-row {
+.nrn-t-chips-row {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 12px;
 }
 
-.norse-timatal .nct-chip {
+.nrn-timatal .nrn-t-chip {
     padding: 5px 14px;
     font-family: inherit;
     font-size: 12.5px;
     line-height: 1.25;
     letter-spacing: 0.3px;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
     background: transparent;
-    border: 1px solid var(--ncw-border-soft);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 999px;
     cursor: pointer;
     opacity: 0.65;
@@ -2021,68 +2021,68 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
                 border-color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 
-.norse-timatal .nct-chip:hover {
-    color: var(--ncw-text);
-    border-color: var(--ncw-border);
+.nrn-timatal .nrn-t-chip:hover {
+    color: var(--nrn-text);
+    border-color: var(--nrn-border);
     opacity: 0.9;
 }
 
-.norse-timatal .nct-chip:focus-visible {
-    outline: 2px solid var(--ncw-accent);
+.nrn-timatal .nrn-t-chip:focus-visible {
+    outline: 2px solid var(--nrn-accent);
     outline-offset: 2px;
 }
 
 /* Зажжённое облачко */
-.norse-timatal .nct-chip-on {
-    color: var(--ncw-chip-text);
-    background: var(--ncw-chip-bg);
-    border-color: var(--ncw-chip-border);
+.nrn-timatal .nrn-t-chip-on {
+    color: var(--nrn-chip-text);
+    background: var(--nrn-chip-bg);
+    border-color: var(--nrn-chip-border);
     opacity: 1;
     font-weight: bold;
-    box-shadow: 0 0 8px -2px var(--ncw-accent-glow);
+    box-shadow: 0 0 8px -2px var(--nrn-accent-glow);
 }
 
-.norse-timatal .nct-chip-on:hover {
-    color: var(--ncw-text-bright);
-    border-color: var(--ncw-accent-border-dim);
+.nrn-timatal .nrn-t-chip-on:hover {
+    color: var(--nrn-text-bright);
+    border-color: var(--nrn-accent-border-dim);
 }
 
-.norse-timatal .nct-subhead {
+.nrn-timatal .nrn-t-subhead {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 17px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: var(--ncw-accent);
+    color: var(--nrn-accent);
     margin: 16px 0 7px;
 }
 
-.nct-note {
+.nrn-t-note {
     margin-top: 12px;
     padding: 10px 14px;
     font-size: 15.5px;
     line-height: 1.5;
-    color: var(--ncw-text-muted);
-    background: var(--ncw-bg-raised);
-    border-left: 3px solid var(--ncw-accent-border-dim);
+    color: var(--nrn-text-muted);
+    background: var(--nrn-bg-raised);
+    border-left: 3px solid var(--nrn-accent-border-dim);
     border-radius: 0 8px 8px 0;
 }
 
 /* --- таблицы --- */
 
-.nct-table-wrap {
+.nrn-t-table-wrap {
     overflow-x: auto;
-    border: 1px solid var(--ncw-border-soft);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 8px;
 }
 
-.norse-timatal .nct-table {
+.nrn-timatal .nrn-t-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 15.5px;
 }
 
-.norse-timatal .nct-table th {
+.nrn-timatal .nrn-t-table th {
     padding: 8px 12px;
     font-size: 12.5px;
     font-weight: bold;
@@ -2090,81 +2090,81 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     text-transform: uppercase;
     text-align: left;
     white-space: nowrap;
-    color: var(--ncw-accent);
-    background: var(--ncw-bg-raised);
-    border-bottom: 1px solid var(--ncw-border);
+    color: var(--nrn-accent);
+    background: var(--nrn-bg-raised);
+    border-bottom: 1px solid var(--nrn-border);
 }
 
 /* Выключенная колонка убирается целиком — ни ширины, ни следа */
-.norse-timatal .nct-table .nct-col-off {
+.nrn-timatal .nrn-t-table .nrn-t-col-off {
     display: none;
 }
 
 /* Постоянные колонки: номер прижат к древнескандинавскому написанию,
    чтобы номер и имя читались как одно целое, а не как две колонки. */
-.norse-timatal .nct-table th[data-col="num"],
-.norse-timatal .nct-table td[data-col="num"] {
+.nrn-timatal .nrn-t-table th[data-col="num"],
+.nrn-timatal .nrn-t-table td[data-col="num"] {
     width: 1%;
     padding-right: 2px;
     text-align: right;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
-.norse-timatal .nct-table th[data-col="norse"],
-.norse-timatal .nct-table td[data-col="norse"] {
+.nrn-timatal .nrn-t-table th[data-col="norse"],
+.nrn-timatal .nrn-t-table td[data-col="norse"] {
     padding-left: 7px;
 }
 
-.norse-timatal .nct-table td {
+.nrn-timatal .nrn-t-table td {
     padding: 8px 12px;
     line-height: 1.45;
     vertical-align: top;
-    color: var(--ncw-text-panel);
-    border-top: 1px solid var(--ncw-border-soft);
+    color: var(--nrn-text-panel);
+    border-top: 1px solid var(--nrn-border-soft);
 }
 
-.norse-timatal .nct-table tbody tr:first-child td {
+.nrn-timatal .nrn-t-table tbody tr:first-child td {
     border-top: none;
 }
 
-.norse-timatal .nct-table tbody tr:hover td {
-    background: var(--ncw-bg-hover);
+.nrn-timatal .nrn-t-table tbody tr:hover td {
+    background: var(--nrn-bg-hover);
 }
 
 /* Подсветка строки, соответствующей текущей сцене */
-.norse-timatal .nct-current td {
-    color: var(--ncw-text-bright);
-    background: var(--ncw-chip-bg);
+.nrn-timatal .nrn-t-current td {
+    color: var(--nrn-text-bright);
+    background: var(--nrn-chip-bg);
     font-weight: bold;
 }
 
-.norse-timatal .nct-current td:first-child {
-    box-shadow: inset 3px 0 0 var(--ncw-accent);
+.nrn-timatal .nrn-t-current td:first-child {
+    box-shadow: inset 3px 0 0 var(--nrn-accent);
 }
 
-.nct-marker {
-    color: var(--ncw-accent);
+.nrn-t-marker {
+    color: var(--nrn-accent);
     margin-right: 5px;
 }
 
-.nct-moon-icon {
+.nrn-t-moon-icon {
     margin-right: 6px;
     font-size: 14px;
 }
 
-.norse-timatal .nct-norse {
+.nrn-timatal .nrn-t-norse {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 16px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: var(--ncw-text-bright);
+    color: var(--nrn-text-bright);
     white-space: nowrap;
 }
 
 /* --- пример блока --- */
 
-.norse-timatal .nct-code {
+.nrn-timatal .nrn-t-code {
     margin: 0;
     padding: 14px 16px;
     overflow-x: auto;
@@ -2172,9 +2172,9 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     font-size: 13px;
     line-height: 1.6;
     white-space: pre;
-    color: var(--ncw-text-day);
-    background: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border-soft);
+    color: var(--nrn-text-day);
+    background: var(--nrn-bg-raised);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 8px;
 }
 
@@ -2184,49 +2184,49 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Два откидных списка в строку. На узком экране переносятся: подпись и
  * список у каждого свои, и рвать их между собой нельзя.
  */
-.nct-look-row {
+.nrn-t-look-row {
     display: flex;
     flex-wrap: wrap;
     gap: 10px 18px;
     margin-bottom: 14px;
 }
 
-.nct-look-label {
+.nrn-t-look-label {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
 }
 
-.nct-look-name {
+.nrn-t-look-name {
     font-size: 15px;
     letter-spacing: 1.2px;
     text-transform: uppercase;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
-.norse-timatal .nct-look-select {
+.nrn-timatal .nrn-t-look-select {
     min-width: 0;
     padding: 6px 10px;
     font-family: inherit;
     font-size: 15px;
     cursor: pointer;
-    color: var(--ncw-text);
-    background: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border);
+    color: var(--nrn-text);
+    background: var(--nrn-bg-raised);
+    border: 1px solid var(--nrn-border);
     border-radius: 8px;
     transition: border-color 0.15s ease;
 }
 
-.norse-timatal .nct-look-select:hover {
-    border-color: var(--ncw-accent-border-dim);
+.nrn-timatal .nrn-t-look-select:hover {
+    border-color: var(--nrn-accent-border-dim);
 }
 
 /* Раскрытый список рисует система, и наследовать наш фон он не станет:
    красим сами, иначе пункты выпадают белыми поверх тёмной темы. */
-.norse-timatal .nct-look-select option {
-    color: var(--ncw-text);
-    background: var(--ncw-bg);
+.nrn-timatal .nrn-t-look-select option {
+    color: var(--nrn-text);
+    background: var(--nrn-bg);
 }
 
 /*
@@ -2234,33 +2234,33 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * тем же кеглем, что и образец блока выше: это такой же текст программы,
  * только его можно править.
  */
-.nct-css-head {
+.nrn-t-css-head {
     display: flex;
     align-items: baseline;
     gap: 10px;
     margin-bottom: 6px;
 }
 
-.nct-css-theme {
+.nrn-t-css-theme {
     font-size: 15px;
     letter-spacing: 1.2px;
     text-transform: uppercase;
-    color: var(--ncw-text-muted);
+    color: var(--nrn-text-muted);
 }
 
 /* Метка «правлено» — единственный признак того, что тема уже не наша. */
-.nct-css-badge {
+.nrn-t-css-badge {
     padding: 1px 9px;
     font-size: 12.5px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: var(--ncw-chip-text);
-    background: var(--ncw-chip-bg);
-    border: 1px solid var(--ncw-chip-border);
+    color: var(--nrn-chip-text);
+    background: var(--nrn-chip-bg);
+    border: 1px solid var(--nrn-chip-border);
     border-radius: 10px;
 }
 
-.norse-timatal .nct-css-area {
+.nrn-timatal .nrn-t-css-area {
     display: block;
     width: 100%;
     min-height: 240px;
@@ -2270,70 +2270,70 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     font-size: 13px;
     line-height: 1.6;
     tab-size: 4;
-    color: var(--ncw-text-day);
-    background: var(--ncw-bg-raised);
-    border: 1px solid var(--ncw-border-soft);
+    color: var(--nrn-text-day);
+    background: var(--nrn-bg-raised);
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 8px;
 }
 
-.norse-timatal .nct-css-area:focus {
+.nrn-timatal .nrn-t-css-area:focus {
     outline: none;
-    border-color: var(--ncw-accent-border-dim);
+    border-color: var(--nrn-accent-border-dim);
 }
 
-.nct-css-row {
+.nrn-t-css-row {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-top: 10px;
 }
 
-.norse-timatal .nct-css-apply,
-.norse-timatal .nct-css-restore {
+.nrn-timatal .nrn-t-css-apply,
+.nrn-timatal .nrn-t-css-restore {
     padding: 7px 16px;
     font-family: inherit;
     font-size: 15px;
     letter-spacing: 0.6px;
     cursor: pointer;
-    color: var(--ncw-text);
-    background: var(--ncw-bg-open);
-    border: 1px solid var(--ncw-border);
+    color: var(--nrn-text);
+    background: var(--nrn-bg-open);
+    border: 1px solid var(--nrn-border);
     border-radius: 8px;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.norse-timatal .nct-css-apply {
-    border-color: var(--ncw-accent-border-dim);
-    color: var(--ncw-accent);
+.nrn-timatal .nrn-t-css-apply {
+    border-color: var(--nrn-accent-border-dim);
+    color: var(--nrn-accent);
 }
 
-.norse-timatal .nct-css-apply:hover,
-.norse-timatal .nct-css-restore:hover {
-    background: var(--ncw-bg-hover);
+.nrn-timatal .nrn-t-css-apply:hover,
+.nrn-timatal .nrn-t-css-restore:hover {
+    background: var(--nrn-bg-hover);
 }
 
 /* Ответ на нажатие. Кнопки ничего не двигают в самом окне — перекрашивается
    блок в чате, — и без слова нажатие выглядело бы холостым. */
-.nct-css-echo {
+.nrn-t-css-echo {
     font-size: 14.5px;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
 /* --- узкие экраны --- */
 
 @media (max-width: 600px) {
-    .norse-timatal { font-size: 14px; }
-    .norse-timatal .nct-title { font-size: 26px; }
-    .norse-timatal .nct-section-title { font-size: 17px; }
-    .norse-timatal .nct-section-toggle { padding: 12px 2px; }
-    .norse-timatal .nct-table th,
-    .norse-timatal .nct-table td { padding: 6px 9px; }
-    .norse-timatal .nct-table th[data-col="num"],
-    .norse-timatal .nct-table td[data-col="num"] { padding-right: 1px; }
-    .norse-timatal .nct-table th[data-col="norse"],
-    .norse-timatal .nct-table td[data-col="norse"] { padding-left: 5px; }
-    .norse-timatal .nct-chip { padding: 5px 11px; font-size: 12px; }
-    .nct-now { flex-direction: column; gap: 3px; }
+    .nrn-timatal { font-size: 14px; }
+    .nrn-timatal .nrn-t-title { font-size: 26px; }
+    .nrn-timatal .nrn-t-section-title { font-size: 17px; }
+    .nrn-timatal .nrn-t-section-toggle { padding: 12px 2px; }
+    .nrn-timatal .nrn-t-table th,
+    .nrn-timatal .nrn-t-table td { padding: 6px 9px; }
+    .nrn-timatal .nrn-t-table th[data-col="num"],
+    .nrn-timatal .nrn-t-table td[data-col="num"] { padding-right: 1px; }
+    .nrn-timatal .nrn-t-table th[data-col="norse"],
+    .nrn-timatal .nrn-t-table td[data-col="norse"] { padding-left: 5px; }
+    .nrn-timatal .nrn-t-chip { padding: 5px 11px; font-size: 12px; }
+    .nrn-t-now { flex-direction: column; gap: 3px; }
 }
 
 /* ============================================================
@@ -2359,75 +2359,75 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Файлы — квадратные SVG (viewBox 0 0 48 48).
  * ============================================================ */
 
-.ncw-icon {
+.nrn-icon {
     display: inline-block;
     flex-shrink: 0;
     width: 18px;
     height: 18px;
     vertical-align: -0.22em;
-    --ncw-icon: url("icons/_fallback.svg");
-    background: var(--ncw-icon) center / contain no-repeat;
+    --nrn-icon: url("icons/_fallback.svg");
+    background: var(--nrn-icon) center / contain no-repeat;
 }
 
 /* --- сцена --- */
-.ncw-icon[data-icon="scene-weather"]   { --ncw-icon: url("icons/scene-weather.svg"); }
-.ncw-icon[data-icon="scene-location"]  { --ncw-icon: url("icons/scene-location.svg"); }
+.nrn-icon[data-icon="scene-weather"]   { --nrn-icon: url("icons/scene-weather.svg"); }
+.nrn-icon[data-icon="scene-location"]  { --nrn-icon: url("icons/scene-location.svg"); }
 
 /* --- время и календарь --- */
-.ncw-icon[data-icon="time-eykt"]       { --ncw-icon: url("icons/time-eykt.svg"); }
-.ncw-icon[data-icon="time-sun"]        { --ncw-icon: url("icons/time-sun.svg"); }
-.ncw-icon[data-icon="cal-weekday"]     { --ncw-icon: url("icons/cal-weekday.svg"); }
-.ncw-icon[data-icon="cal-vika"]        { --ncw-icon: url("icons/cal-vika.svg"); }
-.ncw-icon[data-icon="cal-date"]        { --ncw-icon: url("icons/cal-date.svg"); }
-.ncw-icon[data-icon="cal-auknaetr"]    { --ncw-icon: url("icons/cal-auknaetr.svg"); }
+.nrn-icon[data-icon="time-eykt"]       { --nrn-icon: url("icons/time-eykt.svg"); }
+.nrn-icon[data-icon="time-sun"]        { --nrn-icon: url("icons/time-sun.svg"); }
+.nrn-icon[data-icon="cal-weekday"]     { --nrn-icon: url("icons/cal-weekday.svg"); }
+.nrn-icon[data-icon="cal-vika"]        { --nrn-icon: url("icons/cal-vika.svg"); }
+.nrn-icon[data-icon="cal-date"]        { --nrn-icon: url("icons/cal-date.svg"); }
+.nrn-icon[data-icon="cal-auknaetr"]    { --nrn-icon: url("icons/cal-auknaetr.svg"); }
 /* cal-feast — знак праздника; файла пока нет, показывается `_fallback.svg`. */
-.ncw-icon[data-icon="season-sumar"]    { --ncw-icon: url("icons/season-sumar.svg"); }
-.ncw-icon[data-icon="season-vetr"]     { --ncw-icon: url("icons/season-vetr.svg"); }
-.ncw-icon[data-icon="moon-ny"]         { --ncw-icon: url("icons/moon-ny.svg"); }
-.ncw-icon[data-icon="moon-vaxandi"]    { --ncw-icon: url("icons/moon-vaxandi.svg"); }
-.ncw-icon[data-icon="moon-fullt"]      { --ncw-icon: url("icons/moon-fullt.svg"); }
-.ncw-icon[data-icon="moon-minnandi"]   { --ncw-icon: url("icons/moon-minnandi.svg"); }
-.ncw-icon[data-icon="moon-nid"]        { --ncw-icon: url("icons/moon-nid.svg"); }
+.nrn-icon[data-icon="season-sumar"]    { --nrn-icon: url("icons/season-sumar.svg"); }
+.nrn-icon[data-icon="season-vetr"]     { --nrn-icon: url("icons/season-vetr.svg"); }
+.nrn-icon[data-icon="moon-ny"]         { --nrn-icon: url("icons/moon-ny.svg"); }
+.nrn-icon[data-icon="moon-vaxandi"]    { --nrn-icon: url("icons/moon-vaxandi.svg"); }
+.nrn-icon[data-icon="moon-fullt"]      { --nrn-icon: url("icons/moon-fullt.svg"); }
+.nrn-icon[data-icon="moon-minnandi"]   { --nrn-icon: url("icons/moon-minnandi.svg"); }
+.nrn-icon[data-icon="moon-nid"]        { --nrn-icon: url("icons/moon-nid.svg"); }
 
 /* --- карточки {{char}} / {{user}} --- */
-.ncw-icon[data-icon="char-attire"]     { --ncw-icon: url("icons/char-attire.svg"); }
-.ncw-icon[data-icon="char-state"]      { --ncw-icon: url("icons/char-state.svg"); }
-.ncw-icon[data-icon="char-thought"]    { --ncw-icon: url("icons/char-thought.svg"); }
+.nrn-icon[data-icon="char-attire"]     { --nrn-icon: url("icons/char-attire.svg"); }
+.nrn-icon[data-icon="char-state"]      { --nrn-icon: url("icons/char-state.svg"); }
+.nrn-icon[data-icon="char-thought"]    { --nrn-icon: url("icons/char-thought.svg"); }
 
 /* --- фазы тела: один знак на всё состояние героини --- */
-.ncw-icon[data-icon="phase-tidir"]      { --ncw-icon: url("icons/phase-tidir.svg"); }
-.ncw-icon[data-icon="phase-hreinsun"]   { --ncw-icon: url("icons/phase-hreinsun.svg"); }
-.ncw-icon[data-icon="phase-opit"]       { --ncw-icon: url("icons/phase-opit.svg"); }
-.ncw-icon[data-icon="phase-thverrandi"] { --ncw-icon: url("icons/phase-thverrandi.svg"); }
-.ncw-icon[data-icon="phase-late"]       { --ncw-icon: url("icons/phase-late.svg"); }
-.ncw-icon[data-icon="phase-unknown"]    { --ncw-icon: url("icons/phase-unknown.svg"); }
-.ncw-icon[data-icon="phase-dulid"]      { --ncw-icon: url("icons/phase-dulid.svg"); }
-.ncw-icon[data-icon="phase-kviknat"]    { --ncw-icon: url("icons/phase-kviknat.svg"); }
-.ncw-icon[data-icon="phase-falli"]      { --ncw-icon: url("icons/phase-falli.svg"); }
-.ncw-icon[data-icon="phase-hridir"]     { --ncw-icon: url("icons/phase-hridir.svg"); }
-.ncw-icon[data-icon="phase-threat"]     { --ncw-icon: url("icons/phase-threat.svg"); }
-.ncw-icon[data-icon="phase-loss"]       { --ncw-icon: url("icons/phase-loss.svg"); }
-.ncw-icon[data-icon="phase-saeng"]      { --ncw-icon: url("icons/phase-saeng.svg"); }
-.ncw-icon[data-icon="phase-hreinsan"]   { --ncw-icon: url("icons/phase-hreinsan.svg"); }
-.ncw-icon[data-icon="phase-brjost"]     { --ncw-icon: url("icons/phase-brjost.svg"); }
-.ncw-icon[data-icon="phase-vending"]    { --ncw-icon: url("icons/phase-vending.svg"); }
+.nrn-icon[data-icon="phase-tidir"]      { --nrn-icon: url("icons/phase-tidir.svg"); }
+.nrn-icon[data-icon="phase-hreinsun"]   { --nrn-icon: url("icons/phase-hreinsun.svg"); }
+.nrn-icon[data-icon="phase-opit"]       { --nrn-icon: url("icons/phase-opit.svg"); }
+.nrn-icon[data-icon="phase-thverrandi"] { --nrn-icon: url("icons/phase-thverrandi.svg"); }
+.nrn-icon[data-icon="phase-late"]       { --nrn-icon: url("icons/phase-late.svg"); }
+.nrn-icon[data-icon="phase-unknown"]    { --nrn-icon: url("icons/phase-unknown.svg"); }
+.nrn-icon[data-icon="phase-dulid"]      { --nrn-icon: url("icons/phase-dulid.svg"); }
+.nrn-icon[data-icon="phase-kviknat"]    { --nrn-icon: url("icons/phase-kviknat.svg"); }
+.nrn-icon[data-icon="phase-falli"]      { --nrn-icon: url("icons/phase-falli.svg"); }
+.nrn-icon[data-icon="phase-hridir"]     { --nrn-icon: url("icons/phase-hridir.svg"); }
+.nrn-icon[data-icon="phase-threat"]     { --nrn-icon: url("icons/phase-threat.svg"); }
+.nrn-icon[data-icon="phase-loss"]       { --nrn-icon: url("icons/phase-loss.svg"); }
+.nrn-icon[data-icon="phase-saeng"]      { --nrn-icon: url("icons/phase-saeng.svg"); }
+.nrn-icon[data-icon="phase-hreinsan"]   { --nrn-icon: url("icons/phase-hreinsan.svg"); }
+.nrn-icon[data-icon="phase-brjost"]     { --nrn-icon: url("icons/phase-brjost.svg"); }
+.nrn-icon[data-icon="phase-vending"]    { --nrn-icon: url("icons/phase-vending.svg"); }
 
 /* --- сводка об утробе --- */
-.ncw-icon[data-icon="body-due"]        { --ncw-icon: url("icons/body-due.svg"); }
-.ncw-icon[data-icon="body-rest"]       { --ncw-icon: url("icons/body-rest.svg"); }
-.ncw-icon[data-icon="body-father"]     { --ncw-icon: url("icons/body-father.svg"); }
-.ncw-icon[data-icon="body-divination"] { --ncw-icon: url("icons/body-divination.svg"); }
+.nrn-icon[data-icon="body-due"]        { --nrn-icon: url("icons/body-due.svg"); }
+.nrn-icon[data-icon="body-rest"]       { --nrn-icon: url("icons/body-rest.svg"); }
+.nrn-icon[data-icon="body-father"]     { --nrn-icon: url("icons/body-father.svg"); }
+.nrn-icon[data-icon="body-divination"] { --nrn-icon: url("icons/body-divination.svg"); }
 
 /* --- приметы --- */
-.ncw-icon[data-icon="sign-breast"]       { --ncw-icon: url("icons/sign-breast.svg"); }
-.ncw-icon[data-icon="sign-nausea"]       { --ncw-icon: url("icons/sign-nausea.svg"); }
-.ncw-icon[data-icon="sign-false-hridir"] { --ncw-icon: url("icons/sign-false-hridir.svg"); }
-.ncw-icon[data-icon="sign-kicks-night"]  { --ncw-icon: url("icons/sign-kicks-night.svg"); }
-.ncw-icon[data-icon="sign-blood"]        { --ncw-icon: url("icons/sign-blood.svg"); }
-.ncw-icon[data-icon="sign-lettari"]      { --ncw-icon: url("icons/sign-lettari.svg"); }
-.ncw-icon[data-icon="sign-strain"]       { --ncw-icon: url("icons/sign-strain.svg"); }
-.ncw-icon[data-icon="sign-odd-blood"]    { --ncw-icon: url("icons/sign-odd-blood.svg"); }
-.ncw-icon[data-icon="sign-weather-toll"] { --ncw-icon: url("icons/sign-weather-toll.svg"); }
+.nrn-icon[data-icon="sign-breast"]       { --nrn-icon: url("icons/sign-breast.svg"); }
+.nrn-icon[data-icon="sign-nausea"]       { --nrn-icon: url("icons/sign-nausea.svg"); }
+.nrn-icon[data-icon="sign-false-hridir"] { --nrn-icon: url("icons/sign-false-hridir.svg"); }
+.nrn-icon[data-icon="sign-kicks-night"]  { --nrn-icon: url("icons/sign-kicks-night.svg"); }
+.nrn-icon[data-icon="sign-blood"]        { --nrn-icon: url("icons/sign-blood.svg"); }
+.nrn-icon[data-icon="sign-lettari"]      { --nrn-icon: url("icons/sign-lettari.svg"); }
+.nrn-icon[data-icon="sign-strain"]       { --nrn-icon: url("icons/sign-strain.svg"); }
+.nrn-icon[data-icon="sign-odd-blood"]    { --nrn-icon: url("icons/sign-odd-blood.svg"); }
+.nrn-icon[data-icon="sign-weather-toll"] { --nrn-icon: url("icons/sign-weather-toll.svg"); }
 /* Знаки примет цикла ещё не нарисованы: sign-sleep, sign-smell, sign-belly,
    sign-swelling, sign-ache, sign-mood, sign-hunger, sign-heat. Пока их нет
    в этом списке, панель рисует `_fallback.svg` и вёрстка этого не замечает —
@@ -2435,27 +2435,27 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
    восемь строк, и больше ничего трогать не придётся. */
 
 /* --- дозор --- */
-.ncw-icon[data-icon="watch-kicks"]     { --ncw-icon: url("icons/watch-kicks.svg"); }
-.ncw-icon[data-icon="watch-midwife"]   { --ncw-icon: url("icons/watch-midwife.svg"); }
-.ncw-icon[data-icon="watch-women"]     { --ncw-icon: url("icons/watch-women.svg"); }
-.ncw-icon[data-icon="watch-charms"]    { --ncw-icon: url("icons/watch-charms.svg"); }
-.ncw-icon[data-icon="watch-gear"]      { --ncw-icon: url("icons/watch-gear.svg"); }
-.ncw-icon[data-icon="watch-faderni"]   { --ncw-icon: url("icons/watch-faderni.svg"); }
-.ncw-icon[data-icon="watch-rank"]      { --ncw-icon: url("icons/watch-rank.svg"); }
-.ncw-icon[data-icon="watch-name"]      { --ncw-icon: url("icons/watch-name.svg"); }
+.nrn-icon[data-icon="watch-kicks"]     { --nrn-icon: url("icons/watch-kicks.svg"); }
+.nrn-icon[data-icon="watch-midwife"]   { --nrn-icon: url("icons/watch-midwife.svg"); }
+.nrn-icon[data-icon="watch-women"]     { --nrn-icon: url("icons/watch-women.svg"); }
+.nrn-icon[data-icon="watch-charms"]    { --nrn-icon: url("icons/watch-charms.svg"); }
+.nrn-icon[data-icon="watch-gear"]      { --nrn-icon: url("icons/watch-gear.svg"); }
+.nrn-icon[data-icon="watch-faderni"]   { --nrn-icon: url("icons/watch-faderni.svg"); }
+.nrn-icon[data-icon="watch-rank"]      { --nrn-icon: url("icons/watch-rank.svg"); }
+.nrn-icon[data-icon="watch-name"]      { --nrn-icon: url("icons/watch-name.svg"); }
 
 /* --- отвар, дети, совет --- */
-.ncw-icon[data-icon="draught"]         { --ncw-icon: url("icons/draught.svg"); }
-.ncw-icon[data-icon="child"]           { --ncw-icon: url("icons/child.svg"); }
-.ncw-icon[data-icon="child-need"]      { --ncw-icon: url("icons/child-need.svg"); }
-.ncw-icon[data-icon="child-mark"]      { --ncw-icon: url("icons/child-mark.svg"); }
-.ncw-icon[data-icon="advice"]          { --ncw-icon: url("icons/advice.svg"); }
+.nrn-icon[data-icon="draught"]         { --nrn-icon: url("icons/draught.svg"); }
+.nrn-icon[data-icon="child"]           { --nrn-icon: url("icons/child.svg"); }
+.nrn-icon[data-icon="child-need"]      { --nrn-icon: url("icons/child-need.svg"); }
+.nrn-icon[data-icon="child-mark"]      { --nrn-icon: url("icons/child-mark.svg"); }
+.nrn-icon[data-icon="advice"]          { --nrn-icon: url("icons/advice.svg"); }
 
 /* --- строка факта: знак, подпись, значение ---
    Заведена ради дозора и примет: раньше это были два текстовых узла, куда
    через « · » сваливалось до одиннадцати разнородных фактов. */
 
-.ncw-fact {
+.nrn-fact {
     display: flex;
     align-items: baseline;
     gap: 6px;
@@ -2466,19 +2466,19 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* В плотных строках знак чуть мельче общего: 18px перерастают строку в
    13.5px и разгоняют каждую строку с двадцати пикселей до двадцати четырёх,
    а таких строк в беременность полтора десятка. */
-.ncw-fact .ncw-icon {
+.nrn-fact .nrn-icon {
     width: 16px;
     height: 16px;
 }
 
-.ncw-fact-label {
+.nrn-fact-label {
     flex-shrink: 0;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
 }
 
-.ncw-fact-value {
+.nrn-fact-value {
     min-width: 0;
-    color: var(--ncw-text);
+    color: var(--nrn-text);
 }
 
 /*
@@ -2487,7 +2487,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Обе кучки короткие и по смыслу парные: чей ребёнок — и кто в доме рядом.
  * Рядом они и читаются одним взглядом, а не двумя.
  */
-.ncw-cycle-cols {
+.nrn-cycle-cols {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
     gap: 10px 16px;
@@ -2501,26 +2501,26 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Это целые фразы, и в широкую строку они ложатся лучше, чем в узкий
  * столбец. Столбцы набираются сами: хватает ширины — два, не хватает — один.
  */
-#ncw-cycle-signs {
+#nrn-cycle-signs {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
     gap: 2px 16px;
     align-items: start;
     margin-top: 10px;
     padding-top: 10px;
-    border-top: 1px solid var(--ncw-border-soft);
+    border-top: 1px solid var(--nrn-border-soft);
 }
 
-.ncw-cycle-col {
+.nrn-cycle-col {
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-width: 0;
 }
 
-#ncw-cycle-kicks,
-#ncw-cycle-extra,
-.ncw-cycle-group {
+#nrn-cycle-kicks,
+#nrn-cycle-extra,
+.nrn-cycle-group {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -2531,7 +2531,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  *
  * Слева приметы набраны Alegreya, справа род и дом — Cormorant Unicase.
  * Так видно оба сразу и на живом тексте. Когда выбор сделан: оставить
- * победителя одним правилом на `.ncw-leaf`, второе правило и лишний
+ * победителя одним правилом на `.nrn-leaf`, второе правило и лишний
  * @font-face в разделе 1 убрать.
  */
 /*
@@ -2541,24 +2541,24 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Norse, как дата и луна, и трогать их нельзя. Поэтому шрифт задан на самих
  * листах, а Norse стоит правилами выше с большим весом.
  */
-.ncw-leaf {
+.nrn-leaf {
     font-family: "Cormorant Unicase", Georgia, serif;
 }
 
-#ncw-cycle-signs {
+#nrn-cycle-signs {
     font-size: 17px;
 }
 
-.ncw-cycle-group {
+.nrn-cycle-group {
     font-size: 17.5px;
 }
 
 /* Курсива на листе нити нет нигде: он был у примет, у отвара и у совета,
    то есть у трёх блоков из пяти, и лист читался как сплошная присказка. */
-.ncw-leaf[data-leaf="freyja"],
-.ncw-leaf[data-leaf="freyja"] .ncw-fact-value,
-.ncw-leaf[data-leaf="freyja"] .ncw-draught-text,
-.ncw-leaf[data-leaf="freyja"] #ncw-advice-text {
+.nrn-leaf[data-leaf="freyja"],
+.nrn-leaf[data-leaf="freyja"] .nrn-fact-value,
+.nrn-leaf[data-leaf="freyja"] .nrn-draught-text,
+.nrn-leaf[data-leaf="freyja"] #nrn-advice-text {
     font-style: normal;
 }
 
@@ -2566,75 +2566,75 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Листы {{user}} и {{char}} — крупнее прочего: там две-три строки на весь
  * лист, и мельчить их незачем.
  */
-.ncw-leaf[data-leaf="user"],
-.ncw-leaf[data-leaf="char"] {
+.nrn-leaf[data-leaf="user"],
+.nrn-leaf[data-leaf="char"] {
     font-size: 19px;
 }
 
-.ncw-leaf[data-leaf="user"] .ncw-attire,
-.ncw-leaf[data-leaf="user"] .ncw-state,
-.ncw-leaf[data-leaf="char"] .ncw-attire,
-.ncw-leaf[data-leaf="char"] .ncw-state {
+.nrn-leaf[data-leaf="user"] .nrn-attire,
+.nrn-leaf[data-leaf="user"] .nrn-state,
+.nrn-leaf[data-leaf="char"] .nrn-attire,
+.nrn-leaf[data-leaf="char"] .nrn-state {
     font-size: inherit;
     line-height: 1.45;
 }
 
-#norse-calendar-widget .ncw-leaf[data-leaf="user"] .ncw-icon,
-#norse-calendar-widget .ncw-leaf[data-leaf="char"] .ncw-icon {
+#nrn-widget .nrn-leaf[data-leaf="user"] .nrn-icon,
+#nrn-widget .nrn-leaf[data-leaf="char"] .nrn-icon {
     width: 24px;
     height: 24px;
 }
 
 /* Настроение и невысказанная мысль — скандинавской латиницей: это не
    описание, а то, чем {{char}} назван в эту минуту. */
-#norse-calendar-widget .ncw-leaf[data-leaf="char"] .ncw-chip,
-#norse-calendar-widget .ncw-thought {
+#nrn-widget .nrn-leaf[data-leaf="char"] .nrn-chip,
+#nrn-widget .nrn-thought {
     font-family: "Norse", Georgia, serif !important;
     font-weight: 700 !important;
     text-transform: uppercase;
     letter-spacing: 0.8px;
 }
 
-#norse-calendar-widget .ncw-leaf[data-leaf="char"] .ncw-chip {
+#nrn-widget .nrn-leaf[data-leaf="char"] .nrn-chip {
     font-size: 17px;
 }
 
-#norse-calendar-widget .ncw-thought {
+#nrn-widget .nrn-thought {
     font-size: 19px;
     font-style: normal;
 }
 
 /* Заголовок кучки — тише всего в блоке: он не факт, а перегородка. */
-.ncw-group-title {
+.nrn-group-title {
     font-size: 11.5px;
     letter-spacing: 1.4px;
     text-transform: uppercase;
-    color: var(--ncw-text-dim);
+    color: var(--nrn-text-dim);
     opacity: 0.75;
     margin-bottom: 1px;
     padding-bottom: 2px;
-    border-bottom: 1px solid var(--ncw-border-soft);
+    border-bottom: 1px solid var(--nrn-border-soft);
 }
 
-.ncw-cycle-group .ncw-fact-value {
+.nrn-cycle-group .nrn-fact-value {
     font-style: normal;
 }
 
-/* Приметы остаются присказкой и держат курсив от .ncw-cycle-dim; род, дом
-   и шевеления — нет: там факты, а не лирика (см. .ncw-cycle-group выше). */
-#ncw-cycle-kicks .ncw-fact-value {
+/* Приметы остаются присказкой и держат курсив от .nrn-cycle-dim; род, дом
+   и шевеления — нет: там факты, а не лирика (см. .nrn-cycle-group выше). */
+#nrn-cycle-kicks .nrn-fact-value {
     font-style: normal;
 }
 
 /* Тревога красит значение акцентом. Знак покрасить нельзя — он цветной
    картинкой, — поэтому его подсвечиваем: тревожная строка должна ловить
    взгляд целиком, а не одной своей половиной. */
-.ncw-fact.ncw-alarm .ncw-fact-value {
-    color: var(--ncw-accent);
+.nrn-fact.nrn-alarm .nrn-fact-value {
+    color: var(--nrn-accent);
 }
 
-.ncw-fact.ncw-alarm .ncw-icon {
-    filter: drop-shadow(0 0 3px var(--ncw-accent-glow-strong));
+.nrn-fact.nrn-alarm .nrn-icon {
+    filter: drop-shadow(0 0 3px var(--nrn-accent-glow-strong));
 }
 
 /* --- знаки в левой колонке ---
@@ -2645,11 +2645,11 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* Знаки в строках даты равняем по середине текста, а не по базовой линии:
    сдвиг в em подгонялся под один кегль, а кегли тут разные — эйкта, дата и
    луна набраны по-своему, и знаки при базовой линии разъезжались. */
-#ncw-sun .ncw-icon,
-#ncw-week .ncw-icon,
-#ncw-date .ncw-icon,
-#ncw-lore .ncw-icon,
-.ncw-auk-title .ncw-icon {
+#nrn-sun .nrn-icon,
+#nrn-week .nrn-icon,
+#nrn-date .nrn-icon,
+#nrn-moon .nrn-icon,
+.nrn-auk-title .nrn-icon {
     width: 0.95em;
     height: 0.95em;
     margin-right: 6px;
@@ -2657,47 +2657,47 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 }
 
 /* Текст рядом с ними — тоже по середине, иначе равнять было бы не с чем. */
-#ncw-sun > *,
-#ncw-week > *,
-#ncw-date > *,
-#ncw-lore > * {
+#nrn-sun > *,
+#nrn-week > *,
+#nrn-date > *,
+#nrn-moon > * {
     vertical-align: middle;
 }
 
 /* В строке недели три разных факта подряд, и разводит их теперь не серая
    точка, а отступ перед знаком. */
-#ncw-week .ncw-icon {
+#nrn-week .nrn-icon {
     margin-left: 9px;
 }
 
-#ncw-week .ncw-icon:first-child {
+#nrn-week .nrn-icon:first-child {
     margin-left: 0;
 }
 
 /* Солнце: восемь эйкт — восемь румбов ровно по кругу. Файл один, стрелкой
    на север, остальное докручивается здесь. */
-#ncw-sun .ncw-icon[data-dir] {
+#nrn-sun .nrn-icon[data-dir] {
     transition: transform 0.3s ease;
 }
-#ncw-sun .ncw-icon[data-dir="0"] { transform: rotate(0deg); }
-#ncw-sun .ncw-icon[data-dir="1"] { transform: rotate(45deg); }
-#ncw-sun .ncw-icon[data-dir="2"] { transform: rotate(90deg); }
-#ncw-sun .ncw-icon[data-dir="3"] { transform: rotate(135deg); }
-#ncw-sun .ncw-icon[data-dir="4"] { transform: rotate(180deg); }
-#ncw-sun .ncw-icon[data-dir="5"] { transform: rotate(225deg); }
-#ncw-sun .ncw-icon[data-dir="6"] { transform: rotate(270deg); }
-#ncw-sun .ncw-icon[data-dir="7"] { transform: rotate(315deg); }
+#nrn-sun .nrn-icon[data-dir="0"] { transform: rotate(0deg); }
+#nrn-sun .nrn-icon[data-dir="1"] { transform: rotate(45deg); }
+#nrn-sun .nrn-icon[data-dir="2"] { transform: rotate(90deg); }
+#nrn-sun .nrn-icon[data-dir="3"] { transform: rotate(135deg); }
+#nrn-sun .nrn-icon[data-dir="4"] { transform: rotate(180deg); }
+#nrn-sun .nrn-icon[data-dir="5"] { transform: rotate(225deg); }
+#nrn-sun .nrn-icon[data-dir="6"] { transform: rotate(270deg); }
+#nrn-sun .nrn-icon[data-dir="7"] { transform: rotate(315deg); }
 
 /* Знак фазы тела — крупнее прочих: он один отвечает за всю колонку. */
-#ncw-cycle-text .ncw-icon {
+#nrn-cycle-text .nrn-icon {
     width: 22px;
     height: 22px;
     margin-right: 7px;
     vertical-align: middle;
 }
 
-#ncw-cycle-text > *,
-#ncw-cycle-status > * {
+#nrn-cycle-text > *,
+#nrn-cycle-status > * {
     vertical-align: middle;
 }
 
@@ -2729,13 +2729,13 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Доля от самой строки, а не абсолютные пиксели: так поблажка одинакова
  * и на крупной дате, и на мелкой примете, и в обеих раскладках.
  */
-#norse-calendar-widget .ncw-hint {
+#nrn-widget .nrn-hint {
     font-size: 0.88em;
     line-height: 1.35;
 }
 
 /* Заголовок кучки на листе — тоже подпись, но был мельче всего в блоке. */
-.ncw-group-title {
+.nrn-group-title {
     font-size: 13px;
 }
 
@@ -2750,7 +2750,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Что здесь делается, по порядку:
  *
  *   1. Отменяется всё, чем живёт доска: пропорции картинки, рисунки
- *      слоями, доли вместо пикселей, --ncw-px в кеглях.
+ *      слоями, доли вместо пикселей, --nrn-px в кеглях.
  *   2. Возвращается вёрстка 2.7.3: навершие с круглым медальоном погоды,
  *      три колонки (время — лист — деревяшки), циферблат эйкт.
  *   3. Прячется то, что есть только на доске (фигурки на шнурках), и
@@ -2760,26 +2760,26 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Роли элементов при этом не меняются: кнопка страницы остаётся кнопкой
  * страницы, а превращается она из фигурки в деревяшку на подвязках.
  *
- * Правила ниже нарочно все с `#norse-calendar-widget[data-skin="flat"]`:
+ * Правила ниже нарочно все с `#nrn-widget[data-skin="flat"]`:
  * им приходится перебивать раскладку доски, которая написана без
  * приставки и стоит выше по файлу.
  * ============================================================ */
 
 /* --- 18.1. отмена доски --- */
 
-#norse-calendar-widget[data-skin="flat"] {
+#nrn-widget[data-skin="flat"] {
     max-width: none;
     margin: 0 0 10px;
     /* Место под медальон погоды: круг свисает выше края панели. */
     padding-top: 50px;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-board {
+#nrn-widget[data-skin="flat"] .nrn-board {
     aspect-ratio: auto;
     overflow: visible;
     padding: 84px 16px 16px;
-    background: var(--ncw-board-bg, var(--ncw-bg));
-    border: 1px solid var(--ncw-border);
+    background: var(--nrn-board-bg, var(--nrn-bg));
+    border: 1px solid var(--nrn-border);
     border-radius: 10px;
     opacity: 0.97;
     transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
@@ -2788,11 +2788,11 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
      * Пиксель макета здесь равен настоящему.
      *
      * Кегли этой раскладки заданы ниже в обычных пикселях, но если где-то
-     * в общих разделах останется calc(N * var(--ncw-px)) — а он там есть,
+     * в общих разделах останется calc(N * var(--nrn-px)) — а он там есть,
      * например в сетке календаря, — то без этой строки он посчитался бы
      * от ширины доски и съёжился бы втрое.
      */
-    --ncw-px: 1px;
+    --nrn-px: 1px;
 
     /*
      * Три части в ряд: время — лист — деревяшки.
@@ -2808,31 +2808,31 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
      */
     display: grid;
     grid-template-columns:
-        minmax(0, var(--ncw-col-left, 1.4fr))
-        minmax(0, var(--ncw-col-mid, 2.3fr))
-        minmax(0, var(--ncw-col-rail, 1fr));
+        minmax(0, var(--nrn-col-left, 1.4fr))
+        minmax(0, var(--nrn-col-mid, 2.3fr))
+        minmax(0, var(--nrn-col-rail, 1fr));
     grid-template-rows: auto auto auto 1fr;
     gap: 14px 16px;
 }
 
 /* Рисунков в плоской раскладке нет: ни дерева, ни книги. */
-#norse-calendar-widget[data-skin="flat"] .ncw-board::before,
-#norse-calendar-widget[data-skin="flat"] .ncw-book::before {
+#nrn-widget[data-skin="flat"] .nrn-board::before,
+#nrn-widget[data-skin="flat"] .nrn-book::before {
     content: none;
 }
 
 /* Тень нужна буквам на пятнистом дереве; на ровной панели она только
    мылит их. */
-#norse-calendar-widget[data-skin="flat"] .ncw-beam-line,
-#norse-calendar-widget[data-skin="flat"] #ncw-datebox,
-#norse-calendar-widget[data-skin="flat"] #ncw-grid,
-#norse-calendar-widget[data-skin="flat"] #ncw-stub {
+#nrn-widget[data-skin="flat"] .nrn-beam-line,
+#nrn-widget[data-skin="flat"] #nrn-datebox,
+#nrn-widget[data-skin="flat"] #nrn-grid,
+#nrn-widget[data-skin="flat"] #nrn-stub {
     text-shadow: none;
 }
 
 /* Книга исчезает как коробка, но остаётся в разметке: её дети — лист,
    кнопки и плашка детей — становятся ячейками сетки панели. */
-#norse-calendar-widget[data-skin="flat"] .ncw-book {
+#nrn-widget[data-skin="flat"] .nrn-book {
     display: contents;
 }
 
@@ -2846,15 +2846,15 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * круга с запасом; сам круг лежит поверх, вне потока, потому что свисает
  * выше панели.
  */
-#norse-calendar-widget[data-skin="flat"] .ncw-beam {
+#nrn-widget[data-skin="flat"] .nrn-beam {
     position: absolute;
     inset: auto;
-    top: var(--ncw-plate-inset, 18px);
+    top: var(--nrn-plate-inset, 18px);
     left: 16px;
     right: 16px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    column-gap: var(--ncw-medallion-gap, 158px);
+    column-gap: var(--nrn-medallion-gap, 158px);
     align-items: start;
     justify-items: center;
     pointer-events: auto;
@@ -2863,11 +2863,11 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* Стопки «погода над временем» здесь нет: погода уходит в круг посередине,
    время остаётся деревянной плашкой слева. Обёртка растворяется, и оба
    становятся ячейками навершия. */
-#norse-calendar-widget[data-skin="flat"] .ncw-beam-left {
+#nrn-widget[data-skin="flat"] .nrn-beam-left {
     display: contents;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-beam-line {
+#nrn-widget[data-skin="flat"] .nrn-beam-line {
     font-size: 30px;
     line-height: 1.1;
     letter-spacing: 1.2px;
@@ -2876,7 +2876,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* Дерево — по левому краю панели, а не серединой своей половины: время
    суток читают первым, и начинаться ему положено там же, где начинается
    сама панель. */
-#norse-calendar-widget[data-skin="flat"] #ncw-time-line {
+#nrn-widget[data-skin="flat"] #nrn-time-line {
     grid-column: 1;
     grid-row: 1;
     justify-self: start;
@@ -2885,13 +2885,13 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     gap: 10px;
     max-width: 100%;
     padding: 10px 18px;
-    background: var(--ncw-plate-wood-bg, var(--ncw-bg-raised));
-    border: 1px solid var(--ncw-border);
+    background: var(--nrn-plate-wood-bg, var(--nrn-bg-raised));
+    border: 1px solid var(--nrn-border);
     border-radius: 5px;
-    color: var(--ncw-text-panel);
+    color: var(--nrn-text-panel);
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-eykt-num {
+#nrn-widget[data-skin="flat"] #nrn-eykt-num {
     flex-shrink: 0;
     margin-left: 0;
 }
@@ -2900,7 +2900,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * У места подложки нет: она налезала на круг погоды. Убрана именно
  * подложка — рамка, фон и поля, — а знак с надписью остались как были.
  */
-#norse-calendar-widget[data-skin="flat"] #ncw-location-text {
+#nrn-widget[data-skin="flat"] #nrn-location-text {
     position: static;
     grid-column: 2;
     grid-row: 1;
@@ -2909,13 +2909,13 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     gap: 10px;
     width: auto;
     max-width: 100%;
-    color: var(--ncw-text-panel);
+    color: var(--nrn-text-panel);
 }
 
 /* Знаки погоды и места живут только здесь: на доске их убрали нарочно —
    там всё нарисовано, и знак рядом с надписью был бы вторым рисунком
    поверх первого. */
-#norse-calendar-widget[data-skin="flat"] .ncw-plate-icon {
+#nrn-widget[data-skin="flat"] .nrn-plate-icon {
     display: inline-block;
     flex-shrink: 0;
     width: 1em;
@@ -2924,12 +2924,12 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 
 /* --- медальон погоды --- */
 
-#norse-calendar-widget[data-skin="flat"] #ncw-weather-text {
+#nrn-widget[data-skin="flat"] #nrn-weather-text {
     position: absolute;
     /* Отсчёт от верха навершия, а оно само отступило вниз на
-       --ncw-plate-inset: круг должен свисать за верхний край панели,
+       --nrn-plate-inset: круг должен свисать за верхний край панели,
        отсюда и вычитание. */
-    top: calc(-46px - var(--ncw-plate-inset, 18px));
+    top: calc(-46px - var(--nrn-plate-inset, 18px));
     left: 50%;
     transform: translateX(-50%);
     width: 130px;
@@ -2937,10 +2937,10 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--ncw-border);
+    border: 1px solid var(--nrn-border);
     border-radius: 50%;
-    background: var(--ncw-medallion-bg, var(--ncw-bg-raised));
-    box-shadow: 0 0 0 4px var(--ncw-board-bg, var(--ncw-bg));
+    background: var(--nrn-medallion-bg, var(--nrn-bg-raised));
+    box-shadow: 0 0 0 4px var(--nrn-board-bg, var(--nrn-bg));
     overflow: visible;
 }
 
@@ -2952,7 +2952,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * серединка круга, надписи — дуга по низу, и меняться местами в разметке
  * им нельзя.
  */
-#norse-calendar-widget[data-skin="flat"] .ncw-medallion-svg {
+#nrn-widget[data-skin="flat"] .nrn-medallion-svg {
     display: block;
     position: absolute;
     inset: 0;
@@ -2963,19 +2963,19 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     pointer-events: none;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-medallion-text {
+#nrn-widget[data-skin="flat"] .nrn-medallion-text {
     font-family: "Norse", Georgia, serif;
     font-size: 16px;
     letter-spacing: 0.6px;
     text-transform: uppercase;
-    fill: var(--ncw-text-weather);
+    fill: var(--nrn-text-weather);
     paint-order: stroke;
-    stroke: var(--ncw-medallion-bg, var(--ncw-bg-raised));
+    stroke: var(--nrn-medallion-bg, var(--nrn-bg-raised));
     stroke-width: 3px;
     stroke-linejoin: round;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-medallion-icon {
+#nrn-widget[data-skin="flat"] .nrn-medallion-icon {
     display: inline-block;
     position: relative;
     z-index: 1;
@@ -2986,7 +2986,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 }
 
 /* Погода, которая на дугу не легла, — прямой строкой под кругом. */
-#norse-calendar-widget[data-skin="flat"] #ncw-weather-value {
+#nrn-widget[data-skin="flat"] #nrn-weather-value {
     position: absolute;
     top: calc(100% + 8px);
     left: 50%;
@@ -2997,17 +2997,17 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     font-weight: 400;
     font-size: 18px;
     letter-spacing: 1.5px;
-    color: var(--ncw-text-weather);
+    color: var(--nrn-text-weather);
 }
 
 /* А та, что легла, второй раз не пишется. */
-#norse-calendar-widget[data-skin="flat"] .ncw-weather-curved #ncw-weather-value {
+#nrn-widget[data-skin="flat"] .nrn-weather-curved #nrn-weather-value {
     display: none;
 }
 
 /* --- 18.3. левая колонка: круг эйкт, дата, календарик --- */
 
-#norse-calendar-widget[data-skin="flat"] .ncw-wood {
+#nrn-widget[data-skin="flat"] .nrn-wood {
     position: static;
     grid-column: 1;
     grid-row: 1 / -1;
@@ -3021,18 +3021,18 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     flex-direction: column;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-datebox {
+#nrn-widget[data-skin="flat"] #nrn-datebox {
     position: static;
     width: auto;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-grid {
+#nrn-widget[data-skin="flat"] #nrn-grid {
     position: static;
     bottom: auto;
     width: auto;
     margin-top: auto;
     padding-top: 12px;
-    border-top: 1px solid var(--ncw-border-soft);
+    border-top: 1px solid var(--nrn-border-soft);
 }
 
 /*
@@ -3046,7 +3046,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * Круг занимает всю ширину колонки, но не больше 230px: колонка бывает
  * широкой, и жёсткие пиксели оставляли бы по бокам пустоту.
  */
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir {
+#nrn-widget[data-skin="flat"] .nrn-vegvisir {
     position: relative;
     left: auto;
     top: auto;
@@ -3059,55 +3059,55 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
    подогнана под нарисованный знак. Здесь знака нет, и лучам положено
    доставать до самого края круга: короткие ножки на пустом поле выглядели
    бы обрубками. */
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir-svg {
+#nrn-widget[data-skin="flat"] .nrn-vegvisir-svg {
     transform: scale(1.2);
 }
 
 /* Свечение вокруг луча — примета доски: там оно отсвет очага на дереве.
    На ровной панели луч просто крашеный. */
-#norse-calendar-widget[data-skin="flat"] .ncw-ray-halo {
+#nrn-widget[data-skin="flat"] .nrn-ray-halo {
     display: none;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-ray-core {
-    stroke: var(--ncw-dial-ray-bg, var(--ncw-text-muted));
+#nrn-widget[data-skin="flat"] .nrn-ray-core {
+    stroke: var(--nrn-dial-ray-bg, var(--nrn-text-muted));
     stroke-width: 7;
     stroke-linecap: butt;
 }
 
 /* Погасшие лучи здесь видны, а не спрятаны: из восьми складывается сам
    циферблат, и без них подсвеченный висел бы в пустоте. */
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir-ray {
+#nrn-widget[data-skin="flat"] .nrn-vegvisir-ray {
     opacity: 0.75;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="0"] .ncw-vegvisir-ray[data-ray="0"],
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="1"] .ncw-vegvisir-ray[data-ray="1"],
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="2"] .ncw-vegvisir-ray[data-ray="2"],
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="3"] .ncw-vegvisir-ray[data-ray="3"],
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="4"] .ncw-vegvisir-ray[data-ray="4"],
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="5"] .ncw-vegvisir-ray[data-ray="5"],
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="6"] .ncw-vegvisir-ray[data-ray="6"],
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="7"] .ncw-vegvisir-ray[data-ray="7"] {
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="0"] .nrn-vegvisir-ray[data-ray="0"],
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="1"] .nrn-vegvisir-ray[data-ray="1"],
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="2"] .nrn-vegvisir-ray[data-ray="2"],
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="3"] .nrn-vegvisir-ray[data-ray="3"],
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="4"] .nrn-vegvisir-ray[data-ray="4"],
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"],
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"],
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] {
     opacity: 1;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="0"] .ncw-vegvisir-ray[data-ray="0"] .ncw-ray-core,
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="1"] .ncw-vegvisir-ray[data-ray="1"] .ncw-ray-core,
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="2"] .ncw-vegvisir-ray[data-ray="2"] .ncw-ray-core,
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="3"] .ncw-vegvisir-ray[data-ray="3"] .ncw-ray-core,
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="4"] .ncw-vegvisir-ray[data-ray="4"] .ncw-ray-core,
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="5"] .ncw-vegvisir-ray[data-ray="5"] .ncw-ray-core,
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="6"] .ncw-vegvisir-ray[data-ray="6"] .ncw-ray-core,
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="7"] .ncw-vegvisir-ray[data-ray="7"] .ncw-ray-core {
-    stroke: var(--ncw-accent);
-    filter: drop-shadow(0 0 4px var(--ncw-accent-glow));
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="0"] .nrn-vegvisir-ray[data-ray="0"] .nrn-ray-core,
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="1"] .nrn-vegvisir-ray[data-ray="1"] .nrn-ray-core,
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="2"] .nrn-vegvisir-ray[data-ray="2"] .nrn-ray-core,
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="3"] .nrn-vegvisir-ray[data-ray="3"] .nrn-ray-core,
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="4"] .nrn-vegvisir-ray[data-ray="4"] .nrn-ray-core,
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"] .nrn-ray-core,
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"] .nrn-ray-core,
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] .nrn-ray-core {
+    stroke: var(--nrn-accent);
+    filter: drop-shadow(0 0 4px var(--nrn-accent-glow));
 }
 
 /* Сердцевина — деревянный кружок поверх лучей: он же прячет их внутренние
    концы. На доске середину знака рисует сама картинка, и там сердцевина
    спрятана. */
-#norse-calendar-widget[data-skin="flat"] .ncw-dial-hub {
+#nrn-widget[data-skin="flat"] .nrn-dial-hub {
     display: flex;
     position: absolute;
     top: 50%;
@@ -3117,18 +3117,18 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     transform: translate(-50%, -50%);
     align-items: center;
     justify-content: center;
-    background: var(--ncw-dial-hub-bg, var(--ncw-bg-raised));
-    border: 1px solid var(--ncw-border);
+    background: var(--nrn-dial-hub-bg, var(--nrn-bg-raised));
+    border: 1px solid var(--nrn-border);
     border-radius: 50%;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-dial-pointer {
+#nrn-widget[data-skin="flat"] .nrn-dial-pointer {
     position: absolute;
     inset: 0;
     transition: transform 0.35s ease;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-dial-pointer::before {
+#nrn-widget[data-skin="flat"] .nrn-dial-pointer::before {
     content: "";
     position: absolute;
     top: 4px;
@@ -3136,31 +3136,31 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     margin-left: -8px;
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
-    border-bottom: 12px solid var(--ncw-accent);
+    border-bottom: 12px solid var(--nrn-accent);
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="0"] .ncw-dial-pointer { transform: rotate(0deg); }
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="1"] .ncw-dial-pointer { transform: rotate(45deg); }
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="2"] .ncw-dial-pointer { transform: rotate(90deg); }
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="3"] .ncw-dial-pointer { transform: rotate(135deg); }
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="4"] .ncw-dial-pointer { transform: rotate(180deg); }
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="5"] .ncw-dial-pointer { transform: rotate(225deg); }
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="6"] .ncw-dial-pointer { transform: rotate(270deg); }
-#norse-calendar-widget[data-skin="flat"] .ncw-vegvisir[data-eykt="7"] .ncw-dial-pointer { transform: rotate(315deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="0"] .nrn-dial-pointer { transform: rotate(0deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="1"] .nrn-dial-pointer { transform: rotate(45deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="2"] .nrn-dial-pointer { transform: rotate(90deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="3"] .nrn-dial-pointer { transform: rotate(135deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="4"] .nrn-dial-pointer { transform: rotate(180deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="5"] .nrn-dial-pointer { transform: rotate(225deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="6"] .nrn-dial-pointer { transform: rotate(270deg); }
+#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="7"] .nrn-dial-pointer { transform: rotate(315deg); }
 
 /* Второй кружок — под знак времени суток. */
-#norse-calendar-widget[data-skin="flat"] .ncw-dial-core {
+#nrn-widget[data-skin="flat"] .nrn-dial-core {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 66%;
     height: 66%;
-    background: var(--ncw-dial-core-bg, var(--ncw-bg-open));
-    border: 1px solid var(--ncw-border-soft);
+    background: var(--nrn-dial-core-bg, var(--nrn-bg-open));
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 50%;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-dial-icon {
+#nrn-widget[data-skin="flat"] .nrn-dial-icon {
     display: inline-block;
     width: 68%;
     height: 68%;
@@ -3168,50 +3168,50 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 
 /* --- строки даты: кегли настоящие, а не доли доски --- */
 
-#norse-calendar-widget[data-skin="flat"] .ncw-sun-line {
+#nrn-widget[data-skin="flat"] .nrn-sun-line {
     font-size: 17px;
     margin-bottom: 10px;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-week {
+#nrn-widget[data-skin="flat"] #nrn-week {
     font-size: 22px;
     letter-spacing: 0.5px;
     margin: 4px 0;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-date {
+#nrn-widget[data-skin="flat"] #nrn-date {
     font-size: 30px;
     margin: 4px 0 6px;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-lore {
+#nrn-widget[data-skin="flat"] #nrn-moon {
     font-size: 20px;
     margin-bottom: 7px;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-feast {
+#nrn-widget[data-skin="flat"] #nrn-feast {
     font-size: 23px;
     margin-bottom: 8px;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-row {
+#nrn-widget[data-skin="flat"] .nrn-row {
     gap: 4px;
     margin-bottom: 4px;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-cell {
+#nrn-widget[data-skin="flat"] .nrn-cell {
     font-size: 15px;
     padding: 6px 0;
     border-radius: 4px;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-wd {
+#nrn-widget[data-skin="flat"] .nrn-wd {
     font-size: 13px;
     margin-bottom: 3px;
     padding-bottom: 5px;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-auk-title {
+#nrn-widget[data-skin="flat"] .nrn-auk-title {
     font-size: 15px;
     letter-spacing: 1px;
     padding: 7px 0 9px;
@@ -3221,7 +3221,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* --- 18.4. лист и деревяшки --- */
 
 /* Средняя часть — лист, на который пишет выбранная деревяшка. */
-#norse-calendar-widget[data-skin="flat"] .ncw-page {
+#nrn-widget[data-skin="flat"] .nrn-page {
     position: static;
     grid-column: 2;
     grid-row: 1 / -1;
@@ -3231,8 +3231,8 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     padding: 12px 16px;
     overflow: visible;
     zoom: 1;
-    background: var(--ncw-page-bg, var(--ncw-bg-raised));
-    border: 1px solid var(--ncw-border-soft);
+    background: var(--nrn-page-bg, var(--nrn-bg-raised));
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 4px;
 }
 
@@ -3241,7 +3241,7 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * была фигуркой. Подвязки нарисованы псевдоэлементами: две кожаные
  * полоски, уходящие вверх за край деревяшки.
  */
-#norse-calendar-widget[data-skin="flat"] .ncw-fig {
+#nrn-widget[data-skin="flat"] .nrn-fig {
     position: relative;
     grid-column: 3;
     align-self: start;
@@ -3252,45 +3252,45 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     top: auto;
     margin-top: 10px;
     padding: 9px 10px 10px;
-    background: var(--ncw-plank-bg, var(--ncw-bg-raised));
+    background: var(--nrn-plank-bg, var(--nrn-bg-raised));
     background-image: none;
-    border: 1px solid var(--ncw-border);
+    border: 1px solid var(--nrn-border);
     border-radius: 5px;
     filter: none;
     pointer-events: auto;
     cursor: pointer;
-    color: var(--ncw-text-panel);
+    color: var(--nrn-text-panel);
     font: inherit;
     transition: background 0.25s ease, border-color 0.25s ease;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-fig::before,
-#norse-calendar-widget[data-skin="flat"] .ncw-fig::after {
+#nrn-widget[data-skin="flat"] .nrn-fig::before,
+#nrn-widget[data-skin="flat"] .nrn-fig::after {
     content: "";
     position: absolute;
     top: -10px;
     width: 4px;
     height: 12px;
-    background: var(--ncw-strap-bg, var(--ncw-border));
+    background: var(--nrn-strap-bg, var(--nrn-border));
     border-radius: 2px 2px 0 0;
     opacity: 0.8;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-fig::before { left: 22%; }
-#norse-calendar-widget[data-skin="flat"] .ncw-fig::after { right: 22%; }
+#nrn-widget[data-skin="flat"] .nrn-fig::before { left: 22%; }
+#nrn-widget[data-skin="flat"] .nrn-fig::after { right: 22%; }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-fig:hover {
+#nrn-widget[data-skin="flat"] .nrn-fig:hover {
     filter: none;
-    background: var(--ncw-bg-hover);
+    background: var(--nrn-bg-hover);
 }
 
 /* Горячее место нужно было фигуркам: их прямоугольники налезали друг на
    друга. У деревяшек такой беды нет, и кликает вся кнопка целиком. */
-#norse-calendar-widget[data-skin="flat"] .ncw-fig-hit {
+#nrn-widget[data-skin="flat"] .nrn-fig-hit {
     display: none;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-fig-name {
+#nrn-widget[data-skin="flat"] .nrn-fig-name {
     display: block;
     padding: 2px 0;
     font-family: "Norse", Georgia, serif !important;
@@ -3304,19 +3304,19 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     white-space: nowrap;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-fig-on {
-    background: var(--ncw-plank-on-bg, var(--ncw-bg-open));
-    border-color: var(--ncw-accent-border-dim);
+#nrn-widget[data-skin="flat"] .nrn-fig-on {
+    background: var(--nrn-plank-on-bg, var(--nrn-bg-open));
+    border-color: var(--nrn-accent-border-dim);
     filter: none;
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-fig-on .ncw-fig-name {
-    color: var(--ncw-text-bright);
+#nrn-widget[data-skin="flat"] .nrn-fig-on .nrn-fig-name {
+    color: var(--nrn-text-bright);
 }
 
-#norse-calendar-widget[data-skin="flat"] .ncw-fig:focus-visible {
+#nrn-widget[data-skin="flat"] .nrn-fig:focus-visible {
     filter: none;
-    outline: 1px solid var(--ncw-accent);
+    outline: 1px solid var(--nrn-accent);
     outline-offset: 2px;
 }
 
@@ -3325,38 +3325,38 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
  * всё. Стоит вплотную под деревяшкой хозяйки, потому что это её тело,
  * и своей доски оно не просит.
  */
-#norse-calendar-widget[data-skin="flat"] #ncw-fig-freyja {
+#nrn-widget[data-skin="flat"] #nrn-fig-freyja {
     margin-top: -4px;
     padding: 5px 8px;
-    background: var(--ncw-chip-bg);
-    border: 1px solid var(--ncw-chip-border);
+    background: var(--nrn-chip-bg);
+    border: 1px solid var(--nrn-chip-border);
     border-radius: 10px;
-    color: var(--ncw-chip-text);
+    color: var(--nrn-chip-text);
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-fig-freyja::before,
-#norse-calendar-widget[data-skin="flat"] #ncw-fig-freyja::after {
+#nrn-widget[data-skin="flat"] #nrn-fig-freyja::before,
+#nrn-widget[data-skin="flat"] #nrn-fig-freyja::after {
     content: none;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-fig-freyja .ncw-fig-name {
+#nrn-widget[data-skin="flat"] #nrn-fig-freyja .nrn-fig-name {
     font-weight: 400 !important;
     font-size: 16px;
     letter-spacing: 1.2px;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-fig-freyja.ncw-fig-on {
-    background: var(--ncw-accent-glow);
-    border-color: var(--ncw-accent);
-    color: var(--ncw-accent-contrast);
+#nrn-widget[data-skin="flat"] #nrn-fig-freyja.nrn-fig-on {
+    background: var(--nrn-accent-glow);
+    border-color: var(--nrn-accent);
+    color: var(--nrn-accent-contrast);
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-fig-freyja.ncw-fig-on .ncw-fig-name {
-    color: var(--ncw-accent-contrast);
+#nrn-widget[data-skin="flat"] #nrn-fig-freyja.nrn-fig-on .nrn-fig-name {
+    color: var(--nrn-accent-contrast);
 }
 
 /* Листик с детьми — под кнопками и на любой странице. */
-#norse-calendar-widget[data-skin="flat"] .ncw-children {
+#nrn-widget[data-skin="flat"] .nrn-children {
     position: static;
     grid-column: 3;
     grid-row: 4;
@@ -3368,12 +3368,12 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
     overflow: visible;
     zoom: 1;
     padding: 10px 12px;
-    background: var(--ncw-page-bg, var(--ncw-bg-raised));
-    border: 1px solid var(--ncw-border-soft);
+    background: var(--nrn-page-bg, var(--nrn-bg-raised));
+    border: 1px solid var(--nrn-border-soft);
     border-radius: 4px;
 }
 
-#norse-calendar-widget[data-skin="flat"] #ncw-stub {
+#nrn-widget[data-skin="flat"] #nrn-stub {
     position: static;
     grid-column: 1 / -1;
     transform: none;
@@ -3386,37 +3386,37 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
 /* В узкой панели три части складываются в столбик: время, деревяшки, лист.
    Деревяшки идут перед листом — сперва выбираешь, потом читаешь. */
 @container ncw (max-width: 900px) {
-    #norse-calendar-widget[data-skin="flat"] .ncw-board {
+    #nrn-widget[data-skin="flat"] .nrn-board {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto;
     }
-    #norse-calendar-widget[data-skin="flat"] .ncw-wood,
-    #norse-calendar-widget[data-skin="flat"] .ncw-page,
-    #norse-calendar-widget[data-skin="flat"] .ncw-fig,
-    #norse-calendar-widget[data-skin="flat"] .ncw-children {
+    #nrn-widget[data-skin="flat"] .nrn-wood,
+    #nrn-widget[data-skin="flat"] .nrn-page,
+    #nrn-widget[data-skin="flat"] .nrn-fig,
+    #nrn-widget[data-skin="flat"] .nrn-children {
         grid-column: 1;
         grid-row: auto;
     }
-    #norse-calendar-widget[data-skin="flat"] .ncw-wood {
+    #nrn-widget[data-skin="flat"] .nrn-wood {
         order: 1;
-        border-bottom: 1px solid var(--ncw-border-soft);
+        border-bottom: 1px solid var(--nrn-border-soft);
         padding-bottom: 12px;
     }
-    #norse-calendar-widget[data-skin="flat"] .ncw-fig { order: 2; }
-    #norse-calendar-widget[data-skin="flat"] .ncw-children { order: 3; }
-    #norse-calendar-widget[data-skin="flat"] .ncw-page { order: 4; }
+    #nrn-widget[data-skin="flat"] .nrn-fig { order: 2; }
+    #nrn-widget[data-skin="flat"] .nrn-children { order: 3; }
+    #nrn-widget[data-skin="flat"] .nrn-page { order: 4; }
 }
 
 /* Совсем узкая: круг погоды перестаёт свисать за край и встаёт в столбик
    вместе с плашками — свисать ему больше не над чем. */
 @container ncw (max-width: 480px) {
-    #norse-calendar-widget[data-skin="flat"] {
+    #nrn-widget[data-skin="flat"] {
         padding-top: 0;
     }
-    #norse-calendar-widget[data-skin="flat"] .ncw-board {
+    #nrn-widget[data-skin="flat"] .nrn-board {
         padding-top: 16px;
     }
-    #norse-calendar-widget[data-skin="flat"] .ncw-beam {
+    #nrn-widget[data-skin="flat"] .nrn-beam {
         position: static;
         display: flex;
         flex-direction: column;
@@ -3424,19 +3424,19 @@ dialog.popup.nc-popup .popup-controls .menu_button:hover {
         gap: 8px;
         margin-bottom: 14px;
     }
-    #norse-calendar-widget[data-skin="flat"] #ncw-weather-text {
+    #nrn-widget[data-skin="flat"] #nrn-weather-text {
         position: static;
         transform: none;
         order: -1;
         width: 108px;
         height: 108px;
     }
-    #norse-calendar-widget[data-skin="flat"] .ncw-medallion-icon {
+    #nrn-widget[data-skin="flat"] .nrn-medallion-icon {
         width: 50px;
         height: 50px;
         margin-bottom: 22px;
     }
-    #norse-calendar-widget[data-skin="flat"] #ncw-weather-value {
+    #nrn-widget[data-skin="flat"] #nrn-weather-value {
         position: static;
         transform: none;
         width: auto;

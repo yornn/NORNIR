@@ -1,9 +1,9 @@
 /*
- * Norse Calendar — Tímatal, мини-справочник по счёту времени.
+ * NORNIR — Tímatal, мини-справочник по счёту времени.
  *
  * Tímatal (др.-исл. «счёт времени») — окно из меню «волшебной палочки»
  * рядом с полем ввода. Собирает в одном месте эйкты, месяцы, дни недели,
- * фазы Луны и шпаргалку по блоку <yorni>, чтобы не сверяться с заметками
+ * фазы Луны и шпаргалку по маркеру, чтобы не сверяться с заметками
  * посреди ролевой.
  *
  * Справочник настраивается под себя, и настройки запоминаются:
@@ -35,12 +35,11 @@ import {
     AUK_AFTER_MONTH,
     COMMON_YEAR_DAYS,
     EYKTIR,
-    MONTHS_LORE,
+    MONTHS,
     MOON_PHASES,
     SUMARAUKI_DAYS,
-    WEEKDAYS_LORE,
+    WEEKDAYS,
     aukDays,
-    dayOfYear,
     eyktForHour,
     hasDate,
     hasTime,
@@ -53,8 +52,9 @@ import {
     seasonOf,
     vikaOf,
     weekdayOf,
-    weeksInYear,
-    yearLength,
+    weeksInMisseri,
+    dayOfMisseri,
+    misseriLength,
 } from "./parser.js";
 
 import {
@@ -127,11 +127,11 @@ export const isPermanent = (key) => PERMANENT_COLUMNS.includes(key);
 
 /** Ряд облачков: какие колонки показывать в таблицах этого раздела. */
 function chipsRow(columns, prefs) {
-    const row = h("div", "nct-chips-row");
+    const row = h("div", "nrn-t-chips-row");
     for (const key of columns) {
         if (isPermanent(key)) continue;
         const on = prefs.isColumnVisible(key);
-        const chip = h("button", on ? "nct-chip nct-chip-on" : "nct-chip");
+        const chip = h("button", on ? "nrn-t-chip nrn-t-chip-on" : "nrn-t-chip");
         chip.type = "button";
         chip.dataset.col = key;
         chip.setAttribute("aria-pressed", String(on));
@@ -153,13 +153,13 @@ function chipsRow(columns, prefs) {
  * @param {object} prefs Настройки вида (см. buildReference)
  */
 function table(columns, rows, prefs) {
-    const scroller = h("div", "nct-table-wrap");
-    const tbl = h("table", "nct-table");
+    const scroller = h("div", "nrn-t-table-wrap");
+    const tbl = h("table", "nrn-t-table");
 
     const thead = h("thead");
     const headRow = h("tr");
     for (const key of columns) {
-        const th = h("th", prefs.isColumnVisible(key) ? null : "nct-col-off");
+        const th = h("th", prefs.isColumnVisible(key) ? null : "nrn-t-col-off");
         th.dataset.col = key;
         th.textContent = COLUMN_LABELS[key]();
         headRow.append(th);
@@ -169,10 +169,10 @@ function table(columns, rows, prefs) {
 
     const tbody = h("tbody");
     for (const row of rows) {
-        const tr = h("tr", row.current ? "nct-current" : null);
+        const tr = h("tr", row.current ? "nrn-t-current" : null);
         if (row.current) tr.title = t`Current state of the scene`;
         for (const key of columns) {
-            const td = h("td", prefs.isColumnVisible(key) ? null : "nct-col-off");
+            const td = h("td", prefs.isColumnVisible(key) ? null : "nrn-t-col-off");
             td.dataset.col = key;
             const cell = row.cells[key];
             if (cell instanceof Node) td.append(cell);
@@ -181,7 +181,7 @@ function table(columns, rows, prefs) {
         }
         // Маркер вешается на первую ячейку — она всегда постоянная, так что
         // подсветка текущей строки не пропадёт вместе с выключенной колонкой.
-        if (row.current) tr.firstElementChild?.prepend(h("span", "nct-marker", "▸"));
+        if (row.current) tr.firstElementChild?.prepend(h("span", "nrn-t-marker", "▸"));
         tbody.append(tr);
     }
     tbl.append(tbody);
@@ -193,10 +193,10 @@ function table(columns, rows, prefs) {
 /** Применяет состояние колонки ко всем таблицам и облачкам окна. */
 function applyColumn(root, key, visible) {
     for (const cell of root.querySelectorAll(`th[data-col="${key}"], td[data-col="${key}"]`)) {
-        cell.classList.toggle("nct-col-off", !visible);
+        cell.classList.toggle("nrn-t-col-off", !visible);
     }
-    for (const chip of root.querySelectorAll(`.nct-chip[data-col="${key}"]`)) {
-        chip.classList.toggle("nct-chip-on", visible);
+    for (const chip of root.querySelectorAll(`.nrn-t-chip[data-col="${key}"]`)) {
+        chip.classList.toggle("nrn-t-chip-on", visible);
         chip.setAttribute("aria-pressed", String(visible));
     }
 }
@@ -221,26 +221,26 @@ function nowBanner(state) {
         if (isAuk(month)) {
             parts.push(`${isSumaraukiYear(year) ? "Sumarauki" : "Auknætr"} ${day}/${aukDays(year)}, ${year}`);
         } else {
-            parts.push(`${day} ${MONTHS_LORE[month - 1].ru} ${year}`);
+            parts.push(`${day} ${MONTHS[month - 1].ru} ${year}`);
         }
-        parts.push(WEEKDAYS_LORE[weekdayOf(year, month, day)].ru);
-        parts.push(`vika ${vikaOf(year, month, day)}/${weeksInYear(year)}`);
+        parts.push(WEEKDAYS[weekdayOf(year, month, day)].ru);
+        parts.push(`vika ${vikaOf(year, month, day)}/${weeksInMisseri(year, month)}`);
         const { phase } = moonPhase(year, month, day);
         parts.push(`${phase.icon} ${phase.norse}`);
     }
 
-    const banner = h("div", "nct-now");
-    banner.append(h("span", "nct-now-label", t`In the scene now`));
-    banner.append(h("span", "nct-now-value", parts.join("  •  ")));
+    const banner = h("div", "nrn-t-now");
+    banner.append(h("span", "nrn-t-now-label", t`In the scene now`));
+    banner.append(h("span", "nrn-t-now-value", parts.join("  •  ")));
     return banner;
 }
 
 function lead(text) {
-    return h("div", "nct-lead", text);
+    return h("div", "nrn-t-lead", text);
 }
 
 /**
- * Тройка «день — месяц — год» лорного календаря.
+ * Тройка «день — месяц — год» древнеисландского календаря.
  *
  * Заведена общей, потому что мест два: дата сцены и дата зачатия. Раньше
  * такая тройка была одна и жила внутри выбора даты; вторую было бы проще
@@ -253,7 +253,7 @@ function lead(text) {
  */
 function dateFields(initial, onChange = () => {}) {
     const select = (cls, options, chosen) => {
-        const el = h("select", `nct-picker-select ${cls}`);
+        const el = h("select", `nrn-t-picker-select ${cls}`);
         for (const [value, label] of options) {
             const opt = h("option", null, label);
             opt.value = String(value);
@@ -265,13 +265,13 @@ function dateFields(initial, onChange = () => {}) {
 
     const days = [];
     for (let d = 1; d <= 30; d++) days.push([d, String(d)]);
-    const months = MONTHS_LORE.map((m, i) => [i + 1, m.ru]);
+    const months = MONTHS.map((m, i) => [i + 1, m.ru]);
     months.splice(AUK_AFTER_MONTH, 0, ["AUK", "Аукнэтр"]);
 
     const start = initial?.year != null ? initial : { year: 1015, month: 1, day: 1 };
-    const dayEl = select("nct-picker-day", days, start.day);
-    const monthEl = select("nct-picker-month", months, start.month);
-    const yearEl = h("input", "nct-picker-year");
+    const dayEl = select("nrn-t-picker-day", days, start.day);
+    const monthEl = select("nrn-t-picker-month", months, start.month);
+    const yearEl = h("input", "nrn-t-picker-year");
     yearEl.type = "number";
     yearEl.value = String(start.year);
 
@@ -310,7 +310,7 @@ function dateFields(initial, onChange = () => {}) {
 /** Дата словом — «5 сольмануда 1015», как её прочла бы хозяйка. */
 function dateWords(d) {
     if (!d || d.year == null) return "";
-    const name = d.month === "AUK" ? "аукнэтр" : MONTHS_LORE[d.month - 1].ru.toLowerCase();
+    const name = d.month === "AUK" ? "аукнэтр" : MONTHS[d.month - 1].ru.toLowerCase();
     return `${d.day} ${name} ${d.year}`;
 }
 
@@ -327,8 +327,8 @@ function dateWords(d) {
  * @param {{summary: object|null, length: number, onSet: (day:number)=>boolean}} cycle
  */
 function cyclePicker(cycle) {
-    const box = h("div", "nct-picker");
-    box.append(h("div", "nct-picker-title", t`Womb`));
+    const box = h("div", "nrn-t-picker");
+    box.append(h("div", "nrn-t-picker-title", t`Womb`));
 
     /* Кнопка мигает подтверждением и возвращает прежнюю надпись: окно
        не перерисовывается, и без отклика непонятно, нажалось ли вообще. */
@@ -339,32 +339,32 @@ function cyclePicker(cycle) {
     };
 
     /* ── Что сейчас ── */
-    const now = h("div", "nct-picker-now");
+    const now = h("div", "nrn-t-picker-now");
     if (cycle.view) {
         const line = [cycle.view.title, cycle.view.count].filter(Boolean).join(" · ");
-        now.append(h("div", "nct-picker-now-line", line));
-        now.append(h("div", "nct-picker-echo", cycle.view.status));
-        if (cycle.view.extra) now.append(h("div", "nct-picker-echo", cycle.view.extra));
-        if (cycle.father) now.append(h("div", "nct-picker-echo", `${t`Father`}: ${cycle.father}`));
+        now.append(h("div", "nrn-t-picker-now-line", line));
+        now.append(h("div", "nrn-t-picker-echo", cycle.view.status));
+        if (cycle.view.extra) now.append(h("div", "nrn-t-picker-echo", cycle.view.extra));
+        if (cycle.father) now.append(h("div", "nrn-t-picker-echo", `${t`Father`}: ${cycle.father}`));
     }
     box.append(now);
 
     /* ── День цикла ── */
-    const dayRow = h("div", "nct-picker-row");
-    dayRow.append(h("span", "nct-picker-label", t`Today is day`));
-    const dayEl = h("select", "nct-picker-select");
+    const dayRow = h("div", "nrn-t-picker-row");
+    dayRow.append(h("span", "nrn-t-picker-label", t`Today is day`));
+    const dayEl = h("select", "nrn-t-picker-select");
     for (let d = 1; d <= cycle.length; d++) {
         const opt = h("option", null, String(d));
         opt.value = String(d);
         if (cycle.view?.state === "cycling" && cycle.view.count === `${d}/${cycle.length}`) opt.selected = true;
         dayEl.append(opt);
     }
-    const setDay = h("button", "nct-picker-apply", t`Set day`);
+    const setDay = h("button", "nrn-t-picker-apply", t`Set day`);
     setDay.type = "button";
     dayRow.append(dayEl, setDay);
     box.append(dayRow);
 
-    const echo = h("div", "nct-picker-echo");
+    const echo = h("div", "nrn-t-picker-echo");
     box.append(echo);
     const syncDay = () => {
         const phase = phaseOf(Number(dayEl.value), cycle.length);
@@ -388,12 +388,12 @@ function cyclePicker(cycle) {
      * «Случайно» тоже отвечает не случайностью, а броском от даты зачатия,
      * тем же самым, что и в игре, — на одну дату всегда один ответ.
      */
-    box.append(h("div", "nct-picker-sub", t`Carrying`));
+    box.append(h("div", "nrn-t-picker-sub", t`Carrying`));
 
-    const termRow = h("div", "nct-picker-row");
-    termRow.append(h("span", "nct-picker-label", t`part`));
+    const termRow = h("div", "nrn-t-picker-row");
+    termRow.append(h("span", "nrn-t-picker-label", t`part`));
 
-    const partEl = h("select", "nct-picker-select");
+    const partEl = h("select", "nrn-t-picker-select");
     for (let p = 1; p <= 9; p++) {
         const opt = h("option", null, `${p}/9`);
         opt.value = String(p);
@@ -401,7 +401,7 @@ function cyclePicker(cycle) {
         partEl.append(opt);
     }
 
-    const knownEl = h("select", "nct-picker-select");
+    const knownEl = h("select", "nrn-t-picker-select");
     for (const [value, label] of [["known", t`she knows`], ["unknown", t`she does not know`]]) {
         const opt = h("option", null, label);
         opt.value = value;
@@ -409,7 +409,7 @@ function cyclePicker(cycle) {
         knownEl.append(opt);
     }
 
-    const fatherEl = h("input", "nct-picker-text");
+    const fatherEl = h("input", "nrn-t-picker-text");
     fatherEl.type = "text";
     fatherEl.placeholder = t`Father, if named`;
     if (cycle.father) fatherEl.value = cycle.father;
@@ -418,10 +418,10 @@ function cyclePicker(cycle) {
     box.append(termRow);
 
     /* ── Плод и пол ── */
-    const broodRow = h("div", "nct-picker-row");
-    broodRow.append(h("span", "nct-picker-label", t`bearing`));
+    const broodRow = h("div", "nrn-t-picker-row");
+    broodRow.append(h("span", "nrn-t-picker-label", t`bearing`));
 
-    const birthsEl = h("select", "nct-picker-select");
+    const birthsEl = h("select", "nrn-t-picker-select");
     for (const [value, label] of [[1, t`one child`], [2, t`twins`], [3, t`triplets`]]) {
         const opt = h("option", null, label);
         opt.value = String(value);
@@ -429,7 +429,7 @@ function cyclePicker(cycle) {
         birthsEl.append(opt);
     }
 
-    const sexEl = h("select", "nct-picker-select");
+    const sexEl = h("select", "nrn-t-picker-select");
     for (const [value, label] of [["any", t`sex at random`], ["m", t`son`], ["f", t`daughter`]]) {
         const opt = h("option", null, label);
         opt.value = value;
@@ -449,8 +449,8 @@ function cyclePicker(cycle) {
     box.append(broodRow);
 
     /* ── Дата зачатия ── */
-    const seedRow = h("div", "nct-picker-row");
-    seedRow.append(h("span", "nct-picker-label", t`conceived`));
+    const seedRow = h("div", "nrn-t-picker-row");
+    seedRow.append(h("span", "nrn-t-picker-label", t`conceived`));
 
     const today = cycle.today ?? null;
     const fromPart = (part) => (today
@@ -463,7 +463,7 @@ function cyclePicker(cycle) {
     seedRow.append(...seed.nodes);
     box.append(seedRow);
 
-    const pregEcho = h("div", "nct-picker-echo");
+    const pregEcho = h("div", "nrn-t-picker-echo");
     box.append(pregEcho);
 
     /* Часть срока → дата. */
@@ -516,10 +516,10 @@ function cyclePicker(cycle) {
     birthsEl.addEventListener("input", syncEcho);
     sexEl.addEventListener("input", syncEcho);
 
-    const buttons = h("div", "nct-picker-row");
-    const setPreg = h("button", "nct-picker-apply", cycle.pregnant ? t`Update` : t`Set carrying`);
+    const buttons = h("div", "nrn-t-picker-row");
+    const setPreg = h("button", "nrn-t-picker-apply", cycle.pregnant ? t`Update` : t`Set carrying`);
     setPreg.type = "button";
-    const clearPreg = h("button", "nct-picker-apply nct-picker-clear", t`Clear the child`);
+    const clearPreg = h("button", "nrn-t-picker-apply nrn-t-picker-clear", t`Clear the child`);
     clearPreg.type = "button";
     buttons.append(setPreg, clearPreg);
 
@@ -533,7 +533,7 @@ function cyclePicker(cycle) {
      * Отдельным видом и с оговоркой под ней: отменить призыв нечем, схватки
      * назад не отыгрываются.
      */
-    const summon = h("button", "nct-picker-apply nct-picker-summon", t`Call upon Frigg`);
+    const summon = h("button", "nrn-t-picker-apply nrn-t-picker-summon", t`Call upon Frigg`);
     summon.type = "button";
     summon.disabled = !cycle.canSummon;
     summon.title = cycle.canSummon
@@ -543,7 +543,7 @@ function cyclePicker(cycle) {
     box.append(buttons);
 
     if (cycle.canSummon) {
-        box.append(h("div", "nct-picker-echo nct-picker-warn",
+        box.append(h("div", "nrn-t-picker-echo nrn-t-picker-warn",
             t`Frigg is called in labour. There is no taking it back: the pangs do not unhappen.`));
     }
 
@@ -561,12 +561,12 @@ function cyclePicker(cycle) {
      *
      * Траву не выбирают. Что дали на кухне, то и пьёт; список знает движок.
      */
-    box.append(h("div", "nct-picker-sub", t`Women's draught`));
-    box.append(h("div", "nct-picker-echo",
+    box.append(h("div", "nrn-t-picker-sub", t`Women's draught`));
+    box.append(h("div", "nrn-t-picker-echo",
         t`A brew to bring the blood back. What herb she is given depends on the season, and she does not choose it.`));
 
-    const drinkRow = h("div", "nct-picker-row");
-    const drink = h("button", "nct-picker-apply nct-picker-herb", t`Drink the draught`);
+    const drinkRow = h("div", "nrn-t-picker-row");
+    const drink = h("button", "nrn-t-picker-apply nrn-t-picker-herb", t`Drink the draught`);
     drink.type = "button";
     drink.title = t`She drinks whatever was given to her. Herbs of this age take their toll.`;
     drinkRow.append(drink);
@@ -611,13 +611,13 @@ function cyclePicker(cycle) {
  * Руками сюда возвращаются только ради скачков через несколько суток.
  */
 function datePicker(state, onApply) {
-    const box = h("div", "nct-picker");
-    box.append(h("div", "nct-picker-title", t`Scene date`));
+    const box = h("div", "nrn-t-picker");
+    box.append(h("div", "nrn-t-picker-title", t`Scene date`));
 
-    const row = h("div", "nct-picker-row");
+    const row = h("div", "nrn-t-picker-row");
     const has = hasDate(state);
 
-    const echo = h("div", "nct-picker-echo");
+    const echo = h("div", "nrn-t-picker-echo");
 
     /* Живое эхо: что именно получится из выбранного. */
     const sync = () => {
@@ -625,8 +625,8 @@ function datePicker(state, onApply) {
         if (!isValidDate(now)) { echo.textContent = t`Not a date in this calendar`; return; }
         const { phase } = moonPhase(now.year, now.month, now.day);
         echo.textContent = [
-            WEEKDAYS_LORE[weekdayOf(now.year, now.month, now.day)].norse,
-            `vika ${vikaOf(now.year, now.month, now.day)}/${weeksInYear(now.year)}`,
+            WEEKDAYS[weekdayOf(now.year, now.month, now.day)].norse,
+            `vika ${vikaOf(now.year, now.month, now.day)}/${weeksInMisseri(now.year, now.month)}`,
             `í ${seasonOf(now.month).norse}`,
             `${phase.icon} ${phase.norse}`,
         ].join("  •  ");
@@ -635,7 +635,7 @@ function datePicker(state, onApply) {
     const fields = dateFields(has ? state : { year: 1015, month: 1, day: 1 }, sync);
     row.append(...fields.nodes);
 
-    const apply = h("button", "nct-picker-apply", t`Set date`);
+    const apply = h("button", "nrn-t-picker-apply", t`Set date`);
     apply.type = "button";
     row.append(apply);
     box.append(row);
@@ -645,10 +645,10 @@ function datePicker(state, onApply) {
         const d = fields.read();
         if (!isValidDate(d)) return;
         if (onApply(d)) {
-            box.classList.add("nct-picker-done");
+            box.classList.add("nrn-t-picker-done");
             apply.textContent = t`Date set`;
             setTimeout(() => {
-                box.classList.remove("nct-picker-done");
+                box.classList.remove("nrn-t-picker-done");
                 apply.textContent = t`Set date`;
             }, 1500);
         }
@@ -669,7 +669,7 @@ function eyktSection(body, state, prefs) {
             current: i === currentIdx,
             cells: {
                 num: String(i + 1),
-                norse: h("span", "nct-norse", e.norse),
+                norse: h("span", "nrn-t-norse", e.norse),
                 translit: e.translit + (e.alt ? ` (${e.alt})` : ""),
                 ru: e.ru,
                 hours: `${String(e.start).padStart(2, "0")}:00 – ${String(end).padStart(2, "0")}:00`,
@@ -683,8 +683,8 @@ function eyktSection(body, state, prefs) {
     body.append(chipsRow(columns, prefs), table(columns, rows, prefs));
 }
 
-/** Месяцы уже лежат в порядке лорного года — он начинается с зимы. */
-const YEAR_ORDER = MONTHS_LORE.map((_, i) => i + 1);
+/** Месяцы уже лежат в порядке древнеисландского года — он начинается с зимы. */
+const YEAR_ORDER = MONTHS.map((_, i) => i + 1);
 
 function monthSection(body, state, prefs) {
     body.append(lead(t`Every month is exactly 30 days. The year is split in two halves, not four: Vetr (winter) and Sumar (summer).`));
@@ -695,15 +695,15 @@ function monthSection(body, state, prefs) {
 
     for (const season of ["Vetr", "Sumar"]) {
         const label = season === "Vetr" ? `❄️ Vetr — ${t`winter`}` : `🌿 Sumar — ${t`summer`}`;
-        body.append(h("div", "nct-subhead", label));
+        body.append(h("div", "nrn-t-subhead", label));
         const rows = YEAR_ORDER
             .filter((num) => seasonOf(num).norse === season)
             .map((num) => {
-                const m = MONTHS_LORE[num - 1];
+                const m = MONTHS[num - 1];
                 return {
                     current: num === currentMonth,
                     cells: {
-                        norse: h("span", "nct-norse", m.norse),
+                        norse: h("span", "nrn-t-norse", m.norse),
                         translit: m.translit,
                         ru: m.ru,
                         modern: m.modern,
@@ -714,8 +714,8 @@ function monthSection(body, state, prefs) {
         body.append(table(columns, rows, prefs));
     }
 
-    body.append(h("div", "nct-note",
-        t`Sumarauki (Auknætr) — four extra days in midsummer between Sólmánuður and Heyannir, five in a leap year. Written in the block as "2 Auknætr 875".`));
+    body.append(h("div", "nrn-t-note",
+        t`Sumarauki (Auknætr) — four extra days in midsummer between Sólmánuðr and Heyannir, five in a leap year. Written in the block as "2 Auknætr 875".`));
 }
 
 /**
@@ -730,7 +730,7 @@ function monthSection(body, state, prefs) {
  * и есть первое гормануда, и в столбце это читается без объяснений.
  */
 function holidaySection(body, state, prefs) {
-    body.append(lead(t`Feasts are pinned to a weekday within the month, not to a number — the first Saturday of Gormánaður, the first Thursday of Harpa, the last Thursday of Sólmánuður. That is how they were actually reckoned, and without it the dates would drift from year to year.`));
+    body.append(lead(t`Feasts are pinned to a weekday within the month, not to a number — the first Saturday of Gormánuðr, the first Thursday of Harpa, the last Thursday of Sólmánuðr. That is how they were actually reckoned, and without it the dates would drift from year to year.`));
 
     /* Год берём из сцены: справочник показывает тот год, в котором играют.
        Даты в нём всё равно те же — год состоит из целых недель, — но так
@@ -745,14 +745,14 @@ function holidaySection(body, state, prefs) {
     if (today.length) {
         const main = today[0];
         const count = main.days > 1 ? ` · ${t`day`} ${main.day}/${main.days}` : "";
-        body.append(h("div", "nct-picker-now-line",
+        body.append(h("div", "nrn-t-picker-now-line",
             `${main.holiday.norse} — ${main.holiday.ru}${count}`));
     } else if (hasDate(state)) {
         const soon = nextHoliday(state.year, state.month, state.day, { tiers: ALL_TIERS, region: "all" });
         if (soon) {
             /* Склейку числа со словом делаем так же, как в эхе беременности:
                одним ключом «day», без подстановки внутрь перевода. */
-            body.append(h("div", "nct-picker-echo",
+            body.append(h("div", "nrn-t-picker-echo",
                 `${t`Next`}: ${soon.holiday.norse} — ${soon.holiday.ru} · ${soon.days} ${t`day`}`));
         }
     }
@@ -763,14 +763,14 @@ function holidaySection(body, state, prefs) {
     body.append(chipsRow(columns, prefs));
 
     const regionName = (id) => HOLIDAY_REGIONS.find((r) => r.id === id)?.ru ?? id;
-    const monthName = (d) => (isAuk(d.month) ? "Auknætr" : MONTHS_LORE[d.month - 1].norse);
+    const monthName = (d) => (isAuk(d.month) ? "Auknætr" : MONTHS[d.month - 1].norse);
 
     /*
      * Срок праздника словами.
      *
      * Месяц называем дважды, когда конец пришёлся на другой: Alþingi
      * начинается в сольмануде и кончается уже в аукнэтр или в хейанире,
-     * и «25 — 8 Sólmánuður» было бы прямой неправдой.
+     * и «25 — 8 Sólmánuðr» было бы прямой неправдой.
      */
     const spanWords = (at, end) => {
         if (at.day === end.day && at.month === end.month) return `${at.day} ${monthName(at)}`;
@@ -782,8 +782,8 @@ function holidaySection(body, state, prefs) {
         const inTier = HOLIDAYS.filter((x) => x.tier === tier.id);
         if (!inTier.length) continue;
 
-        body.append(h("div", "nct-subhead", tier.ru));
-        body.append(h("div", "nct-hint", tier.hint));
+        body.append(h("div", "nrn-t-subhead", tier.ru));
+        body.append(h("div", "nrn-t-hint", tier.hint));
 
         const rows = inTier
             .map((holiday) => ({ holiday, at: holidayStart(holiday, year) }))
@@ -798,10 +798,10 @@ function holidaySection(body, state, prefs) {
                 return {
                     current: todayIds.has(holiday.id),
                     cells: {
-                        norse: h("span", "nct-norse", holiday.norse),
+                        norse: h("span", "nrn-t-norse", holiday.norse),
                         ru: holiday.ru,
                         when: spanWords(at, end),
-                        weekday: WEEKDAYS_LORE[weekdayOf(at.year, at.month, at.day)].norse,
+                        weekday: WEEKDAYS[weekdayOf(at.year, at.month, at.day)].norse,
                         days: holiday.days,
                         region: regionName(holiday.region),
                         meaning: holiday.gloss,
@@ -812,9 +812,9 @@ function holidaySection(body, state, prefs) {
         body.append(table(columns, rows, prefs));
     }
 
-    body.append(h("div", "nct-note",
+    body.append(h("div", "nrn-t-note",
         t`Whole layers are switched on and off in the extension settings, and so is the land the story is set in: feasts of all Scandinavia show everywhere, the Icelandic and Swedish ones only on their own soil. A feast listed here may therefore be missing from the panel — that is the setting, not an error.`));
-    body.append(h("div", "nct-note",
+    body.append(h("div", "nrn-t-note",
         t`Several feasts can fall on one day: the winter nights carry the great feast, the rite for the álfar and the sacrifice to the dísir at once. The panel names the chief one and keeps the rest in its hint — a saga outweighs a reconstruction, a long feast a single day.`));
 }
 
@@ -825,20 +825,20 @@ function holidaySection(body, state, prefs) {
 function vikaSection(body, state) {
     body.append(lead(t`The year is counted in whole weeks. Twelve months of thirty days give 360; four midsummer aukanætr bring that to ${COMMON_YEAR_DAYS} — exactly 52 weeks.`));
 
-    body.append(h("div", "nct-note",
+    body.append(h("div", "nrn-t-note",
         t`A year of ${COMMON_YEAR_DAYS} days falls about 1.24 days short of the sun, so once the shortfall reaches a week, a whole week — sumarauki — is inserted in midsummer. That happens every fifth or sixth year and makes the year ${COMMON_YEAR_DAYS + SUMARAUKI_DAYS} days, or 53 weeks.`));
 
-    body.append(h("div", "nct-subhead", t`Where the year begins`));
-    body.append(h("div", "nct-note",
-        t`Because every year is a whole number of weeks, every year opens on the same weekday: Laugardagr, the first day of winter. Summer then always opens on Þórsdagr — sumardagurinn fyrsti, the first day of summer.`));
+    body.append(h("div", "nrn-t-subhead", t`Where the year begins`));
+    body.append(h("div", "nrn-t-note",
+        t`Because every year is a whole number of weeks, every year opens on the same weekday: Laugardagr, the first day of winter. Summer then always opens on Þórsdagr — sumardagrinn fyrsti, the first day of summer.`));
 
     if (hasDate(state) ) {
         const { year, month, day } = state;
-        const now = h("div", "nct-now");
-        now.append(h("span", "nct-now-label", t`In the scene now`));
-        now.append(h("span", "nct-now-value",
-            `vika ${vikaOf(year, month, day)}/${weeksInYear(year)}  •  ` +
-            `${t`day`} ${dayOfYear(year, month, day)}/${yearLength(year)}  •  ` +
+        const now = h("div", "nrn-t-now");
+        now.append(h("span", "nrn-t-now-label", t`In the scene now`));
+        now.append(h("span", "nrn-t-now-value",
+            `vika ${vikaOf(year, month, day)}/${weeksInMisseri(year, month)}  •  ` +
+            `${t`day`} ${dayOfMisseri(year, month, day)}/${misseriLength(year, month)}  •  ` +
             (isSumaraukiYear(year) ? t`a sumarauki year` : t`an ordinary year`)));
         body.append(now);
     }
@@ -851,10 +851,10 @@ function weekdaySection(body, state, prefs) {
         ? weekdayOf(state.year, state.month, state.day)
         : -1;
 
-    const rows = WEEKDAYS_LORE.map((w, i) => ({
+    const rows = WEEKDAYS.map((w, i) => ({
         current: i === currentWd,
         cells: {
-            norse: h("span", "nct-norse", w.norse),
+            norse: h("span", "nrn-t-norse", w.norse),
             en: w.en,
             ru: w.ru,
             meaning: w.desc,
@@ -876,8 +876,8 @@ function moonSection(body, state, prefs) {
     const rows = MOON_PHASES.map((p) => {
         // Иконка живёт внутри названия: отдельная безымянная колонка не имела бы
         // заголовка, а значит и переключателя.
-        const name = h("span", "nct-norse");
-        name.append(h("span", "nct-moon-icon", p.icon), document.createTextNode(p.norse));
+        const name = h("span", "nrn-t-norse");
+        name.append(h("span", "nrn-t-moon-icon", p.icon), document.createTextNode(p.norse));
         return {
             current: p.norse === currentPhase,
             cells: {
@@ -906,7 +906,7 @@ function blockSection(body) {
     body.append(lead(t`This is what the model puts at the very end of every reply. The block is an HTML comment: the chat never shows it, and the extension cuts it out of the message once it has been read.`));
 
     const sample = [
-        "<!-- [YORNI:",
+        "<!-- [URD:",
         "eykt: хадеги",
         "weather: Мокрый снег, порывистый северный ветер",
         "location: Побережье фьорда, старая пристань",
@@ -920,17 +920,17 @@ function blockSection(body) {
         "] -->",
     ].join("\n");
 
-    body.append(h("pre", "nct-code", sample));
-    body.append(h("div", "nct-note",
+    body.append(h("pre", "nrn-t-code", sample));
+    body.append(h("div", "nrn-t-note",
         t`The date is not asked of the model at all — you set it above and the panel carries it forward. Everything else appears only when it is due: passed after a time skip, body when something happened to her, and the birth, standing and naming lines while they matter.`));
 }
 
 /** Откидной список с подписью — как в календарике даты, только для вида. */
 function lookSelect(labelText, options, current, onPick) {
-    const label = h("label", "nct-look-label");
-    label.append(h("span", "nct-look-name", labelText));
+    const label = h("label", "nrn-t-look-label");
+    label.append(h("span", "nrn-t-look-name", labelText));
 
-    const select = h("select", "nct-look-select");
+    const select = h("select", "nrn-t-look-select");
     for (const opt of options) {
         const node = h("option", null, opt.label);
         node.value = opt.id;
@@ -968,13 +968,13 @@ function cssSection(body, state, prefs, extras) {
     body.append(lead(t`Everything about how the block looks lives here: the layout, the theme and the CSS of that theme. Change a value in the field, press Apply, and the block repaints at once.`));
 
     if (!look) {
-        body.append(h("div", "nct-note", t`Editing is not available in this window.`));
+        body.append(h("div", "nrn-t-note", t`Editing is not available in this window.`));
         return;
     }
 
     /* --- раскладка и тема --- */
 
-    const picks = h("div", "nct-look-row");
+    const picks = h("div", "nrn-t-look-row");
     const skin = lookSelect(t`Layout`, look.skins, look.skin(), (id) => look.setSkin(id));
     const theme = lookSelect(t`Theme`, look.themes, look.theme(), (id) => pickTheme(id));
     picks.append(skin.node, theme.node);
@@ -982,33 +982,33 @@ function cssSection(body, state, prefs, extras) {
 
     /* --- CSS выбранной темы --- */
 
-    const head = h("div", "nct-css-head");
-    const themeName = h("span", "nct-css-theme", look.themeLabel(look.theme()));
-    const badge = h("span", "nct-css-badge", t`edited`);
+    const head = h("div", "nrn-t-css-head");
+    const themeName = h("span", "nrn-t-css-theme", look.themeLabel(look.theme()));
+    const badge = h("span", "nrn-t-css-badge", t`edited`);
     head.append(themeName, badge);
     body.append(head);
 
-    const area = h("textarea", "nct-css-area");
+    const area = h("textarea", "nrn-t-css-area");
     area.value = look.read(look.theme());
     area.spellcheck = false;
     area.setAttribute("rows", "14");
     area.setAttribute("aria-label", t`Theme CSS`);
     body.append(area);
 
-    const row = h("div", "nct-css-row");
-    const apply = h("button", "nct-css-apply", t`Apply`);
+    const row = h("div", "nrn-t-css-row");
+    const apply = h("button", "nrn-t-css-apply", t`Apply`);
     apply.type = "button";
-    const restore = h("button", "nct-css-restore", t`Restore`);
+    const restore = h("button", "nrn-t-css-restore", t`Restore`);
     restore.type = "button";
     restore.title = t`Forget your changes and load the original CSS of this theme`;
-    const echo = h("div", "nct-css-echo");
+    const echo = h("div", "nrn-t-css-echo");
     row.append(apply, restore, echo);
     body.append(row);
 
-    body.append(h("div", "nct-note",
+    body.append(h("div", "nrn-t-note",
         t`Changes are kept in this browser only — they do not travel with the chat and are not sent anywhere. Each theme remembers its own.`));
 
-    const syncBadge = () => badge.classList.toggle("nct-hidden", !look.isEdited(look.theme()));
+    const syncBadge = () => badge.classList.toggle("nrn-t-hidden", !look.isEdited(look.theme()));
     syncBadge();
 
     /* Слово вместо тишины: нажатие должно быть слышно, а «Применить»
@@ -1029,7 +1029,7 @@ function cssSection(body, state, prefs, extras) {
      */
     function pickTheme(id) {
         look.setTheme(id);
-        const root = body.closest(".norse-timatal");
+        const root = body.closest(".nrn-timatal");
         if (root) root.dataset.theme = look.theme();
         themeName.textContent = look.themeLabel(look.theme());
         area.value = look.read(look.theme());
@@ -1074,23 +1074,23 @@ export const SECTION_IDS = SECTIONS.map((s) => s.id);
 export const COLUMN_KEYS = Object.keys(COLUMN_LABELS);
 
 function buildSection(def, state, prefs, extras) {
-    const section = h("div", "nct-section");
+    const section = h("div", "nrn-t-section");
     section.dataset.section = def.id;
 
     const closed = prefs.isSectionClosed(def.id);
-    section.classList.toggle("nct-closed", closed);
+    section.classList.toggle("nrn-t-closed", closed);
 
-    const head = h("button", "nct-section-toggle");
+    const head = h("button", "nrn-t-section-toggle");
     head.type = "button";
     head.dataset.section = def.id;
     head.setAttribute("aria-expanded", String(!closed));
     head.append(
-        h("span", "nct-chevron", "▾"),
-        h("span", "nct-section-icon", def.icon),
-        h("span", "nct-section-title", def.title()),
+        h("span", "nrn-t-chevron", "▾"),
+        h("span", "nrn-t-section-icon", def.icon),
+        h("span", "nrn-t-section-title", def.title()),
     );
 
-    const body = h("div", "nct-section-body");
+    const body = h("div", "nrn-t-section-body");
     def.build(body, state, prefs, extras);
 
     section.append(head, body);
@@ -1114,20 +1114,20 @@ function buildSection(def, state, prefs, extras) {
  * @returns {HTMLElement} Корневой элемент для Popup
  */
 export function buildReference(state, theme = "default", prefs, onSetDate = null, cycle = null, look = null) {
-    const root = h("div", "norse-timatal nc-themed");
+    const root = h("div", "nrn-timatal nrn-themed");
     root.setAttribute("data-theme", theme || "default");
 
-    const header = h("div", "nct-header");
-    header.append(h("div", "nct-runes", "ᛏᛁᛘᚨᛏᚨᛚ"));
-    header.append(h("div", "nct-title", "Tímatal"));
-    header.append(h("div", "nct-subtitle", t`Norse reckoning of time`));
+    const header = h("div", "nrn-t-header");
+    header.append(h("div", "nrn-t-runes", "ᛏᛁᛘᚨᛏᚨᛚ"));
+    header.append(h("div", "nrn-t-title", "Tímatal"));
+    header.append(h("div", "nrn-t-subtitle", t`Norse reckoning of time`));
 
     // Кнопка сброса — единственная страховка на случай, когда спрятано всё
     // подряд. Показывается только если вид отличается от исходного.
-    const reset = h("button", "nct-reset");
+    const reset = h("button", "nrn-t-reset");
     reset.type = "button";
     reset.title = t`Restore all sections and columns`;
-    reset.append(h("span", "nct-reset-icon", "↺"), h("span", null, t`Reset view`));
+    reset.append(h("span", "nrn-t-reset-icon", "↺"), h("span", null, t`Reset view`));
     header.append(reset);
     root.append(header);
 
@@ -1137,30 +1137,30 @@ export function buildReference(state, theme = "default", prefs, onSetDate = null
     if (onSetDate) root.append(datePicker(state, onSetDate));
     if (cycle) root.append(cyclePicker(cycle));
 
-    const hint = h("div", "nct-hint", t`Tap a heading to fold a section. Pick the chips to add columns.`);
+    const hint = h("div", "nrn-t-hint", t`Tap a heading to fold a section. Pick the chips to add columns.`);
     root.append(hint);
 
     const extras = { look };
     for (const def of SECTIONS) root.append(buildSection(def, state, prefs, extras));
 
     function syncReset() {
-        reset.classList.toggle("nct-hidden", prefs.isDefaultView());
+        reset.classList.toggle("nrn-t-hidden", prefs.isDefaultView());
     }
     syncReset();
 
     root.addEventListener("click", (e) => {
-        const toggle = e.target.closest(".nct-section-toggle");
+        const toggle = e.target.closest(".nrn-t-section-toggle");
         if (toggle) {
             const id = toggle.dataset.section;
             const closed = prefs.toggleSection(id);
-            const section = root.querySelector(`.nct-section[data-section="${id}"]`);
-            section.classList.toggle("nct-closed", closed);
+            const section = root.querySelector(`.nrn-t-section[data-section="${id}"]`);
+            section.classList.toggle("nrn-t-closed", closed);
             toggle.setAttribute("aria-expanded", String(!closed));
             syncReset();
             return;
         }
 
-        const chip = e.target.closest(".nct-chip");
+        const chip = e.target.closest(".nrn-t-chip");
         if (chip) {
             const key = chip.dataset.col;
             applyColumn(root, key, prefs.toggleColumn(key));
@@ -1168,14 +1168,14 @@ export function buildReference(state, theme = "default", prefs, onSetDate = null
             return;
         }
 
-        if (e.target.closest(".nct-reset")) {
+        if (e.target.closest(".nrn-t-reset")) {
             prefs.resetView();
             for (const key of COLUMN_KEYS) applyColumn(root, key, prefs.isColumnVisible(key));
             for (const def of SECTIONS) {
                 const closed = prefs.isSectionClosed(def.id);
-                root.querySelector(`.nct-section[data-section="${def.id}"]`)
-                    .classList.toggle("nct-closed", closed);
-                root.querySelector(`.nct-section-toggle[data-section="${def.id}"]`)
+                root.querySelector(`.nrn-t-section[data-section="${def.id}"]`)
+                    .classList.toggle("nrn-t-closed", closed);
+                root.querySelector(`.nrn-t-section-toggle[data-section="${def.id}"]`)
                     .setAttribute("aria-expanded", String(!closed));
             }
             syncReset();

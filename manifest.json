@@ -1,5 +1,5 @@
 {
-    "display_name": "Norse Calendar",
+    "display_name": "NORNIR",
     "loading_order": 5,
     "requires": [],
     "optional": [],
@@ -8,7 +8,7 @@
     "author": "yornn",
     "version": "2.7.0",
     "license": "AGPL-3.0",
-    "homePage": "https://github.com/yornn/Norse-Calendar",
+    "homePage": "https://github.com/yornn/NORNIR",
     "auto_update": false,
     "i18n": {
         "ru-ru": "i18n/ru-ru.json",

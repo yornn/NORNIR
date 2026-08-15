@@ -1,5 +1,5 @@
 /*
- * Norse Calendar — тест движка дат.
+ * NORNIR — тест движка дат.
  *
  * Дату модель больше не пишет: её ставит пользователь в Tímatal, расширение
  * везёт вперёд и перелистывает по смене эйкты. Логика небольшая, но вся про
@@ -10,7 +10,7 @@
  */
 
 import { findLatestState, findSceneDate, setSceneDate, syncWholeChat } from "./chat-state.js";
-import { MONTHS_LORE, aukDays, isAuk } from "./parser.js";
+import { MONTHS, aukDays, isAuk } from "./parser.js";
 
 let ok = 0;
 let bad = 0;
@@ -31,7 +31,7 @@ function mk(eykt, dateLine = "", passed = "") {
         mes: [
             "проза",
             "",
-            "<!-- [YORNI:",
+            "<!-- [URD:",
             `eykt: ${eykt}`,
             dateLine,
             passed ? `passed: ${passed}` : "",
@@ -50,7 +50,7 @@ function mk(eykt, dateLine = "", passed = "") {
 function dateOf(chat) {
     const s = findLatestState(chat)?.state;
     if (!s || s.year == null) return "—";
-    const name = isAuk(s.month) ? "аукнэтр" : MONTHS_LORE[s.month - 1].ru.toLowerCase();
+    const name = isAuk(s.month) ? "аукнэтр" : MONTHS[s.month - 1].ru.toLowerCase();
     return `${s.day} ${name} ${s.year}`;
 }
 
@@ -88,7 +88,7 @@ check(`последний аукнэтр (${aukDays(1015)}-й) → хейанн�
 check("аукнэтр в середине не перескакивает в хейаннир",
     dateOf(run(mk("наттмал", "date: 4 аукнэтр 1015"), mk("отта"))), "5 аукнэтр 1015");
 check("конец обычного месяца",
-    dateOf(run(mk("наттмал", "date: 30 торри 1015"), mk("отта"))), "1 гоа 1015");
+    dateOf(run(mk("наттмал", "date: 30 торри 1015"), mk("отта"))), "1 гои 1015");
 
 console.log("\n=== Календарик Tímatal ===");
 
@@ -122,7 +122,7 @@ const meta = run(mk("хадеги"), mk("отта"));
 check("дата начала чата из метаданных",
     (() => {
         const s = findSceneDate(meta, { year: 1015, month: 4, day: 12 });
-        return `${s.day} ${MONTHS_LORE[s.month - 1].ru.toLowerCase()} ${s.year}`;
+        return `${s.day} ${MONTHS[s.month - 1].ru.toLowerCase()} ${s.year}`;
     })(), "13 торри 1015");
 
 console.log("\n=== Свайпы, откат, мусор ===");
@@ -186,7 +186,7 @@ const live = {
     send_date: "August 9, 2026 11:54pm",
     extra: {},
     mes: [
-        "проза", "", "<!-- [YORNI:",
+        "проза", "", "<!-- [URD:",
         "eykt: хадеги", "date: 5 сольмануд 1015",
         "weather: мокрый снег", "location: пристань", "mood: усталый",
         "user_attire: платье", "char_attire: шкуры", "thought: хм",

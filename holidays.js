@@ -1,5 +1,5 @@
 /* ============================================================
- * Norse Calendar — праздники года.
+ * NORNIR — праздники года.
  *
  * Отдельный модуль, а не таблица в parser.js, по той же причине, по какой
  * тело живёт в body.js: календарь считает дни, а праздники — это уже знание
@@ -8,7 +8,7 @@
  *
  * ГЛАВНОЕ ПРАВИЛО ДАТ: праздник привязан не к числу, а к дню недели внутри
  * месяца. Зимние ночи — первая суббота гормануда, Sumarmál — первый четверг
- * харпы, Þorri начинается в пятницу, Góa — в воскресенье. Так считали на
+ * харпы, Þorri начинается в пятницу, Gói — в воскресенье. Так считали на
  * самом деле, и без этого даты поплыли бы от года к году.
  *
  * В нашем календаре у этого правила есть приятное следствие. Год всегда
@@ -16,9 +16,9 @@
  * начинается всегда с Laugardagr. Поэтому день недели у любого числа один
  * и тот же во всяком году:
  *
- *     1 Gormánaður  — Laugardagr (суббота)
+ *     1 Gormánuðr  — Laugardagr (суббота)
  *     1 Þorri       — Frjádagr   (пятница)
- *     1 Góa         — Sunnudagr  (воскресенье)
+ *     1 Gói         — Sunnudagr  (воскресенье)
  *     1 Harpa       — Þórsdagr   (четверг)
  *
  * То есть исторические правила ложатся на этот календарь без единой натяжки:
@@ -32,8 +32,8 @@
  * ============================================================ */
 
 import {
-    MONTHS_LORE,
-    WEEKDAYS_LORE,
+    MONTHS,
+    WEEKDAYS,
     addDays,
     isAuk,
     serialOf,
@@ -44,8 +44,16 @@ import {
 /* Номер месяца и день недели берём из таблиц parser.js по имени, а не числом.
    Числа пришлось бы держать в голове и править в двух местах: тронули порядок
    месяцев — и праздники молча разъехались бы по году. */
-const mo = (translit) => MONTHS_LORE.findIndex((m) => m.translit === translit) + 1;
-const wd = (en) => WEEKDAYS_LORE.findIndex((w) => w.en === en);
+const mo = (translit) => {
+    const i = MONTHS.findIndex((m) => m.translit === translit);
+    /* Молчать здесь нельзя. Прежде findIndex отдавал -1, +1 превращал его в 0,
+       и праздник тихо уезжал на несуществующий месяц — таблица собирается на
+       импорте, так что промах видно только по кривым датам через полгода.
+       Опечатку и рассинхрон с parser.js ловит первый же прогон тестов. */
+    if (i === -1) throw new Error(`[NORNIR] в таблице праздников неизвестный месяц: ${translit}`);
+    return i + 1;
+};
+const wd = (en) => WEEKDAYS.findIndex((w) => w.en === en);
 
 /**
  * Слои достоверности.
@@ -108,35 +116,35 @@ export const HOLIDAYS = [
     {
         id: "vetrnaetr", norse: "Vetrnætr", ru: "Зимние ночи",
         tier: "attested", region: "norse", days: 3,
-        rule: { month: mo("Gormanud"), weekday: wd("Saturday"), nth: 1 },
+        rule: { month: mo("Gormanudr"), weekday: wd("Saturday"), nth: 1 },
         gloss: "Начало зимнего полугодия: скот забит, мясо посолено, дом полон. Большой пир и главное сходбище года по усадьбам.",
         source: "«Сага о Глуме Убийце», «Сага о Гисли»",
     },
     {
         id: "alfablot", norse: "Álfablót", ru: "Жертва альвам",
         tier: "attested", region: "norse", days: 3,
-        rule: { month: mo("Gormanud"), weekday: wd("Saturday"), nth: 1 },
+        rule: { month: mo("Gormanudr"), weekday: wd("Saturday"), nth: 1 },
         gloss: "Домашний обряд тех же зимних ночей — альвам и предкам рода. Правит хозяйка, чужаков в дом не пускают вовсе: гостя заворачивают от порога.",
         source: "«Восточные висы» Сигвата Тордарсона, где его самого и завернули",
     },
     {
         id: "disablot", norse: "Dísablót", ru: "Жертва дисам",
         tier: "attested", region: "norse", days: 3,
-        rule: { month: mo("Gormanud"), weekday: wd("Saturday"), nth: 1 },
+        rule: { month: mo("Gormanudr"), weekday: wd("Saturday"), nth: 1 },
         gloss: "Жертва дисам — женским духам-покровительницам рода. Идёт в те же зимние ночи и держится на женщинах дома.",
         source: "«Сага об Эгиле», «Сага о Хервёр»",
     },
     {
         id: "disathing", norse: "Dísaþing", ru: "Тинг дис",
         tier: "attested", region: "sweden", days: 3,
-        rule: { month: mo("Goa"), weekday: wd("Sunday"), nth: 1 },
+        rule: { month: mo("Goi"), weekday: wd("Sunday"), nth: 1 },
         gloss: "Шведский черёд того же обряда: жертва дисам в Уппсале, а при ней тинг и большая ярмарка. Съезжается вся округа.",
         source: "«Сага об Олаве Святом»",
     },
     {
-        id: "hokunott", norse: "Hǫkunótt", ru: "Ночь перед Йолем",
+        id: "hokunott", norse: "Hökunótt", ru: "Ночь перед Йолем",
         tier: "attested", region: "norse", days: 1,
-        rule: { month: mo("Morsugur"), day: 30 },
+        rule: { month: mo("Morsugr"), day: 30 },
         gloss: "Ночь, с которой начинают пить Йоль. Что значит само слово, спорят до сих пор.",
         source: "«Сага о Хаконе Добром»",
     },
@@ -157,7 +165,7 @@ export const HOLIDAYS = [
     {
         id: "althingi", norse: "Alþingi", ru: "Всеобщий тинг",
         tier: "attested", region: "iceland", days: 14,
-        rule: { month: mo("Solmanud"), weekday: wd("Thursday"), nth: -1 },
+        rule: { month: mo("Solmanudr"), weekday: wd("Thursday"), nth: -1 },
         gloss: "Не жертва, а главное людское дело года: две недели на Полях тинга — законы, тяжбы, сговоры о свадьбах и торг. Кто не поехал, тот весь год не при делах.",
         source: "«Книга об исландцах», «Серый гусь»",
     },
@@ -173,14 +181,14 @@ export const HOLIDAYS = [
     {
         id: "goublot", norse: "Góublót", ru: "Жертва Гои",
         tier: "probable", region: "norse", days: 1,
-        rule: { month: mo("Goa"), weekday: wd("Sunday"), nth: 1 },
+        rule: { month: mo("Goi"), weekday: wd("Sunday"), nth: 1 },
         gloss: "Встреча Гои — месяца, за которым зиме уже недолго.",
         source: "Восстановлено по имени месяца и позднему обычаю; прямого свидетельства эпохи нет.",
     },
     {
         id: "midsumar", norse: "Miðsumar", ru: "Середина лета",
         tier: "probable", region: "norse", days: 1,
-        rule: { month: mo("Solmanud"), day: 15 },
+        rule: { month: mo("Solmanudr"), day: 15 },
         gloss: "Солнцеворот: самый долгий день, костры на холмах.",
         source: "Костры и середина лета известны по позднему обычаю; отдельного праздника с этим именем саги не называют.",
     },
@@ -196,7 +204,7 @@ export const HOLIDAYS = [
     {
         id: "olafsmessa", norse: "Ólafsmessa", ru: "Олавов день",
         tier: "christian", region: "norse", days: 1, since: 1031,
-        rule: { month: mo("Solmanud"), day: 29 },
+        rule: { month: mo("Solmanudr"), day: 29 },
         gloss: "Память Олава Святого, павшего при Стикластадире.",
         source: "29 июля; раньше 1031 года праздника нет вовсе — Олава причли к святым лишь через год после гибели",
     },
@@ -210,7 +218,7 @@ export const HOLIDAYS = [
     {
         id: "krossmessa-haust", norse: "Krossmessa á haust", ru: "Крестов день осенний",
         tier: "christian", region: "norse", days: 1, since: 1000,
-        rule: { month: mo("Tvimanud"), day: 14 },
+        rule: { month: mo("Tvimanudr"), day: 14 },
         gloss: "Осенняя веха: скот сгоняют с горных пастбищ, работников рассчитывают.",
         source: "14 сентября по счёту церкви; в этом календаре — твимануд",
     },
@@ -219,7 +227,7 @@ export const HOLIDAYS = [
     {
         id: "ostara", norse: "Ostara", ru: "Остара",
         tier: "modern", region: "norse", days: 1,
-        rule: { month: mo("Goa"), day: 21 },
+        rule: { month: mo("Goi"), day: 21 },
         gloss: "Весеннее равноденствие.",
         source: "Неоязыческая реконструкция XX века. Для эпохи викингов подтверждений нет.",
     },
@@ -247,14 +255,14 @@ export const HOLIDAYS = [
     {
         id: "mabon", norse: "Mabon", ru: "Мабон",
         tier: "modern", region: "norse", days: 1,
-        rule: { month: mo("Tvimanud"), day: 21 },
+        rule: { month: mo("Tvimanudr"), day: 21 },
         gloss: "Осеннее равноденствие.",
         source: "Неоязыческая реконструкция XX века. Для эпохи викингов подтверждений нет.",
     },
     {
         id: "samhain", norse: "Samhain", ru: "Самайн",
         tier: "modern", region: "norse", days: 1,
-        rule: { month: mo("Haustmanud"), day: 30 },
+        rule: { month: mo("Haustmanudr"), day: 30 },
         gloss: "Канун зимы, ночь, когда грань тонка.",
         source: "Неоязыческая реконструкция XX века, и притом кельтская. Ставится на 31 октября, но в месяце тридцать дней — стоит последним числом хаустмануда.",
     },
@@ -469,7 +477,7 @@ export function holidaysOfYear(year, opts = {}) {
 
 /** Слово о дне недели — для проверок и для Tímatal. */
 export function weekdayNameOf(year, month, day) {
-    return isAuk(month) ? null : WEEKDAYS_LORE[weekdayOf(year, month, day)].norse;
+    return isAuk(month) ? null : WEEKDAYS[weekdayOf(year, month, day)].norse;
 }
 
 /** Последний день праздника — пригождается и панели, и тестам. */
