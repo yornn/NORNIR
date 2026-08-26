@@ -18,7 +18,11 @@
  * настройками — см. комментарий к readState().
  *
  * Календарные таблицы и разбор маркера живут в parser.js, счёт цикла и беременности —
- * в body.js. Оба не зависят от SillyTavern и покрыты тестами в test-*.mjs.
+ * в body.js, праздники — в holidays.js, счёт уведомлений — в notify.js. Ни один
+ * из них не зависит от SillyTavern, и все покрыты тестами в test-*.mjs.
+ *
+ * Своей системы уведомлений расширение не заводит: всплывашки показывает сама
+ * таверна (toastr), а notify.js только решает, о чём стоит подать голос.
  *
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
@@ -91,12 +95,14 @@ import { CYCLE_DEFAULT, DIVINATION_ACCURACY, bodyView, pregnancyTerm } from "./b
 
 import { DEFAULT_TIERS, HOLIDAY_TIERS, holidayView, markWeek } from "./holidays.js";
 
+import { DEFAULT_NOTICES, NOTICE_IDS, noticesBetween, watchSnapshot } from "./notify.js";
+
 const extensionName = "NORNIR";
 const extensionFolderName = `third-party/${extensionName}`;
 
 /* По умолчанию в Tímatal открыты только Эйкты: с телефона незачем листать
    весь справочник, а нужный раздел разворачивается одним касанием. */
-const DEFAULT_CLOSED_SECTIONS = ["month", "vika", "week", "moon", "feast", "block", "css"];
+const DEFAULT_CLOSED_SECTIONS = ["month", "vika", "week", "moon", "feast", "block", "notify", "css"];
 
 /* Постоянные колонки (номер и др.-сканд. написание) здесь не перечисляются —
    они всегда на месте. Русский включён, чтобы при первом открытии сразу было
@@ -128,6 +134,11 @@ const defaultSettings = {
     holidays: true,
     holidayTiers: [...DEFAULT_TIERS],
     holidayRegion: "all",
+    /* Уведомления. Выключены целиком, пока их не попросят: всплывашка поверх
+       чата — вещь навязчивая, и включать её должен читатель, а не мы. Виды
+       списком по той же причине, что и слои праздников. */
+    notify: false,
+    notifyKinds: [...DEFAULT_NOTICES],
     bodyTracking: false,
     bodyDebug: false,
     herbDeath: false,
@@ -1229,6 +1240,80 @@ function refresh() {
     mountWidget();
     renderAll();
     stripMarkersFromDom();
+    notifyTick();
+}
+
+/* ── Уведомления ────────────────────────────────────────────────────────
+ *
+ * Своих всплывашек расширение не рисует: их показывает таверна (toastr).
+ * Здесь только слепок наблюдаемого и его сравнение с прошлым тактом —
+ * счёт живёт в notify.js и ничего не знает ни про DOM, ни про ST.
+ *
+ * Слепок держится в памяти вкладки и НЕ сохраняется. Это нарочно: после
+ * перезагрузки страницы сравнивать не с чем, и первый такт молчит — иначе
+ * каждый вход в чат встречал бы читателя пачкой уведомлений о том, что и
+ * так нарисовано в панели. По той же причине слепок забывается при смене
+ * чата: там своя дата и своё тело.
+ */
+let lastWatch = null;
+
+function forgetWatch() {
+    lastWatch = null;
+}
+
+/**
+ * Пришёл ли последний ответ без маркера.
+ *
+ * Ищем последнее НЕ пользовательское сообщение и смотрим, оно ли дало панели
+ * снимок. Если снимок взят раньше — значит модель маркер не поставила, и
+ * панель показывает прошлый ход. Молчим, когда инжект выключен: там маркера
+ * никто и не ждёт.
+ */
+function markerStale() {
+    if (!settings().inject) return false;
+    const chat = getContext()?.chat;
+    if (!Array.isArray(chat)) return false;
+    for (let i = chat.length - 1; i >= 0; i--) {
+        const msg = chat[i];
+        if (!msg || typeof msg.mes !== "string" || msg.is_user) continue;
+        return readState().index !== i;
+    }
+    return false;
+}
+
+function notifyTick() {
+    if (!settings().notify) {
+        /* Выключили посреди игры — забываем прошлое. Иначе после обратного
+           включения прилетело бы всё, что накопилось за время молчания. */
+        forgetWatch();
+        return;
+    }
+
+    const snap = watchSnapshot({
+        scene: state,
+        view: bodySummary(),
+        holidays: !!settings().holidays,
+        holidayOpts: holidayOpts(),
+        stale: markerStale(),
+    });
+
+    const kinds = settings().notifyKinds ?? DEFAULT_NOTICES;
+    const notices = noticesBetween(lastWatch, snap, kinds);
+    lastWatch = snap;
+
+    for (const note of notices) showNotice(note);
+}
+
+/** Отдаёт уведомление таверне. Своей системы у нас нет и не заводим. */
+function showNotice(note) {
+    const say = toastr?.[note.level] ?? toastr?.info;
+    if (typeof say !== "function") return;
+    const title = [note.icon, note.title].filter(Boolean).join(" ");
+    try {
+        say(note.text, title, { timeOut: 7000, extendedTimeOut: 2000, escapeHtml: true });
+    } catch (e) {
+        console.error(`[${extensionName}] не удалось показать уведомление:`, e);
+    }
 }
 
 /** События чата приходят залпом — перечитываем состояние один раз в конце. */
@@ -2458,6 +2543,51 @@ function timatalPrefs() {
 }
 
 /**
+ * Настройки уведомлений для раздела в Tímatal.
+ *
+ * Мастер-выключатель и набор видов. Выключатель отдельно от набора нарочно:
+ * «выключить всё на вечер» — не то же самое, что «мне не нужны праздники», и
+ * галочки после включения обратно должны остаться теми же.
+ */
+function notifyPrefs() {
+    const s = settings();
+
+    const kinds = () => {
+        if (!Array.isArray(s.notifyKinds)) s.notifyKinds = [...DEFAULT_NOTICES];
+        /* Чистим от неизвестных ключей: переименование вида не должно
+           оставлять в настройках мусор, который никто уже не выключит. */
+        const clean = s.notifyKinds.filter((v) => NOTICE_IDS.includes(v));
+        if (clean.length !== s.notifyKinds.length) s.notifyKinds = clean;
+        return s.notifyKinds;
+    };
+
+    return {
+        enabled: () => !!s.notify,
+        setEnabled: (on) => {
+            s.notify = !!on;
+            saveSettingsDebounced();
+            /* Включили — считаем нынешний ход точкой отсчёта, чтобы первая
+               же всплывашка не пересказала то, что и так на экране. */
+            forgetWatch();
+            notifyTick();
+        },
+        isOn: (id) => kinds().includes(id),
+        toggle: (id) => {
+            const arr = kinds();
+            const idx = arr.indexOf(id);
+            if (idx === -1) arr.push(id);
+            else arr.splice(idx, 1);
+            saveSettingsDebounced();
+            return idx === -1;
+        },
+        /* Что показывать в разделе, а что скрыть: женская линия выключена —
+           галочкам про цикл и ношение там делать нечего. */
+        bodyTracking: () => !!s.bodyTracking,
+        holidays: () => !!s.holidays,
+    };
+}
+
+/**
  * Ставит дату сцены из календарика Tímatal.
  *
  * Якорь ложится на последнее сообщение {{char}} — там же, где живёт весь
@@ -2708,7 +2838,7 @@ async function openTimatal() {
     const paint = () => {
         shell.replaceChildren(
             buildReference(state, currentTheme(), timatalPrefs(), onSetDate,
-                cycleControls(paint), look),
+                cycleControls(paint), look, notifyPrefs()),
         );
     };
     const onSetDate = (date) => {
@@ -2858,6 +2988,26 @@ function loadSettings() {
     delete extension_settings[extensionName].timatalHiddenColumns;
     /* Сетка дней больше не сворачивается: кнопку убрали, блок всегда открыт. */
     delete extension_settings[extensionName].collapsed;
+    /*
+     * Раздел уведомлений появился позже прочих.
+     *
+     * У тех, кто ставил расширение раньше, список свёрнутых разделов уже
+     * сохранён, и нового ключа в нём нет — раздел открылся бы развёрнутым,
+     * а «Сбросить вид» повис бы в шапке навсегда: вид ведь и правда не
+     * совпадает с исходным. Досыпаем ключ один раз и запоминаем это, иначе
+     * раздел закрывался бы обратно при каждой загрузке.
+     */
+    const s = extension_settings[extensionName];
+    if (!s.notifySeeded) {
+        if (Array.isArray(s.timatalClosedSections) && !s.timatalClosedSections.includes("notify")) {
+            s.timatalClosedSections.push("notify");
+        }
+        s.notifySeeded = true;
+        /* Записываем сразу: иначе у того, кто ничего в настройках не тронул,
+           досыпка не сохранилась бы и повторялась при каждой загрузке — а на
+           второй раз она закрывала бы раздел, который читатель открыл сам. */
+        saveSettingsDebounced();
+    }
     /* Длина цикла была настройкой и успела сохраниться со значением 30.
        Теперь она всегда 28, а забытая тридцатка давала ровный оборот на
        таймскипе в три месяца — цикл возвращался на тот же день. */
@@ -2984,6 +3134,9 @@ jQuery(async () => {
     // в extra и вырезаем из текста — молча, один раз на чат.
     eventSource.on(event_types.CHAT_CHANGED, () => {
         forgetChat();
+        /* Новый чат — новая дата и новое тело. Сравнивать нынешний ход
+           с ходом из прошлой истории нельзя, поэтому слепок забываем. */
+        forgetWatch();
         const context = getContext();
         if (!chatHasRawMarkers(context?.chat)) return;
         const n = syncWholeChat(context?.chat, { keepMarker: settings().debugKeepMarkers });

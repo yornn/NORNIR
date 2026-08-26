@@ -24,11 +24,18 @@
  * 2. Columns ............ Реестр колонок, облачки выбора и таблица
  * 3. Sections ........... Эйкты, месяцы, дни недели, Луна, праздники, блок
  * 4. Assembly ........... Сборка окна с аккордеоном
+ *
+ * Два последних раздела — не про счёт времени, а про поведение расширения:
+ * «Уведомления» решают, о чём подавать голос, «Оформление» — как выглядит
+ * блок. Стоят они здесь, а не в панели настроек таверны, по одной причине:
+ * и то и другое настраивают, глядя на чат, а справочник открыт поверх него.
  */
 
 import { t } from "../../../i18n.js";
 
 import { phaseOf, pregnancySummary } from "./body.js";
+
+import { NOTICE_KINDS } from "./notify.js";
 
 import {
     AUKNAETR_DAYS,
@@ -1050,6 +1057,120 @@ function cssSection(body, state, prefs, extras) {
     });
 }
 
+/* ── Уведомления ─────────────────────────────────────────────────────────
+ *
+ * Подписи видов — здесь, а не в notify.js: там модуль чистый и про i18n
+ * ничего не знает, а `t` — тег шаблонной строки, динамическим ключом его не
+ * позвать. Ключ вида общий, подпись у него одна на всё расширение.
+ *
+ * `needs` — от какой настройки расширения зависит вид. Женская линия
+ * выключена — галочкам про цикл и ношение в списке делать нечего: они бы
+ * ничего не включили, а спрашивать себя, почему уведомления молчат, читатель
+ * стал бы всё равно.
+ */
+const NOTICE_LABELS = {
+    day:    { label: () => t`The current day`,        hint: () => t`Eykt, date, weekday and the feast, if there is one`,   needs: null },
+    eykt:   { label: () => t`Time of day`,            hint: () => t`When the eykt turns within the same day`,              needs: null },
+    moon:   { label: () => t`Moon phases`,            hint: () => t`New moon, full moon and the turns between them`,       needs: null },
+    season: { label: () => t`Turn of the year`,       hint: () => t`First day of winter and of summer, a new month, the inserted days`, needs: null },
+    feast:  { label: () => t`Feasts`,                 hint: () => t`A feast begins, and a warning three days before it`,   needs: "holidays" },
+    cycle:  { label: () => t`Cycle phases`,           hint: () => t`A new phase of the cycle begins`,                      needs: "body" },
+    body:   { label: () => t`The womb and the child`, hint: () => t`The stage of the term, quickening, danger, labour, the draught, the days after`,     needs: "body" },
+    marker: { label: () => t`A reply without a marker`, hint: () => t`The model forgot the infoblock and the panel stayed on the previous turn`, needs: null },
+};
+
+/** Строка с галочкой: подпись, пояснение под ней и сам переключатель. */
+function switchRow(labelText, hintText, checked, onChange) {
+    const row = h("label", "nrn-t-switch");
+
+    const box = h("input", "nrn-t-switch-box");
+    box.type = "checkbox";
+    box.checked = !!checked;
+    box.addEventListener("input", () => onChange(box.checked));
+
+    const words = h("span", "nrn-t-switch-words");
+    words.append(h("span", "nrn-t-switch-label", labelText));
+    if (hintText) words.append(h("span", "nrn-t-switch-hint", hintText));
+
+    row.append(box, words);
+    return { node: row, box };
+}
+
+/**
+ * Уведомления — единственный раздел, который не рассказывает, а решает.
+ *
+ * Своих всплывашек расширение не рисует: показывает их сама таверна, и это
+ * решение, а не заготовка. У неё уже есть и место на экране, и настройки
+ * длительности, и порядок — заводить рядом второй такой же механизм значило
+ * бы поссорить их за один угол экрана.
+ *
+ * Заголовок раздела включает всё разом, список под ним говорит, о чём именно
+ * говорить. Две вещи, а не одна: «выключить на вечер» и «мне не нужны
+ * праздники» — разные желания, и галочки после обратного включения должны
+ * остаться теми же.
+ */
+function notifySection(body, state, prefs, extras) {
+    const notify = extras?.notify;
+
+    body.append(lead(t`SillyTavern shows the notices; NORNIR only decides what is worth saying. Nothing is announced twice, and the first turn after a chat opens stays silent — there is nothing to compare it with yet.`));
+
+    if (!notify) {
+        body.append(h("div", "nrn-t-note", t`Notifications are not available in this window.`));
+        return;
+    }
+
+    const list = h("div", "nrn-t-switch-list");
+
+    /* Список гаснет вместе с выключателем: видно, что галочки на месте и
+       никуда не делись, но сейчас они ничего не решают. */
+    const syncList = () => {
+        const on = notify.enabled();
+        list.classList.toggle("nrn-t-off", !on);
+        for (const box of list.querySelectorAll(".nrn-t-switch-box")) box.disabled = !on;
+    };
+
+    const master = switchRow(
+        t`Turn notifications on`,
+        t`Everything below is announced through SillyTavern's own notices`,
+        notify.enabled(),
+        (on) => { notify.setEnabled(on); syncList(); },
+    );
+    master.node.classList.add("nrn-t-switch-master");
+    body.append(master.node);
+
+    body.append(h("div", "nrn-t-subhead", t`Announce`));
+
+    for (const kind of NOTICE_KINDS) {
+        const def = NOTICE_LABELS[kind.id];
+        if (!def) continue;
+        if (def.needs === "body" && !notify.bodyTracking()) continue;
+        if (def.needs === "holidays" && !notify.holidays()) continue;
+
+        const row = switchRow(
+            `${kind.icon}  ${def.label()}`,
+            def.hint(),
+            notify.isOn(kind.id),
+            () => notify.toggle(kind.id),
+        );
+        list.append(row.node);
+    }
+
+    body.append(list);
+    syncList();
+
+    if (!notify.bodyTracking()) {
+        body.append(h("div", "nrn-t-note",
+            t`Notices about the cycle and the womb appear in this list once the woman's line is turned on in the extension settings.`));
+    }
+    if (!notify.holidays()) {
+        body.append(h("div", "nrn-t-note",
+            t`Notices about feasts appear in this list once feasts are turned on in the extension settings.`));
+    }
+
+    body.append(h("div", "nrn-t-note",
+        t`Notices follow the scene, not the clock: they arrive when the marker moves the day, the phase or the state of the womb. A swipe or a rollback puts everything back the way it was.`));
+}
+
 /* ============================================================
  * 4. ASSEMBLY
  * ============================================================ */
@@ -1064,6 +1185,9 @@ const SECTIONS = [
        а блок — уже про то, как оно попадает в чат. */
     { id: "feast", icon: "🔥", title: () => t`Feasts — the year by its holidays`, build: holidaySection },
     { id: "block", icon: "ᚱ",  title: () => t`The calendar block`,                build: blockSection },
+    /* Уведомления стоят после блока: сперва про то, что расширение знает,
+       потом про то, о чём из этого оно подаёт голос. */
+    { id: "notify", icon: "🔔", title: () => t`Notifications`,                    build: notifySection },
     /* Оформление — в самом конце: это уже не про счёт времени, а про то,
        каким его видно. Читателю справочника оно нужно реже прочего. */
     { id: "css",   icon: "🎨", title: () => t`Look — layout, theme and CSS`,      build: cssSection },
@@ -1111,9 +1235,11 @@ function buildSection(def, state, prefs, extras) {
  *   skins, themes, skin(), theme(), setSkin(id), setTheme(id),
  *   themeLabel(id), read(theme), original(theme), isEdited(theme),
  *   apply(theme, text), restore(theme)
+ * @param {object|null} notify Уведомления: enabled(), setEnabled(on),
+ *   isOn(id), toggle(id), bodyTracking(), holidays()
  * @returns {HTMLElement} Корневой элемент для Popup
  */
-export function buildReference(state, theme = "default", prefs, onSetDate = null, cycle = null, look = null) {
+export function buildReference(state, theme = "default", prefs, onSetDate = null, cycle = null, look = null, notify = null) {
     const root = h("div", "nrn-timatal nrn-themed");
     root.setAttribute("data-theme", theme || "default");
 
@@ -1140,7 +1266,7 @@ export function buildReference(state, theme = "default", prefs, onSetDate = null
     const hint = h("div", "nrn-t-hint", t`Tap a heading to fold a section. Pick the chips to add columns.`);
     root.append(hint);
 
-    const extras = { look };
+    const extras = { look, notify };
     for (const def of SECTIONS) root.append(buildSection(def, state, prefs, extras));
 
     function syncReset() {

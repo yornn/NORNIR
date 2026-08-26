@@ -2178,6 +2178,90 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     border-radius: 8px;
 }
 
+/* --- раздел уведомлений: выключатель и список видов ---
+ *
+ * Галочки собраны в столбец, а не в облачка: у каждой есть пояснение, и
+ * пояснение это длиннее самой подписи. В облачко его не уместить, а без него
+ * половина видов («поворот года», «утроба») ничего не говорит.
+ */
+
+.nrn-t-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    margin: 0 -10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.nrn-t-switch:hover {
+    background: var(--nrn-bg-hover);
+}
+
+/* Выключатель всего раздела стоит особняком: он не из списка, он над ним. */
+.nrn-t-switch-master {
+    padding: 10px;
+    background: var(--nrn-bg-raised);
+    border: 1px solid var(--nrn-border-soft);
+}
+
+.nrn-timatal .nrn-t-switch-box {
+    flex: 0 0 auto;
+    /* Чекбокс рисует система; красим его в наш цвет, иначе он приходит
+       синим системным поверх любой темы. */
+    accent-color: var(--nrn-accent);
+    width: 16px;
+    height: 16px;
+    margin: 3px 0 0;
+    cursor: pointer;
+}
+
+.nrn-t-switch-words {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.nrn-t-switch-label {
+    font-size: 16px;
+    line-height: 1.35;
+    color: var(--nrn-text);
+}
+
+.nrn-t-switch-master .nrn-t-switch-label {
+    letter-spacing: 0.6px;
+    color: var(--nrn-text-bright);
+}
+
+.nrn-t-switch-hint {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--nrn-text-dim);
+}
+
+.nrn-t-switch-list {
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.15s ease;
+}
+
+/* Список при выключенных уведомлениях гаснет, но не исчезает: видно, что
+   выбор на месте и вернётся вместе с выключателем. */
+.nrn-t-switch-list.nrn-t-off {
+    opacity: 0.4;
+}
+
+.nrn-t-switch-list.nrn-t-off .nrn-t-switch {
+    cursor: default;
+}
+
+.nrn-t-switch-list.nrn-t-off .nrn-t-switch:hover {
+    background: transparent;
+}
+
 /* --- раздел оформления: раскладка, тема и правка CSS --- */
 
 /*
