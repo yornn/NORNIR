@@ -1743,6 +1743,16 @@ export function bodyView(body, today, opts = {}) {
         ? `Кровь не приходила: ${late} ${plural(late, "день", "дня", "дней")}`
         : null;
 
+    /*
+     * Тот же счёт числом, а не строкой.
+     *
+     * Нужен уведомлениям: строку они показать могут, но решить по ней, ПЕРВЫЙ
+     * ли это день задержки, — нет, она меняется каждые сутки. Отдаём число
+     * ровно тогда, когда панель о задержке говорит, чтобы у обоих был один
+     * ответ на вопрос «задержка объявлена?», а не два разных.
+     */
+    const lateDays = lateLine ? late : null;
+
     /* Кровь не в срок. Якорь цикла она не двигает — это не тидир, — но и
        молчать о ней нельзя: у беременной это прямая тревога. */
     const oddDays = daysSinceBleeding(body.oddBleed, today);
@@ -1852,6 +1862,7 @@ export function bodyView(body, today, opts = {}) {
                 state: "pregnant_unknown",
                 icon: "phase-unknown",
                 title: lateLine ?? "Тидир задерживаются",
+                lateDays,
                 titleHint: "Задержка ещё ничего не значит: тидир задерживаются от голода, дороги и тревоги",
                 status: pregnancy.sign + ".",
                 statusHint: "Приметы, а не знание.",
@@ -1962,6 +1973,7 @@ export function bodyView(body, today, opts = {}) {
             icon: "phase-late",
             title: upset.norse, titleHint: upset.ru,
             count: lateLine,
+            lateDays,
             status: "Тидир не пришли в срок.",
             statusHint: `Тело сбилось: ${upset.ru}. Кровь придёт позже обычного, а дитя тут ни при чём.`,
             extra: oddLine,

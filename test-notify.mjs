@@ -23,7 +23,7 @@ import {
     weekdayName,
 } from "./notify.js";
 
-import { CYCLE_PHASES } from "./body.js";
+import { CYCLE_PHASES, bodyView } from "./body.js";
 import { MONTHS, WEEKDAYS, addDays, weekdayOf } from "./parser.js";
 
 let passed = 0;
@@ -329,6 +329,101 @@ function view(state, title, extra = {}) {
     const after = snap({ year: 998, month: 2, day: 20, hour: 12 },
         { view: view("cycling", "Tíðir", { draught: { ...draught, lingering: true, status: "Утроба не примет семени." } }) });
     eq("перемена отката тоже названа", noticesBetween(b, after, ["body"]).length, 1);
+}
+
+/* ============================================================
+ * Скрытая беременность
+ *
+ * Самое важное место во всём модуле. Зачатие лежит в данных с первого дня,
+ * а героиня о нём не знает — и уведомления обязаны не знать тоже. Здесь
+ * счёт настоящий, через bodyView: подделанной сводкой эту проверку не
+ * сделать, вся суть в том, ЧТО именно тело отдаёт наружу в эти недели.
+ * ============================================================ */
+
+/* Виды про утробу: день, Луна и поворот года здесь только мешали бы —
+   они идут своим чередом и к скрытому сроку отношения не имеют. */
+const WOMB = ["cycle", "body"];
+
+group("Скрытая беременность");
+
+{
+    const lastBleed = { year: 1015, month: 2, day: 24 };
+    const conceived = { year: 1015, month: 3, day: 12 };
+    const knownAt = addDays(conceived.year, conceived.month, conceived.day, 45);
+
+    const bodyOn = (i) => (i < 0
+        ? { lastBleed }
+        : {
+            lastBleed,
+            pregnancy: {
+                conceived,
+                knownSince: i >= 45 ? knownAt : null,
+                father: null, births: 1, seed: "s",
+            },
+        });
+
+    const at = (i) => addDays(conceived.year, conceived.month, conceived.day, i);
+    const snapAt = (i) => {
+        const today = at(i);
+        return watchSnapshot({
+            scene: { ...today, hour: 12 },
+            view: bodyView(bodyOn(i), today, { accuracy: 0.6 }),
+        });
+    };
+
+    /* Прогон от последних дней цикла до того дня, когда она узнала. */
+    let prev = snapAt(-2);
+    const heard = [];
+    for (let i = -1; i <= 45; i++) {
+        const next = snapAt(i);
+        for (const note of noticesBetween(prev, next, WOMB)) heard.push({ day: i, note });
+        prev = next;
+    }
+
+    const onConception = heard.filter((x) => x.day === 0);
+    eq("в день зачатия — тишина", onConception.length, 0);
+
+    const delays = heard.filter((x) => x.note.title === "Tíðir");
+    eq("о задержке сказано ровно один раз", delays.length, 1);
+    ok("и не в день зачатия, а когда срок прошёл", delays[0].day >= 7,
+        `сказано на день ${delays[0]?.day}`);
+    ok("без единого слова о причине",
+        !/дит|берем|зача|нош/i.test(delays[0].note.text + delays[0].note.title),
+        delays[0].note.text);
+
+    const known = heard.filter((x) => x.day === 45);
+    eq("день, когда узнала, назван", known.length, 1);
+    ok("и назван ношением", /Ношение/.test(known[0].note.text), known[0].note.text);
+
+    /* Между задержкой и знанием тело меняется каждый день — приметы, счёт
+       дней, — но новостью это не является. Раньше здесь сыпалось по
+       уведомлению в сутки: заголовком скрытого состояния служит счётчик. */
+    eq("за все недели скрытого срока — два уведомления", heard.length, 2);
+}
+
+{
+    /* Названный сбой — та же задержка, но причина героине известна, и она
+       названа. Число дней при этом такое же: по длине строки не должно быть
+       видно, есть у задержки причина или нет. */
+    const lastBleed = { year: 1015, month: 2, day: 24 };
+    const body = { lastBleed, disruption: { id: "hungr", at: { year: 1015, month: 3, day: 4 } } };
+
+    let prev = null;
+    const heard = [];
+    for (let i = 0; i <= 40; i++) {
+        const today = addDays(lastBleed.year, lastBleed.month, lastBleed.day, i);
+        const next = watchSnapshot({
+            scene: { ...today, hour: 12 },
+            view: bodyView(body, today, { accuracy: 0.6 }),
+        });
+        for (const note of noticesBetween(prev, next, WOMB)) heard.push({ day: i, note });
+        prev = next;
+    }
+
+    const upset = heard.filter((x) => x.note.title === "Hungr");
+    eq("о сбое сказано один раз", upset.length, 1);
+    ok("со счётом дней, как и у задержки без причины",
+        /Кровь не приходила/.test(upset[0].note.text), upset[0].note.text);
 }
 
 /* ============================================================
