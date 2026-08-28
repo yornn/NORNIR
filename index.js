@@ -54,7 +54,7 @@ import { t } from "../../../i18n.js";
 import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
 import { SlashCommand } from "../../../slash-commands/SlashCommand.js";
 import { Popup, POPUP_TYPE } from "../../../popup.js";
-import { buildReference, SECTION_IDS, COLUMN_KEYS, isPermanent } from "./reference.js";
+import { buildReference, COLUMN_KEYS, isPermanent } from "./reference.js";
 
 import {
     AUK_AFTER_MONTH,
@@ -100,10 +100,6 @@ import { DEFAULT_NOTICES, NOTICE_IDS, noticesBetween, watchSnapshot } from "./no
 const extensionName = "NORNIR";
 const extensionFolderName = `third-party/${extensionName}`;
 
-/* По умолчанию в Tímatal открыты только Эйкты: с телефона незачем листать
-   весь справочник, а нужный раздел разворачивается одним касанием. */
-const DEFAULT_CLOSED_SECTIONS = ["month", "vika", "week", "moon", "feast", "block", "notify", "css"];
-
 /* Постоянные колонки (номер и др.-сканд. написание) здесь не перечисляются —
    они всегда на месте. Русский включён, чтобы при первом открытии сразу было
    видно, что есть что; остальное добирается облачками. */
@@ -125,7 +121,6 @@ const defaultSettings = {
     /* Какой лист разворота открыт. Нить Фрейи первой не по алфавиту:
        ради неё расширение и писалось. */
     activeTab: "freyja",
-    timatalClosedSections: DEFAULT_CLOSED_SECTIONS,
     timatalVisibleColumns: DEFAULT_VISIBLE_COLUMNS,
     calendarHints: false,
     /* Праздники: сам показ, слои достоверности и край света. Слои списком,
@@ -2787,20 +2782,15 @@ function timatalPrefs() {
     const toggleable = COLUMN_KEYS.filter((k) => !isPermanent(k));
 
     return {
-        isSectionClosed: (id) => list("timatalClosedSections", SECTION_IDS).includes(id),
-        toggleSection: (id) => toggle("timatalClosedSections", SECTION_IDS, id),
-
         isColumnVisible: (key) =>
             isPermanent(key) || list("timatalVisibleColumns", toggleable).includes(key),
         toggleColumn: (key) => toggle("timatalVisibleColumns", toggleable, key),
 
         isDefaultView: () =>
-            sameSet(list("timatalVisibleColumns", toggleable), DEFAULT_VISIBLE_COLUMNS) &&
-            sameSet(list("timatalClosedSections", SECTION_IDS), DEFAULT_CLOSED_SECTIONS),
+            sameSet(list("timatalVisibleColumns", toggleable), DEFAULT_VISIBLE_COLUMNS),
 
         resetView: () => {
             s.timatalVisibleColumns = [...DEFAULT_VISIBLE_COLUMNS];
-            s.timatalClosedSections = [...DEFAULT_CLOSED_SECTIONS];
             saveSettingsDebounced();
         },
     };
@@ -3119,10 +3109,16 @@ async function openTimatal() {
 
     // Popup, а не callGenericPopup: нужен доступ к <dialog> ДО показа, чтобы
     // покрасить подложку своей темой без мигания таверновской.
+    /*
+     * allowVerticalScrolling выключен нарочно: прокрутку ведёт не окно
+     * целиком, а страница внутри него. Шапка с возвратом на карту обязана
+     * стоять на месте, пока таблица под ней уезжает вверх, — иначе с
+     * телефона до «← карта» пришлось бы листать обратно.
+     */
     const popup = new Popup(shell, POPUP_TYPE.DISPLAY, "", {
         wide: true,
         large: true,
-        allowVerticalScrolling: true,
+        allowVerticalScrolling: false,
         leftAlign: true,
     });
     popup.dlg.classList.add("nrn-popup", "nrn-themed");
@@ -3258,25 +3254,13 @@ function loadSettings() {
     /* Сетка дней больше не сворачивается: кнопку убрали, блок всегда открыт. */
     delete extension_settings[extensionName].collapsed;
     /*
-     * Раздел уведомлений появился позже прочих.
-     *
-     * У тех, кто ставил расширение раньше, список свёрнутых разделов уже
-     * сохранён, и нового ключа в нём нет — раздел открылся бы развёрнутым,
-     * а «Сбросить вид» повис бы в шапке навсегда: вид ведь и правда не
-     * совпадает с исходным. Досыпаем ключ один раз и запоминаем это, иначе
-     * раздел закрывался бы обратно при каждой загрузке.
+     * Аккордеон в Tímatal был, да весь вышел: разделы больше не сворачиваются,
+     * у каждого своя страница. Список свёрнутых и досыпка к нему («раздел
+     * уведомлений появился позже прочих») стали ни к чему — выметаем их из
+     * сохранённых настроек, чтобы не тащить за собой мёртвый ключ.
      */
-    const s = extension_settings[extensionName];
-    if (!s.notifySeeded) {
-        if (Array.isArray(s.timatalClosedSections) && !s.timatalClosedSections.includes("notify")) {
-            s.timatalClosedSections.push("notify");
-        }
-        s.notifySeeded = true;
-        /* Записываем сразу: иначе у того, кто ничего в настройках не тронул,
-           досыпка не сохранилась бы и повторялась при каждой загрузке — а на
-           второй раз она закрывала бы раздел, который читатель открыл сам. */
-        saveSettingsDebounced();
-    }
+    delete extension_settings[extensionName].timatalClosedSections;
+    delete extension_settings[extensionName].notifySeeded;
     /* Длина цикла была настройкой и успела сохраниться со значением 30.
        Теперь она всегда 28, а забытая тридцатка давала ровный оборот на
        таймскипе в три месяца — цикл возвращался на тот же день. */

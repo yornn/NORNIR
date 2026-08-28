@@ -1398,7 +1398,57 @@ dialog.popup.nrn-popup[open] {
     background-color: var(--nrn-bg) !important;
     border: 1px solid var(--nrn-border) !important;
     border-radius: 10px;
-    box-shadow: 0 0 24px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.55) !important;
+
+    /*
+     * Окно во всю высоту экрана, а не по содержимому.
+     *
+     * Справочник листается по одной странице за раз, и высота окна больше
+     * не должна прыгать от того, длинная в этой странице таблица или
+     * короткая: карта и страница обязаны стоять в одной раме. Прокрутку
+     * ведёт полоса внутри — шапка с возвратом на карту остаётся на месте.
+     *
+     * dvh, а не vh: на телефоне адресная строка браузера то появляется,
+     * то уходит, и vh считался бы от большей высоты — низ окна уезжал
+     * бы под неё.
+     */
+    display: flex !important;
+    flex-direction: column;
+    width: min(1180px, 96vw) !important;
+    max-width: 96vw !important;
+    height: calc(100dvh - 36px) !important;
+    max-height: calc(100dvh - 36px) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Тело окна таверны — только рама: всю раскладку внутри ведёт справочник. */
+dialog.popup.nrn-popup .popup-body,
+dialog.popup.nrn-popup .popup-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/*
+ * На телефоне окно разворачивается во весь экран целиком: полей нет,
+ * скруглений нет, рамки нет — читать справочник с ладони и так тесно.
+ */
+@media (max-width: 700px) {
+    dialog.popup.nrn-popup,
+    dialog.popup.nrn-popup[open] {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border: none !important;
+        border-radius: 0 !important;
+    }
 }
 
 dialog.popup.nrn-popup[open]::backdrop {
@@ -1407,14 +1457,34 @@ dialog.popup.nrn-popup[open]::backdrop {
     -webkit-backdrop-filter: blur(3px);
 }
 
+/*
+ * Рама окна — тоже наша.
+ *
+ * Броня внутри справочника (см. `.nrn-timatal *` ниже) до крестика закрытия
+ * и подложки не достаёт: они не наши по разметке, а таверновы. Тень и
+ * свечение с них снимаются здесь — иначе окно с чистым содержимым стоит
+ * в светящейся оправе, и вся правка насмарку.
+ */
+dialog.popup.nrn-popup,
+dialog.popup.nrn-popup * {
+    text-shadow: none !important;
+    -webkit-text-stroke: 0 !important;
+}
+
+dialog.popup.nrn-popup * {
+    box-shadow: none !important;
+}
+
 /* Крестик закрытия — в цвет акцента темы */
 dialog.popup.nrn-popup .popup-button-close {
-    color: var(--nrn-text-dim);
+    color: var(--nrn-text-dim) !important;
+    background: none !important;
+    border: none !important;
     transition: color 0.15s ease;
 }
 
 dialog.popup.nrn-popup .popup-button-close:hover {
-    color: var(--nrn-accent);
+    color: var(--nrn-accent) !important;
 }
 
 dialog.popup.nrn-popup .popup-controls .menu_button {
@@ -1438,27 +1508,102 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  * же `font-family`, и они этот выбор перебивают. Всё прочее — пояснения,
  * оговорки, эхо ручной установки, описания в таблицах — наследует отсюда.
  *
- * Кегль поднят с 15 до 16.5: справочник читают с телефона, и мелочь
- * в 11–13 пунктов, которой тут было полстраницы, глаза не берут.
+ * Кегль поднят до 18: полотна из всех разделов разом больше нет, у каждого
+ * своё окно, и место под текст освободилось. Мелочь в 11–13 пунктов, которой
+ * тут было полстраницы, глаза не брали — особенно с телефона.
  */
 .nrn-timatal {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
     color: var(--nrn-text);
     font-family: "Cormorant Unicase", Georgia, serif;
-    font-size: 16.5px;
+    font-size: 18px;
     text-align: left;
 }
 
-.nrn-timatal * {
+/*
+ * Броня от чужих тем.
+ *
+ * Темы таверны сплошь и рядом вешают на весь интерфейс тень, обводку или
+ * свечение текста — иные прямо на `body`, а тень и обводка наследуются.
+ * Справочник подхватывал их вместе со всем прочим, и читать таблицу,
+ * набранную светящейся капителью, было невозможно больно.
+ *
+ * Поэтому здесь всё это снимается разом и с !important: наши собственные
+ * тени (полоска у текущей строки) прописаны с тем же !important, но с
+ * большей специфичностью, и эту чистку переживают.
+ */
+.nrn-timatal,
+.nrn-timatal *,
+.nrn-timatal *::before,
+.nrn-timatal *::after {
     box-sizing: border-box;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    -webkit-text-stroke: 0 !important;
+    text-stroke: 0 !important;
+    animation: none !important;
+    /* Скруглений в справочнике нет нигде: всё прямоугольное. Разом и с
+       !important — иначе чужое `button { border-radius: 999px !important }`
+       превращает клеймо раздела в пилюлю. */
+    border-radius: 0 !important;
+}
+
+/*
+ * Поля и кнопки. Темы таверны красят `select`, `input`, `textarea` и `button`
+ * через один — своим фоном, своим кеглем, своими полями. Здесь у них снова
+ * наш шрифт и наша рама; собственные цвета и размеры каждому виду кнопки
+ * прописаны ниже, тоже с !important.
+ */
+.nrn-timatal button,
+.nrn-timatal select,
+.nrn-timatal input,
+.nrn-timatal textarea {
+    font-family: "Cormorant Unicase", Georgia, serif !important;
+    background-image: none !important;
+    outline-offset: -2px;
+}
+
+/* --- карта: одиннадцать клейм в двух ларях --- */
+
+/*
+ * Карта и страница — два вида одного окна, и прокрутка у каждого своя.
+ * Карта прокручивается целиком; у страницы шапка с возвратом стоит на
+ * месте, а уезжает только содержимое (`.nrn-t-scroll` ниже).
+ */
+.nrn-t-hub {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* Справа шире: там крестик закрытия таверны, и заголовок не должен
+       заезжать под него. */
+    padding: 26px 52px 28px 26px;
+}
+
+.nrn-t-page {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.nrn-t-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 24px 26px;
 }
 
 /* --- шапка --- */
 
 .nrn-t-header {
     text-align: center;
-    padding: 0 0 14px;
-    border-bottom: 1px solid var(--nrn-border);
-    margin-bottom: 14px;
+    padding: 0 0 4px;
+    margin-bottom: 20px;
 }
 
 .nrn-t-runes {
@@ -1493,14 +1638,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-top: 10px;
-    padding: 5px 13px;
-    font-family: inherit;
-    font-size: 12.5px;
-    color: var(--nrn-text-muted);
-    background: var(--nrn-bg-raised);
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 14px;
+    margin-top: 22px;
+    padding: 7px 15px !important;
+    font-size: 14px !important;
+    color: var(--nrn-text-muted) !important;
+    background: var(--nrn-bg-raised) !important;
+    border: 1px solid var(--nrn-border-soft) !important;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
@@ -1516,6 +1659,175 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     line-height: 1;
 }
 
+/* Подпись над решёткой клейм: слово и линейка до края окна. */
+.nrn-t-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 22px 0 12px;
+}
+
+.nrn-t-group:first-of-type {
+    margin-top: 0;
+}
+
+.nrn-t-group-name {
+    flex: none;
+    font-size: 14px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--nrn-text-dim);
+}
+
+.nrn-t-group-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--nrn-border);
+}
+
+/*
+ * Клейма. Три в ряд на большом окне, два на среднем, одно на телефоне:
+ * имя раздела набрано Norse, и в узкую колонку оно не влезает.
+ */
+.nrn-t-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.nrn-timatal .nrn-t-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 13px 15px 14px !important;
+    font-size: 18px !important;
+    text-align: left;
+    color: var(--nrn-text) !important;
+    background: var(--nrn-bg-raised) !important;
+    border: 1px solid var(--nrn-border-soft) !important;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.nrn-timatal .nrn-t-tile:hover {
+    background: var(--nrn-bg-hover) !important;
+    border-color: var(--nrn-accent-border-dim) !important;
+}
+
+.nrn-timatal .nrn-t-tile:focus-visible {
+    outline: 2px solid var(--nrn-accent);
+    outline-offset: -2px;
+}
+
+.nrn-t-tile-top {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+}
+
+.nrn-t-tile-rune {
+    flex: none;
+    font-size: 15px;
+    color: var(--nrn-accent);
+}
+
+.nrn-timatal .nrn-t-tile-name {
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 23px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--nrn-text-bright);
+}
+
+.nrn-t-tile-sub {
+    font-size: 15px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--nrn-text-muted);
+}
+
+/* --- шапка страницы: возврат на карту --- */
+
+.nrn-t-topbar {
+    flex: none;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 14px 52px 13px 24px;
+    background: var(--nrn-bg-raised);
+    border-bottom: 1px solid var(--nrn-border);
+}
+
+.nrn-timatal .nrn-t-back {
+    flex: none;
+    padding: 0 !important;
+    font-size: 15px !important;
+    letter-spacing: 1.7px;
+    text-transform: uppercase;
+    color: var(--nrn-accent) !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer;
+}
+
+.nrn-timatal .nrn-t-back:hover {
+    color: var(--nrn-text-bright) !important;
+}
+
+.nrn-t-dot {
+    flex: none;
+    color: var(--nrn-text-dim);
+}
+
+.nrn-t-crumb {
+    flex: none;
+    font-size: 14px;
+    letter-spacing: 1.7px;
+    text-transform: uppercase;
+    color: var(--nrn-text-dim);
+}
+
+/*
+ * «Сейчас в сцене» в шапке страницы — с краю и тише крошек.
+ *
+ * В одну строку и с многоточием: строка длинная (эйкта, дата, день недели,
+ * вика, Луна), и в перенос она уходила под крестик закрытия таверны. На
+ * узком экране перенос, наоборот, разрешён — там она стоит отдельной
+ * строкой под крошками (см. «узкие экраны» ниже).
+ */
+.nrn-t-topbar-now {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 15px;
+    letter-spacing: 0.6px;
+    color: var(--nrn-text-soft);
+}
+
+/* Заголовок страницы — то же имя, что и в оглавлении раздела. */
+.nrn-timatal .nrn-t-page-title {
+    margin-bottom: 10px;
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 29px;
+    letter-spacing: 1.4px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--nrn-text-bright);
+}
+
+/* «Сейчас в сцене» на карте — под названием, одной строкой. */
+.nrn-t-now-line {
+    margin-top: 6px;
+    font-size: 16px;
+    letter-spacing: 0.8px;
+    color: var(--nrn-text-soft);
+}
+
 /* --- «сейчас в сцене» --- */
 
 .nrn-t-now {
@@ -1526,7 +1838,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     padding: 9px 14px;
     margin-bottom: 14px;
     border: 1px solid var(--nrn-accent-border-dim);
-    border-radius: 14px;
+    border-radius: 0;
     background: var(--nrn-bg-raised);
 }
 
@@ -1789,7 +2101,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     margin-bottom: 4px;
     padding-top: 10px;
     border-top: 1px solid var(--nrn-border-soft);
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.6px;
     text-transform: uppercase;
     color: var(--nrn-text-muted);
@@ -1797,17 +2109,17 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 /* Подпись перед списком в календарике цикла. */
 .nrn-t-picker-label {
-    font-size: 15px;
+    font-size: 17px;
     color: var(--nrn-text-muted);
 }
 
 /* --- календарик: выбор даты сцены --- */
 
 .nrn-t-picker {
-    padding: 11px 14px 12px;
+    padding: 14px 16px 16px;
     margin-bottom: 14px;
     border: 1px solid var(--nrn-border-soft);
-    border-radius: 14px;
+    border-radius: 0;
     background: var(--nrn-bg-raised);
     transition: border-color 0.2s ease;
 }
@@ -1817,8 +2129,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-t-picker-title {
-    margin-bottom: 8px;
-    font-size: 13.5px;
+    margin-bottom: 10px;
+    font-size: 15px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--nrn-text-dim);
@@ -1831,30 +2143,58 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     gap: 7px;
 }
 
+/*
+ * Поля, в которых выставляют дату и числа: день, месяц, год, день цикла.
+ *
+ * Тут всё нарочно с !important, и вот почему. Темы таверны и пользовательский
+ * CSS красят `select`, `input` и `.text_pole` через один — своим фоном,
+ * своими скруглениями, своей тенью, а иные ещё и кегль задают. Поле даты от
+ * этого превращалось в чужую пилюлю посреди справочника, и цифру в ней было
+ * не разобрать. Здесь у поля своя рама: прямоугольная, крупная и с крупной
+ * же цифрой внутри — дату ставят один раз, но смотрят на неё каждый ход.
+ */
 .nrn-timatal .nrn-t-picker-select,
-.nrn-timatal .nrn-t-picker-year {
-    padding: 5px 9px;
-    font-family: inherit;
-    font-size: 13px;
-    color: var(--nrn-text);
-    background: var(--nrn-bg);
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 9px;
+.nrn-timatal .nrn-t-picker-year,
+.nrn-timatal .nrn-t-picker-text {
+    min-height: 42px;
+    padding: 9px 14px !important;
+    font-family: "Cormorant Unicase", Georgia, serif !important;
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.5px;
+    color: var(--nrn-text-bright) !important;
+    background: var(--nrn-bg) !important;
+    background-image: none !important;
+    border: 1px solid var(--nrn-border) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.nrn-timatal .nrn-t-picker-select:hover,
+.nrn-timatal .nrn-t-picker-year:hover,
+.nrn-timatal .nrn-t-picker-text:hover,
+.nrn-timatal .nrn-t-picker-select:focus,
+.nrn-timatal .nrn-t-picker-year:focus,
+.nrn-timatal .nrn-t-picker-text:focus {
+    outline: none;
+    border-color: var(--nrn-accent-border-dim) !important;
 }
 
 /* Год — свободный ввод, но поле не должно растягиваться на всю строку. */
 .nrn-timatal .nrn-t-picker-year {
-    width: 5.5em;
+    width: 6em;
 }
 
 .nrn-timatal .nrn-t-picker-apply {
-    padding: 5px 14px;
-    font-family: inherit;
-    font-size: 12.5px;
-    color: var(--nrn-accent);
-    background: var(--nrn-bg);
-    border: 1px solid var(--nrn-accent-border-dim);
-    border-radius: 14px;
+    min-height: 42px;
+    padding: 9px 20px !important;
+    font-family: "Cormorant Unicase", Georgia, serif !important;
+    font-size: 16px !important;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--nrn-accent) !important;
+    background: var(--nrn-bg) !important;
+    border: 1px solid var(--nrn-accent-border-dim) !important;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
 }
@@ -1875,7 +2215,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 .nrn-t-picker-now-line {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
-    font-size: 17px;
+    font-size: 20px;
     letter-spacing: 0.6px;
     color: var(--nrn-accent);
 }
@@ -1883,13 +2223,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 .nrn-timatal .nrn-t-picker-text {
     flex: 1 1 8em;
     min-width: 7em;
-    padding: 5px 9px;
-    font-family: inherit;
-    font-size: 15px;
-    color: var(--nrn-text);
-    background: var(--nrn-bg);
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 9px;
 }
 
 /* Сброс — действие разрушительное, и выглядеть должно иначе. */
@@ -1908,22 +2241,25 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  */
 .nrn-t-picker-echo {
     margin-top: 8px;
-    font-size: 15.5px;
+    font-size: 17px;
     letter-spacing: 0.3px;
     line-height: 1.4;
     color: var(--nrn-text-muted);
     min-height: 1.2em;
 }
 
-/* --- подсказка про управление --- */
-
+/* --- пояснение под подзаголовком ---
+ *
+ * Строка под названием слоя праздников: чем этот слой отличается от
+ * соседнего. Тише таблицы под ней — цветом и кеглем, но не курсивом:
+ * настоящего курсивного начертания у Cormorant Unicase не существует, и
+ * браузер подделывает его наклоном — на капители это читается тяжелее
+ * прямого.
+ */
 .nrn-t-hint {
     margin-bottom: 12px;
-    font-size: 15px;
-    /* Курсива нет: настоящего курсивного начертания у Cormorant Unicase
-       не существует, и браузер подделывает его наклоном — на капители
-       это читается тяжелее прямого. Тише прочего эти строки и так:
-       цветом и кеглем. */
+    font-size: 16px;
+    line-height: 1.45;
     color: var(--nrn-text-dim);
     opacity: 0.9;
 }
@@ -2037,82 +2373,17 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     display: none;
 }
 
-.nrn-t-section {
-    border-top: 1px solid var(--nrn-border-soft);
-}
-
-.nrn-t-section:last-child {
-    border-bottom: 1px solid var(--nrn-border-soft);
-}
-
-/* Заголовок раздела — он же переключатель */
-.nrn-timatal .nrn-t-section-toggle {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 13px 4px;
-    font-family: inherit;
-    text-align: left;
-    color: var(--nrn-text-bright);
-    background: none;
-    border: none;
-    cursor: pointer;
-    transition: color 0.15s ease;
-}
-
-.nrn-timatal .nrn-t-section-toggle:hover {
-    color: var(--nrn-accent);
-}
-
-.nrn-timatal .nrn-t-section-toggle:focus-visible {
-    outline: 2px solid var(--nrn-accent);
-    outline-offset: -2px;
-    border-radius: 6px;
-}
-
-.nrn-t-chevron {
-    flex-shrink: 0;
-    font-size: 12px;
-    line-height: 1;
-    color: var(--nrn-accent);
-    transition: transform 0.2s ease;
-}
-
-.nrn-t-closed .nrn-t-chevron {
-    transform: rotate(-90deg);
-}
-
-.nrn-t-section-icon {
-    flex-shrink: 0;
-    font-size: 15px;
-}
-
-.nrn-timatal .nrn-t-section-title {
-    font-family: "Norse", Georgia, serif;
-    font-weight: 700;
-    font-size: 20px;
-    letter-spacing: 1px;
-    line-height: 1.25;
-    text-transform: uppercase;
-}
-
+/*
+ * Тело раздела. Аккордеона больше нет: раздел не сворачивается, а живёт
+ * на своей странице целиком — от заголовка до примечания под таблицей.
+ */
 .nrn-t-section-body {
-    padding: 0 0 18px;
-}
-
-.nrn-t-closed .nrn-t-section-body {
-    display: none;
-}
-
-/* Свёрнутый раздел бледнее — сразу видно, что он спрятан, а не пуст */
-.nrn-t-closed .nrn-t-section-toggle {
-    color: var(--nrn-text-dim);
+    padding: 0;
 }
 
 .nrn-t-lead {
-    margin-bottom: 12px;
-    font-size: 16.5px;
+    margin-bottom: 14px;
+    font-size: 18px;
     /* Курсива нет: настоящего курсивного начертания у Cormorant Unicase
        не существует, и браузер подделывает его наклоном — на капители
        это читается тяжелее прямого. Тише прочего эти строки и так:
@@ -2135,15 +2406,14 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-timatal .nrn-t-chip {
-    padding: 5px 14px;
-    font-family: inherit;
-    font-size: 12.5px;
+    padding: 6px 14px !important;
+    font-size: 14px !important;
     line-height: 1.25;
-    letter-spacing: 0.3px;
-    color: var(--nrn-text-dim);
-    background: transparent;
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 999px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--nrn-text-dim) !important;
+    background: transparent !important;
+    border: 1px solid var(--nrn-border-soft) !important;
     cursor: pointer;
     opacity: 0.65;
     transition: color 0.15s ease, background 0.15s ease,
@@ -2163,12 +2433,11 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 /* Зажжённое облачко */
 .nrn-timatal .nrn-t-chip-on {
-    color: var(--nrn-chip-text);
-    background: var(--nrn-chip-bg);
-    border-color: var(--nrn-chip-border);
+    color: var(--nrn-chip-text) !important;
+    background: var(--nrn-chip-bg) !important;
+    border-color: var(--nrn-chip-border) !important;
     opacity: 1;
     font-weight: bold;
-    box-shadow: 0 0 8px -2px var(--nrn-accent-glow);
 }
 
 .nrn-timatal .nrn-t-chip-on:hover {
@@ -2187,14 +2456,14 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-t-note {
-    margin-top: 12px;
-    padding: 10px 14px;
-    font-size: 15.5px;
+    margin-top: 14px;
+    padding: 11px 15px;
+    font-size: 17px;
     line-height: 1.5;
     color: var(--nrn-text-muted);
     background: var(--nrn-bg-raised);
     border-left: 3px solid var(--nrn-accent-border-dim);
-    border-radius: 0 8px 8px 0;
+    border-radius: 0;
 }
 
 /* --- таблицы --- */
@@ -2202,18 +2471,18 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 .nrn-t-table-wrap {
     overflow-x: auto;
     border: 1px solid var(--nrn-border-soft);
-    border-radius: 8px;
+    border-radius: 0;
 }
 
 .nrn-timatal .nrn-t-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 15.5px;
+    font-size: 17px;
 }
 
 .nrn-timatal .nrn-t-table th {
-    padding: 8px 12px;
-    font-size: 12.5px;
+    padding: 10px 14px;
+    font-size: 13.5px;
     font-weight: bold;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -2245,7 +2514,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-timatal .nrn-t-table td {
-    padding: 8px 12px;
+    padding: 10px 14px;
     line-height: 1.45;
     vertical-align: top;
     color: var(--nrn-text-panel);
@@ -2268,7 +2537,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-timatal .nrn-t-current td:first-child {
-    box-shadow: inset 3px 0 0 var(--nrn-accent);
+    /* !important — чтобы полоска пережила чистку теней выше. */
+    box-shadow: inset 3px 0 0 var(--nrn-accent) !important;
 }
 
 .nrn-t-marker {
@@ -2284,7 +2554,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 .nrn-timatal .nrn-t-norse {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 18px;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--nrn-text-bright);
@@ -2298,13 +2568,13 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     padding: 14px 16px;
     overflow-x: auto;
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-    font-size: 13px;
+    font-size: 14.5px;
     line-height: 1.6;
     white-space: pre;
     color: var(--nrn-text-day);
     background: var(--nrn-bg-raised);
     border: 1px solid var(--nrn-border-soft);
-    border-radius: 8px;
+    border-radius: 0;
 }
 
 /* --- раздел уведомлений: выключатель и список видов ---
@@ -2320,7 +2590,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     gap: 10px;
     padding: 8px 10px;
     margin: 0 -10px;
-    border-radius: 8px;
+    border-radius: 0;
     cursor: pointer;
     transition: background 0.15s ease;
 }
@@ -2355,7 +2625,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-t-switch-label {
-    font-size: 16px;
+    font-size: 17.5px;
     line-height: 1.35;
     color: var(--nrn-text);
 }
@@ -2366,7 +2636,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-t-switch-hint {
-    font-size: 14px;
+    font-size: 15.5px;
     line-height: 1.4;
     color: var(--nrn-text-dim);
 }
@@ -2420,14 +2690,15 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 .nrn-timatal .nrn-t-look-select {
     min-width: 0;
-    padding: 6px 10px;
-    font-family: inherit;
-    font-size: 15px;
+    min-height: 42px;
+    padding: 9px 14px !important;
+    font-family: "Cormorant Unicase", Georgia, serif !important;
+    font-size: 17px !important;
     cursor: pointer;
-    color: var(--nrn-text);
-    background: var(--nrn-bg-raised);
-    border: 1px solid var(--nrn-border);
-    border-radius: 8px;
+    color: var(--nrn-text-bright) !important;
+    background: var(--nrn-bg-raised) !important;
+    background-image: none !important;
+    border: 1px solid var(--nrn-border) !important;
     transition: border-color 0.15s ease;
 }
 
@@ -2463,14 +2734,14 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 /* Метка «правлено» — единственный признак того, что тема уже не наша. */
 .nrn-t-css-badge {
-    padding: 1px 9px;
-    font-size: 12.5px;
+    padding: 2px 10px;
+    font-size: 13.5px;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--nrn-chip-text);
     background: var(--nrn-chip-bg);
     border: 1px solid var(--nrn-chip-border);
-    border-radius: 10px;
+    border-radius: 0;
 }
 
 .nrn-timatal .nrn-t-css-area {
@@ -2484,9 +2755,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     line-height: 1.6;
     tab-size: 4;
     color: var(--nrn-text-day);
-    background: var(--nrn-bg-raised);
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 8px;
+    background: var(--nrn-bg-raised) !important;
+    border: 1px solid var(--nrn-border-soft) !important;
 }
 
 .nrn-timatal .nrn-t-css-area:focus {
@@ -2503,15 +2773,15 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 .nrn-timatal .nrn-t-css-apply,
 .nrn-timatal .nrn-t-css-restore {
-    padding: 7px 16px;
-    font-family: inherit;
-    font-size: 15px;
+    min-height: 42px;
+    padding: 9px 18px !important;
+    font-family: "Cormorant Unicase", Georgia, serif !important;
+    font-size: 16px !important;
     letter-spacing: 0.6px;
     cursor: pointer;
-    color: var(--nrn-text);
-    background: var(--nrn-bg-open);
-    border: 1px solid var(--nrn-border);
-    border-radius: 8px;
+    color: var(--nrn-text) !important;
+    background: var(--nrn-bg-open) !important;
+    border: 1px solid var(--nrn-border) !important;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
@@ -2532,20 +2802,50 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     color: var(--nrn-text-dim);
 }
 
-/* --- узкие экраны --- */
+/* --- узкие экраны ---
+ *
+ * Кегль здесь падает не так низко, как раньше: окно на телефоне теперь во
+ * весь экран и показывает один раздел, а не все сразу, — место под текст
+ * есть. Ужимаются поля и решётка клейм, а не буквы.
+ */
+
+/* Среднее окно: три клейма в ряд уже не встают — имена набраны Norse. */
+@media (max-width: 900px) {
+    .nrn-t-tiles { grid-template-columns: repeat(2, 1fr); }
+}
 
 @media (max-width: 600px) {
-    .nrn-timatal { font-size: 14px; }
-    .nrn-timatal .nrn-t-title { font-size: 26px; }
-    .nrn-timatal .nrn-t-section-title { font-size: 17px; }
-    .nrn-timatal .nrn-t-section-toggle { padding: 12px 2px; }
+    .nrn-timatal { font-size: 16.5px; }
+    .nrn-timatal .nrn-t-title { font-size: 28px; }
+    .nrn-timatal .nrn-t-page-title { font-size: 24px; }
+
+    /* Клейма в один столбец: два по полширины режут имя раздела пополам. */
+    .nrn-t-tiles { grid-template-columns: 1fr; }
+    .nrn-t-hub { padding: 20px 44px 22px 16px; }
+    .nrn-t-scroll { padding: 16px 16px 22px; }
+    .nrn-t-topbar { padding: 12px 44px 11px 16px; }
+
+    /*
+     * Шапка страницы переносится: «← карта · книга времени» остаётся в
+     * строке, а «сейчас в сцене» уходит под неё целиком — иначе строка
+     * ужимается до пары букв и не читается вовсе.
+     */
+    .nrn-t-topbar { flex-wrap: wrap; }
+    .nrn-t-topbar-now {
+        flex-basis: 100%;
+        text-align: left;
+        margin-top: 4px;
+        white-space: normal;
+    }
+
+    .nrn-timatal .nrn-t-table { font-size: 16px; }
     .nrn-timatal .nrn-t-table th,
-    .nrn-timatal .nrn-t-table td { padding: 6px 9px; }
+    .nrn-timatal .nrn-t-table td { padding: 8px 10px; }
     .nrn-timatal .nrn-t-table th[data-col="num"],
     .nrn-timatal .nrn-t-table td[data-col="num"] { padding-right: 1px; }
     .nrn-timatal .nrn-t-table th[data-col="norse"],
     .nrn-timatal .nrn-t-table td[data-col="norse"] { padding-left: 5px; }
-    .nrn-timatal .nrn-t-chip { padding: 5px 11px; font-size: 12px; }
+    .nrn-timatal .nrn-t-chip { padding: 6px 12px; font-size: 13.5px; }
     .nrn-t-now { flex-direction: column; gap: 3px; }
 }
 

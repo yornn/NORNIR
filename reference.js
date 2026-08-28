@@ -6,9 +6,14 @@
  * фазы Луны и шпаргалку по маркеру, чтобы не сверяться с заметками
  * посреди ролевой.
  *
- * Справочник настраивается под себя, и настройки запоминаются:
- *  - разделы сворачиваются по клику на заголовок (по умолчанию открыты
- *    только Эйкты — с телефона не приходится листать всё подряд);
+ * Окно живёт двумя видами. Сперва карта: одиннадцать клейм, разложенных
+ * по двум ларям — «Книга времени» (знание о мире) и «Мастерская» (то, как
+ * расширение с этим знанием обходится). Щелчок по клейму открывает страницу
+ * раздела во всю ширину окна, «← карта» возвращает обратно. Полотна из всех
+ * разделов разом больше нет: у каждого своё окно, и потому кегль здесь
+ * крупнее, чем был.
+ *
+ * Настройки вида запоминаются:
  *  - колонки выбираются облачками над таблицей: затемнённое облачко —
  *    колонки нет, зажжённое — есть. Выбор общий для всех таблиц: включили
  *    «Транслит» — он появился и в эйктах, и в месяцах.
@@ -16,19 +21,20 @@
  *    постоянная: это опора таблицы, её не выключить.
  *
  * Если в чате уже есть инфоблок, текущая эйкта, месяц, день недели и фаза
- * Луны подсвечиваются — видно не только «какие бывают», но и «где мы сейчас».
+ * Луны подсвечиваются — видно не только «какие бывают», но и «где мы сейчас»;
+ * та же строка стоит на карте и в шапке каждой страницы.
  *
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
  * 1. Helpers ............ Мелкие конструкторы DOM
  * 2. Columns ............ Реестр колонок, облачки выбора и таблица
  * 3. Sections ........... Эйкты, месяцы, дни недели, Луна, праздники, блок
- * 4. Assembly ........... Сборка окна с аккордеоном
+ * 4. Assembly ........... Карта клейм и страница раздела
  *
- * Два последних раздела — не про счёт времени, а про поведение расширения:
- * «Уведомления» решают, о чём подавать голос, «Оформление» — как выглядит
- * блок. Стоят они здесь, а не в панели настроек таверны, по одной причине:
- * и то и другое настраивают, глядя на чат, а справочник открыт поверх него.
+ * Мастерская — не про счёт времени, а про поведение расширения: дата сцены,
+ * утроба, уведомления, блок маркера, оформление. Стоит она здесь, а не в
+ * панели настроек таверны, по одной причине: всё это настраивают, глядя на
+ * чат, а справочник открыт поверх него.
  */
 
 import { t } from "../../../i18n.js";
@@ -1280,60 +1286,169 @@ function notifySection(body, state, prefs, extras) {
  * 4. ASSEMBLY
  * ============================================================ */
 
+
+/*
+ * Разделы. Каждый — своя страница; на карте они разложены по двум ларям.
+ *
+ *  - «Книга времени» — знание о мире: эйкты, месяцы, вики, дни, Луна, пиры.
+ *  - «Мастерская» — то, как расширение с этим знанием обходится: дата сцены,
+ *    утроба, оповещения, блок маркера, оформление.
+ *
+ * `rune` и `norse` — то, чем клеймо подписано на карте: руна и древнее имя.
+ * `sub` — русское словцо под ним, чтобы руны не приходилось разгадывать.
+ */
 const SECTIONS = [
-    { id: "eykt",  icon: "🧭", title: () => t`Eykt — the eight parts of the day`, build: eyktSection },
-    { id: "month", icon: "🌿", title: () => t`Months — twelve of thirty days`,    build: monthSection },
-    { id: "vika",  icon: "🗓", title: () => t`Vika — the year in whole weeks`,     build: vikaSection },
-    { id: "week",  icon: "🪓", title: () => t`Weekdays — named after the gods`,   build: weekdaySection },
-    { id: "moon",  icon: "🌕", title: () => t`Tungl — phases of the Moon`,        build: moonSection },
-    /* Праздники стоят после Луны и до блока: это последнее знание о мире,
-       а блок — уже про то, как оно попадает в чат. */
-    { id: "feast", icon: "🔥", title: () => t`Feasts — the year by its holidays`, build: holidaySection },
-    { id: "block", icon: "ᚱ",  title: () => t`The calendar block`,                build: blockSection },
-    /* Уведомления стоят после блока: сперва про то, что расширение знает,
-       потом про то, о чём из этого оно подаёт голос. */
-    { id: "notify", icon: "🔔", title: () => t`Notifications`,                    build: notifySection },
-    /* Оформление — в самом конце: это уже не про счёт времени, а про то,
-       каким его видно. Читателю справочника оно нужно реже прочего. */
-    { id: "css",   icon: "🎨", title: () => t`Look — layout, theme and CSS`,      build: cssSection },
+    { id: "eykt",  group: "book", rune: "ᛖ", norse: "Eyktir",     sub: () => t`eykts`,
+      title: () => t`Eykt — the eight parts of the day`, build: eyktSection },
+    { id: "month", group: "book", rune: "ᛘ", norse: "Mánuðir",    sub: () => t`months`,
+      title: () => t`Months — twelve of thirty days`, build: monthSection },
+    { id: "vika",  group: "book", rune: "ᚡ", norse: "Vikur",      sub: () => t`weeks`,
+      title: () => t`Vika — the year in whole weeks`, build: vikaSection },
+    { id: "week",  group: "book", rune: "ᚹ", norse: "Dagar",      sub: () => t`weekdays`,
+      title: () => t`Weekdays — named after the gods`, build: weekdaySection },
+    { id: "moon",  group: "book", rune: "ᛗ", norse: "Tungl",      sub: () => t`moon phases`,
+      title: () => t`Tungl — phases of the Moon`, build: moonSection },
+    { id: "feast", group: "book", rune: "ᚠ", norse: "Blót",       sub: () => t`feasts`,
+      title: () => t`Feasts — the year by its holidays`, build: holidaySection },
+
+    { id: "date",  group: "tool", rune: "ᛞ", norse: "Dagsetning", sub: () => t`scene date`,
+      title: () => t`The date of the scene`, build: dateSection },
+    { id: "womb",  group: "tool", rune: "ᚢ", norse: "Kviðr",      sub: () => t`womb`,
+      title: () => t`Womb`, build: wombSection },
+    { id: "notify", group: "tool", rune: "ᚴ", norse: "Kall",      sub: () => t`notices`,
+      title: () => t`Notifications`, build: notifySection },
+    { id: "block", group: "tool", rune: "ᚱ", norse: "Merki",      sub: () => t`marker block`,
+      title: () => t`The calendar block`, build: blockSection },
+    { id: "css",   group: "tool", rune: "ᛚ", norse: "Ásýnd",      sub: () => t`look`,
+      title: () => t`Look — layout, theme and CSS`, build: cssSection },
 ];
+
+const GROUP_TITLES = {
+    book: () => t`The book of time`,
+    tool: () => t`The workshop`,
+};
 
 /** Все ключи разделов и колонок — index.js использует их для сброса вида. */
 export const SECTION_IDS = SECTIONS.map((s) => s.id);
 export const COLUMN_KEYS = Object.keys(COLUMN_LABELS);
 
-function buildSection(def, state, prefs, extras) {
-    const section = h("div", "nrn-t-section");
-    section.dataset.section = def.id;
+/* Дата сцены и утроба раньше стояли отдельными коробками над разделами;
+   теперь у каждой своя страница, и обёртки ниже — весь их код. */
+function dateSection(body, state, prefs, extras) {
+    body.append(lead(t`This is the one thing the panel cannot read out of the reply: the day everything else is counted from. Set it once, and the day carries itself onward.`));
+    if (extras?.onSetDate) body.append(datePicker(state, extras.onSetDate));
+}
 
-    const closed = prefs.isSectionClosed(def.id);
-    section.classList.toggle("nrn-t-closed", closed);
+function wombSection(body, state, prefs, extras) {
+    if (extras?.cycle) body.append(cyclePicker(extras.cycle));
+}
 
-    const head = h("button", "nrn-t-section-toggle");
-    head.type = "button";
-    head.dataset.section = def.id;
-    head.setAttribute("aria-expanded", String(!closed));
-    head.append(
-        h("span", "nrn-t-chevron", "▾"),
-        h("span", "nrn-t-section-icon", def.icon),
-        h("span", "nrn-t-section-title", def.title()),
+/*
+ * Строка «сейчас в сцене» одной строкой — она стоит и на карте, и в шапке
+ * каждой страницы, поэтому собрана отдельно от коробки `nowBanner`.
+ */
+function nowText(state) {
+    const banner = nowBanner(state);
+    return banner ? banner.querySelector(".nrn-t-now-value").textContent : "";
+}
+
+/**
+ * Какая страница открыта сейчас. Живёт вне сборки нарочно: окно
+ * пересобирается после каждой правки даты или счёта, и без этого
+ * пользователя выбрасывало бы обратно на карту посреди работы.
+ */
+let openId = null;
+
+/** Клеймо раздела на карте. */
+function tile(def) {
+    const btn = h("button", "nrn-t-tile");
+    btn.type = "button";
+    btn.dataset.open = def.id;
+
+    const top = h("span", "nrn-t-tile-top");
+    top.append(
+        h("span", "nrn-t-tile-rune", def.rune),
+        h("span", "nrn-t-tile-name", def.norse),
     );
+    btn.append(top, h("span", "nrn-t-tile-sub", def.sub()));
+    return btn;
+}
+
+/** Подпись над решёткой клейм: слово и линейка до края. */
+function groupHead(text) {
+    const head = h("div", "nrn-t-group");
+    head.append(h("span", "nrn-t-group-name", text), h("span", "nrn-t-group-rule"));
+    return head;
+}
+
+/** Карта: заголовок, «сейчас», два ларя клейм. */
+function buildHub(state, sections, prefs) {
+    const hub = h("div", "nrn-t-hub");
+
+    const header = h("div", "nrn-t-header");
+    header.append(h("div", "nrn-t-runes", "ᛏᛁᛘᚨᛏᚨᛚ"));
+    header.append(h("div", "nrn-t-title", "Tímatal"));
+    const now = nowText(state);
+    if (now) header.append(h("div", "nrn-t-now-line", now));
+    else header.append(h("div", "nrn-t-subtitle", t`Norse reckoning of time`));
+    hub.append(header);
+
+    for (const group of ["book", "tool"]) {
+        const defs = sections.filter((s) => s.group === group);
+        if (!defs.length) continue;
+        hub.append(groupHead(GROUP_TITLES[group]()));
+        const grid = h("div", "nrn-t-tiles");
+        for (const def of defs) grid.append(tile(def));
+        hub.append(grid);
+    }
+
+    /* Сброс вида — единственная страховка на случай, когда из таблиц
+       выключено всё подряд. Показывается, только если вид не исходный. */
+    const reset = h("button", "nrn-t-reset");
+    reset.type = "button";
+    reset.title = t`Restore all columns`;
+    reset.append(h("span", "nrn-t-reset-icon", "↺"), h("span", null, t`Reset view`));
+    if (prefs.isDefaultView()) reset.classList.add("nrn-t-hidden");
+    hub.append(reset);
+
+    return hub;
+}
+
+/** Страница раздела: шапка с возвратом и содержимое во всю ширину. */
+function buildPage(def, state, prefs, extras) {
+    const page = h("div", "nrn-t-page");
+
+    const bar = h("div", "nrn-t-topbar");
+    const back = h("button", "nrn-t-back", `← ${t`Map`}`);
+    back.type = "button";
+    bar.append(back, h("span", "nrn-t-dot", "·"),
+        h("span", "nrn-t-crumb", GROUP_TITLES[def.group]()));
+    const now = nowText(state);
+    if (now) bar.append(h("span", "nrn-t-topbar-now", now));
+    page.append(bar);
+
+    const scroll = h("div", "nrn-t-scroll");
+    scroll.append(h("div", "nrn-t-page-title", def.title()));
 
     const body = h("div", "nrn-t-section-body");
     def.build(body, state, prefs, extras);
+    scroll.append(body);
 
-    section.append(head, body);
-    return section;
+    page.append(scroll);
+    return page;
 }
 
 /**
  * Собирает содержимое окна Tímatal.
  *
+ * Окно живёт двумя видами: карта одиннадцати клейм и страница одного
+ * раздела во всю ширину. Из-за этого содержимое перерисовывается изнутри —
+ * `show()` ниже, — а не пересобирается снаружи на каждый щелчок.
+ *
  * @param {object} state Состояние виджета (для подсветки текущей сцены)
  * @param {string} theme Тема оформления — та же, что у виджета
  * @param {object} prefs Настройки вида:
- *   isSectionClosed(id), toggleSection(id), isColumnVisible(key),
- *   toggleColumn(key), resetView(), isDefaultView()
+ *   isColumnVisible(key), toggleColumn(key), resetView(), isDefaultView()
  * @param {function|null} onSetDate Установка даты сцены из календарика
  * @param {object|null} cycle Ручная правка счёта тела
  * @param {object|null} look Вид блока: раскладка, тема и CSS темы —
@@ -1348,70 +1463,53 @@ export function buildReference(state, theme = "default", prefs, onSetDate = null
     const root = h("div", "nrn-timatal nrn-themed");
     root.setAttribute("data-theme", theme || "default");
 
-    const header = h("div", "nrn-t-header");
-    header.append(h("div", "nrn-t-runes", "ᛏᛁᛘᚨᛏᚨᛚ"));
-    header.append(h("div", "nrn-t-title", "Tímatal"));
-    header.append(h("div", "nrn-t-subtitle", t`Norse reckoning of time`));
+    const extras = { look, notify, onSetDate, cycle };
 
-    // Кнопка сброса — единственная страховка на случай, когда спрятано всё
-    // подряд. Показывается только если вид отличается от исходного.
-    const reset = h("button", "nrn-t-reset");
-    reset.type = "button";
-    reset.title = t`Restore all sections and columns`;
-    reset.append(h("span", "nrn-t-reset-icon", "↺"), h("span", null, t`Reset view`));
-    header.append(reset);
-    root.append(header);
+    /* Дата сцены и утроба показываются, только если их есть чем наполнить:
+       клеймо, ведущее на пустую страницу, — обман. */
+    const sections = SECTIONS.filter((def) => {
+        if (def.id === "date") return !!onSetDate;
+        if (def.id === "womb") return !!cycle;
+        return true;
+    });
 
-    const banner = nowBanner(state);
-    if (banner) root.append(banner);
+    if (openId && !sections.some((s) => s.id === openId)) openId = null;
 
-    if (onSetDate) root.append(datePicker(state, onSetDate));
-    if (cycle) root.append(cyclePicker(cycle));
-
-    const hint = h("div", "nrn-t-hint", t`Tap a heading to fold a section. Pick the chips to add columns.`);
-    root.append(hint);
-
-    const extras = { look, notify };
-    for (const def of SECTIONS) root.append(buildSection(def, state, prefs, extras));
-
-    function syncReset() {
-        reset.classList.toggle("nrn-t-hidden", prefs.isDefaultView());
+    function show() {
+        const def = sections.find((s) => s.id === openId);
+        root.replaceChildren(def
+            ? buildPage(def, state, prefs, extras)
+            : buildHub(state, sections, prefs));
+        root.classList.toggle("nrn-t-on-page", !!def);
     }
-    syncReset();
 
     root.addEventListener("click", (e) => {
-        const toggle = e.target.closest(".nrn-t-section-toggle");
-        if (toggle) {
-            const id = toggle.dataset.section;
-            const closed = prefs.toggleSection(id);
-            const section = root.querySelector(`.nrn-t-section[data-section="${id}"]`);
-            section.classList.toggle("nrn-t-closed", closed);
-            toggle.setAttribute("aria-expanded", String(!closed));
-            syncReset();
+        const open = e.target.closest(".nrn-t-tile");
+        if (open) {
+            openId = open.dataset.open;
+            show();
+            return;
+        }
+
+        if (e.target.closest(".nrn-t-back")) {
+            openId = null;
+            show();
             return;
         }
 
         const chip = e.target.closest(".nrn-t-chip");
         if (chip) {
-            const key = chip.dataset.col;
-            applyColumn(root, key, prefs.toggleColumn(key));
-            syncReset();
+            applyColumn(root, chip.dataset.col, prefs.toggleColumn(chip.dataset.col));
             return;
         }
 
         if (e.target.closest(".nrn-t-reset")) {
             prefs.resetView();
             for (const key of COLUMN_KEYS) applyColumn(root, key, prefs.isColumnVisible(key));
-            for (const def of SECTIONS) {
-                const closed = prefs.isSectionClosed(def.id);
-                root.querySelector(`.nrn-t-section[data-section="${def.id}"]`)
-                    .classList.toggle("nrn-t-closed", closed);
-                root.querySelector(`.nrn-t-section-toggle[data-section="${def.id}"]`)
-                    .setAttribute("aria-expanded", String(!closed));
-            }
-            syncReset();
+            root.querySelector(".nrn-t-reset")?.classList.add("nrn-t-hidden");
         }
     });
 
+    show();
     return root;
 }
