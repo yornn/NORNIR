@@ -2185,6 +2185,51 @@ function weatherArc() {
  */
 const VEGVISIR_RAYS = 8;
 
+/*
+ * Ставы восьми лучей — для раскладки «Дом и его нити».
+ *
+ * Там доски под знаком нет, и рисовать нечему: вегвизир целиком собирается
+ * вёрсткой. Поэтому у каждого луча своё завершение и свои поперечины, как на
+ * исландских ставах, а внешнего кольца нет вовсе. Система координат своя:
+ * середина знака — 0,0, остриё смотрит вверх, древко идёт до -104. Луч i
+ * докручивается на i × 45° тем же поворотом, что и полоски эйкт.
+ *
+ * В board и flat ставы спрятаны стилями (раздел 19), там светятся полоски.
+ */
+const VEGVISIR_ARMS = [
+    /* 0 — трезубец с двумя поперечинами (север) */
+    `<path d="M-17 -78 L-17 -104 M17 -78 L17 -104 M0 -88 L0 -110" />
+     <path d="M-17 -78 L17 -78" />
+     <path d="M-13 -58 L13 -58" />`,
+    /* 1 — кольцо и крюк */
+    `<circle cx="0" cy="-96" r="9" />
+     <path d="M-9 -96 C-22 -96 -22 -78 -9 -78" />
+     <path d="M-12 -62 L12 -62" />`,
+    /* 2 — гребень из трёх перекладин */
+    `<path d="M-15 -100 L15 -100" />
+     <path d="M-15 -86 L15 -86" />
+     <path d="M-15 -72 L15 -72" />`,
+    /* 3 — вилка с раздвоенным концом */
+    `<path d="M0 -104 L-16 -88 M0 -104 L16 -88" />
+     <path d="M-11 -74 L11 -74" />
+     <path d="M-11 -58 L11 -58" />`,
+    /* 4 — короб на ножках (юг) */
+    `<path d="M-19 -78 L-19 -100 L19 -100 L19 -78" />
+     <path d="M-8 -100 L-8 -86 M8 -100 L8 -86" />
+     <path d="M-13 -64 L13 -64" />`,
+    /* 5 — косой крест */
+    `<path d="M-16 -104 L16 -80 M16 -104 L-16 -80" />
+     <path d="M-12 -66 L12 -66" />`,
+    /* 6 — скоба с обратными концами */
+    `<path d="M-17 -100 L17 -100 M-17 -100 L-17 -84 M17 -100 L17 -84" />
+     <path d="M-10 -78 L10 -78" />
+     <path d="M-10 -62 L10 -62" />`,
+    /* 7 — два крюка */
+    `<path d="M0 -102 C-16 -102 -18 -86 -8 -84" />
+     <path d="M0 -102 C16 -102 18 -86 8 -84" />
+     <path d="M-12 -66 L12 -66" />`,
+];
+
 function vegvisirOverlay() {
     const svg = svgEl("svg", {
         "class": "nrn-vegvisir-svg",
@@ -2206,6 +2251,14 @@ function vegvisirOverlay() {
                 "class": cls, x1: 120, y1: 104, x2: 120, y2: 24,
             }));
         }
+        /* Став того же луча. Пути писаны от середины знака, поэтому группу
+           сдвигаем в центр квадрата; поворот наследуется от самого луча. */
+        const stave = svgEl("g", {
+            "class": "nrn-ray-stave",
+            transform: "translate(120 120)",
+        });
+        stave.innerHTML = VEGVISIR_ARMS[i];
+        ray.appendChild(stave);
         svg.appendChild(ray);
     }
 
@@ -2253,6 +2306,39 @@ function figureButton(tab, id, label) {
            деревяшка с именем, и узнать её можно только по нему. */
         $("<span>", { "class": "nrn-fig-name", text: label }),
     );
+}
+
+/**
+ * Акцентный разделитель в духе исландских ставов.
+ *
+ * Ставится только там, где нужен акцент: перед нитью Фрейи и перед детьми.
+ * Обычные черты остаются чертами — иначе акцент перестаёт быть акцентом.
+ * Видны разделители только в раскладке «Дом и его нити», в board и flat
+ * они спрятаны стилями (раздел 19).
+ *
+ * variant: "" — стрелы и ромб, "kids" — три ромба.
+ */
+function buildNorseRule(variant = "") {
+    const glyph = variant === "kids"
+        ? `<path d="M6 8 H30" />
+           <path d="M42 3 L50 8 L42 13 L34 8 Z" />
+           <path class="nrn-rule-eye" d="M66 1 L74 8 L66 15 L58 8 Z" />
+           <path d="M90 3 L98 8 L90 13 L82 8 Z" />
+           <path d="M102 8 H126" />`
+        : `<path d="M2 4 A4 4 0 0 1 2 12" />
+           <path d="M8 8 H30" />
+           <path d="M22 4 L18 8 L22 12" />
+           <path d="M30 4 V12" />
+           <path d="M36 8 H52" />
+           <path class="nrn-rule-eye" d="M66 2 L78 8 L66 14 L54 8 Z" />
+           <path d="M80 8 H96" />
+           <path d="M102 4 V12" />
+           <path d="M110 4 L114 8 L110 12" />
+           <path d="M102 8 H124" />
+           <path d="M130 4 A4 4 0 0 0 130 12" />`;
+
+    return $("<div>", { "class": `nrn-rule${variant ? ` nrn-rule-${variant}` : ""}`, "aria-hidden": "true" })
+        .html(`<svg width="126" height="16" viewBox="0 0 132 16">${glyph}</svg>`);
 }
 
 /** Создаёт DOM-структуру виджета (detached — вставит mountWidget). */
@@ -2360,6 +2446,7 @@ function buildWidget() {
                          * напротив: так лист выходит вдвое короче.
                          */
                         $("<div>", { id: "nrn-page-freyja", "class": "nrn-leaf", "data-leaf": "freyja" }).append(
+                            buildNorseRule(),
                             $("<div>", { id: "nrn-cycle", "class": "nrn-cycle" }).append(
                                 /* Фаза со счётом — заголовок листа, слова о теле
                                    под ним подзаголовком. */
@@ -2433,6 +2520,7 @@ function buildWidget() {
                 /* Дети вписаны в саму книгу, под фигурками, и видны на любой
                    странице: дитя не перестаёт просить есть оттого, что
                    смотрят на {{char}}. */
+                buildNorseRule("kids"),
                 $("<div>", { id: "nrn-children", "class": "nrn-children" }),
             ),
 
@@ -2648,11 +2736,16 @@ const THEME_LABELS = {
     light: () => t`Light`,
     frost: () => t`Hoarfrost`,
     parchment: () => t`Parchment`,
+    "thread-dark": () => t`Threads: dark`,
+    "thread-light": () => t`Threads: light`,
+    "thread-lannister": () => t`Threads: Lannister`,
+    "thread-calm": () => t`Threads: calm`,
 };
 
 const SKIN_LABELS = {
     board: () => t`Carved board`,
     flat: () => t`Plain panel`,
+    thread: () => t`House and its threads`,
 };
 
 function themeLabel(theme) {
