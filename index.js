@@ -3291,6 +3291,28 @@ function applySkin(skin) {
     const home = name === "thread" ? "#nrn-book" : "#nrn-page-freyja";
     const $home = $widget.find(home);
     if ($home.length && !foot.parent().is($home)) $home.append(foot);
+
+    forgetStoredDisplay();
+}
+
+/*
+ * Забыть, каким был display в прошлой раскладке.
+ *
+ * jQuery .hide() запоминает ВЫЧИСЛЕННЫЙ display и возвращает его обратно
+ * при .show() — уже строкой в атрибуте style, а инлайн сильнее файла.
+ * Значение запомнено под той раскладкой, что была на экране: спрятали род
+ * с домом на доске (там сетка) — и в «нитях» .show() возвращает им ту же
+ * сетку вместо двух столбцов. Столбцы складывались в один, приметы теряли
+ * строй, и починить это правилами было нечем.
+ *
+ * Гасим только то, что показано: скрытое пусть остаётся скрытым, иначе
+ * до ближайшей перерисовки на экране повисли бы пустые строки. Дальше
+ * jQuery запомнит уже вычисленное в новой раскладке, и всё сойдётся само.
+ */
+function forgetStoredDisplay() {
+    $widget.find("*").each(function () {
+        if (this.style.display && this.style.display !== "none") this.style.display = "";
+    });
 }
 
 function bindSettings() {

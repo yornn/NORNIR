@@ -3898,6 +3898,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     letter-spacing: 1.2px;
     text-transform: uppercase;
     white-space: nowrap;
+    overflow: hidden;
     color: var(--nrn-th-silver);
 }
 
@@ -3906,8 +3907,10 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-date::before,
 #nrn-widget[data-skin="thread"] #nrn-date::after {
     content: "";
+    /* До нуля: «í Vetr» переводится в «Зимнее полугодие», и на черты
+       места уже не остаётся — пусть уступают они, а не дата. */
     flex: 1 1 0;
-    min-width: 6px;
+    min-width: 0;
     height: 1px;
     margin: 0 6px;
     background: var(--nrn-th-line);
@@ -3961,6 +3964,15 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     justify-content: center;
     gap: 3px 9px;
     margin-top: 9px;
+    /*
+     * Место под две строки — всегда.
+     *
+     * Нижний блок столбца прижат к краю, и любое изменение высоты этой
+     * подписи двигало его целиком: щёлкнул по «Fullt tungl», перевод лёг
+     * в одну строку вместо двух — и дата с календариком подпрыгнули на
+     * пятнадцать пикселей. Место отмерено заранее, и прыгать больше нечему.
+     */
+    min-height: calc(2 * 1.4em + 3px);
     font-size: 13px;
     letter-spacing: 1.6px;
     line-height: 1.4;
@@ -3972,7 +3984,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-calfoot #nrn-moon {
     display: flex;
     align-items: baseline;
-    gap: 9px;
+    gap: 6px;
     margin: 0;
     font-size: inherit;
     letter-spacing: inherit;
@@ -3991,6 +4003,10 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     display: inline !important;
     width: auto;
     height: auto;
+    /* Знаку в левой колонке доска даёт поле справа — там он стоит перед
+       словом. Точке поле ни к чему: зазоры держит gap, а с полем между
+       днём недели и викой зияла дыра в два пробела. */
+    margin: 0;
     background: none;
     color: var(--nrn-th-dot);
 }
@@ -4433,16 +4449,25 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     color: var(--nrn-th-dim);
 }
 
-#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact::before { content: "дитя"; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact::before { content: "примета"; }
-#nrn-widget[data-skin="thread"] #nrn-draught::before { content: "отвар"; }
-
-#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact::before,
-#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact::before,
-#nrn-widget[data-skin="thread"] #nrn-draught::before,
-#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-fact-label {
+/*
+ * Ярлык строки — из знака поля.
+ *
+ * Знак и так стоит первым в строке и назван по смыслу: sign-breast,
+ * body-due, watch-kicks. Картинку гасим, а на её место ставим слово по
+ * имени знака — так у каждой строки свой ярлык, а не девять «примет»
+ * подряд. Чего в списке нет, то остаётся «приметой»: правило общее стоит
+ * первым, именные ниже перебивают его.
+ */
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-draught::before {
+    display: block !important;
     flex: none;
     width: 74px;
+    height: auto;
+    margin: 0;
+    background: none;
     font-family: "Cormorant Unicase", serif;
     font-size: 10px;
     letter-spacing: 1.5px;
@@ -4450,6 +4475,38 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     text-transform: uppercase;
     color: var(--nrn-th-label);
 }
+
+#nrn-widget[data-skin="thread"] #nrn-draught::before { content: "отвар"; }
+/* Общий ярлык — через :where(), чтобы он не весил ничего: именные ниже
+   зовутся одним классом и должны перебивать его, а не наоборот. */
+#nrn-widget[data-skin="thread"] :where(#nrn-cycle-signs) .nrn-icon::before { content: "примета"; }
+#nrn-widget[data-skin="thread"] :where(#nrn-cycle-kicks) .nrn-icon::before { content: "дитя"; }
+
+/* Приметы по видам: грудь, сон, дурнота, запахи и прочее — так их и
+   считает body.js, и слово у каждой своё. */
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-breast"]::before       { content: "грудь"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-sleep"]::before        { content: "сон"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-nausea"]::before       { content: "дурнота"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-smell"]::before        { content: "запахи"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-belly"]::before        { content: "живот"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-false-hridir"]::before { content: "хридир"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-kicks-night"]::before  { content: "дитя"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-swelling"]::before     { content: "отёки"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-blood"]::before        { content: "кровь"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-odd-blood"]::before    { content: "кровь"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-ache"]::before         { content: "ломота"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-lettari"]::before      { content: "léttari"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-heat"]::before         { content: "жар"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-hunger"]::before       { content: "голод"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-mood"]::before         { content: "нрав"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-strain"]::before       { content: "тягота"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-weather-toll"]::before { content: "погода"; }
+
+/* Строка под нитью без своей подписи — «дитя с кошку · ждать к середине
+   гои». Что это за строка, решает её знак: срок дитяти, кровь не в срок
+   или последнее, чем ещё можно помочь. */
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-due"]::before  { content: "срок"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-rest"]::before { content: "можно"; }
 
 #nrn-widget[data-skin="thread"] .nrn-fact-value {
     flex: 1;
@@ -4669,7 +4726,10 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     display: flex;
     flex-direction: column;
     gap: 7px;
-    margin: 0;
+    /* auto сверху держит подножие у нижнего края и тогда, когда тянуться
+       в книге нечему: все три створки закрыты или открыты дети. Иначе оно
+       поднималось вслед за заголовками и скакало при переключении. */
+    margin: auto 0 0;
     padding: 11px 22px 13px;
     border-top: 1px solid var(--nrn-th-line);
     background: var(--nrn-th-bg2);
