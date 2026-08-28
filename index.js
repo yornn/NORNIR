@@ -1676,7 +1676,7 @@ function renderTimeAndDate(showTime, showDate) {
         const mm = String(state.minute ?? 0).padStart(2, "0");
 
         el("#nrn-eykt-name").empty().append(hintSpan("eykt", e.ru, `${hh}:${mm}`));
-        el("#nrn-eykt-num").text(t`eykt ${idx + 1}`);
+        el("#nrn-eykt-num").text(t`eykt ${idx + 1} of 8`);
         timeLine.show();
 
         /* Вегвизир знает свою эйкту одним числом: по нему CSS и зажигает
@@ -2495,9 +2495,20 @@ function buildWidget() {
 
                 $("<div>", { id: "nrn-datebox" }).append(
                     $("<div>", { id: "nrn-sun", "class": "nrn-sun-line" }),
-                    $("<div>", { id: "nrn-week", "class": "nrn-cal-line" }),
+                    /*
+                     * Седмица и Луна лежат в общей обёртке.
+                     *
+                     * На доске и в плоской панели она прозрачная
+                     * (display: contents) — там это две отдельные строки,
+                     * как и было. В «нитях» они сходятся в одну подпись под
+                     * календариком: «Frjádagr · vika 48 · Fullt tungl», и
+                     * коробка нужна, чтобы было что положить в эту строку.
+                     */
+                    $("<div>", { "class": "nrn-calfoot" }).append(
+                        $("<div>", { id: "nrn-week", "class": "nrn-cal-line" }),
+                        $("<div>", { id: "nrn-moon", "class": "nrn-cal-line" }),
+                    ),
                     $("<div>", { id: "nrn-date", "class": "nrn-cal-line" }),
-                    $("<div>", { id: "nrn-moon", "class": "nrn-cal-line" }),
 
                     /* Праздник — прямо над календариком, где он и покрашен. */
                     $("<div>", { id: "nrn-feast", "class": "nrn-cal-line" }),
