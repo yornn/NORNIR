@@ -1166,6 +1166,10 @@ const EMPTY_STATE = {
     charState: null, userState: null, advice: null,
     midwife: null, women: null, charms: null, gear: null,
     faderni: null, childRank: null, childName: null,
+    /* Что случилось с телом в этой сцене — список опознанных событий.
+       Раньше поля тут не было, и строка «что было» держалась бы от прошлой
+       истории: снимок обязан сбрасывать всё, что панель читает. */
+    body: null,
 };
 
 /** Кэш отрисовки: копия снимка, который сейчас на экране. */
@@ -1777,6 +1781,62 @@ function textRow(rowSelector, textSelector, value) {
     }
 }
 
+/*
+ * Что случилось с телом — теми же словами, какими это назвала модель.
+ *
+ * Промпт даёт закрытый список: парсер узнаёт слова и складывает их в
+ * `state.body` опознанными кличками. Обратно в слова — здесь: панель
+ * показывает читателю то, что произошло в сцене, а не кличку из кода.
+ * Порядок в строке — порядок в сцене, его расставил разбор.
+ */
+const BODY_EVENT_WORDS = {
+    seedSpilled: "семя пролилось",
+    seedWithheld: "семя не пролилось",
+    bleedStart: "кровь пришла",
+    bleedEnd: "кровь кончилась",
+    oddBleeding: "кровь не в срок",
+    conceived: "понесла",
+    realized: "поняла, что тяжела",
+    quickened: "дитя шевельнулось",
+    kick: "дитя бьётся",
+    quiet: "дитя затихло",
+    labour: "схватки начались",
+    birth: "родила",
+    lost: "выкидыш",
+    stillborn: "дитя родилось мёртвым",
+    nursingStart: "дитя у груди",
+    nursingEnd: "отняли от груди",
+    hungr: "голодала",
+    sott: "хворала",
+    ferd: "была в дороге",
+    ugg: "извелась",
+    heavy: "подняла тяжёлое",
+    strained: "надорвалась",
+    fell: "упала",
+    beaten: "побили",
+    rest: "легла пластом",
+    childTooth: "зубок прорезался",
+    childWalks: "дитя пошло",
+    childSpeaks: "дитя заговорило",
+    childSick: "дитя занемогло",
+    childWell: "дитя поправилось",
+    childDied: "дитя померло",
+};
+
+/**
+ * Строка «что было» — в подножии книги, рядом со словом повитухи.
+ *
+ * Видна только в раскладке «Дом и его нити»: в двух других подножия нет,
+ * и события тела там читаются по самой нити. Сцена без событий — обычный
+ * ход, и строки тогда нет вовсе.
+ */
+function renderHappened() {
+    const words = (state.body ?? [])
+        .map((id) => BODY_EVENT_WORDS[id])
+        .filter(Boolean);
+    textRow("#nrn-happened", "#nrn-happened-text", words.join(" · ") || null);
+}
+
 /**
  * Совет — то, что сказала бы знающая женщина этого века.
  *
@@ -1893,10 +1953,18 @@ function renderDraught() {
     row.show();
 }
 
+/* Сколько детей во дворе — словом, как сказали бы в доме. Дальше семерых
+   счёт не идёт словами: там уже просто число. */
+const KIDS_COUNT_WORDS = ["", "один", "двое", "трое", "четверо", "пятеро", "шестеро", "семеро"];
+
 function renderChildren() {
     const box = el("#nrn-children").empty();
+    const head = el("#nrn-kids-head");
     const kids = bodySummary()?.children;
-    if (!kids?.length) { box.hide(); return; }
+    if (!kids?.length) { box.hide(); head.hide(); return; }
+
+    el("#nrn-kids-count").text(`${KIDS_COUNT_WORDS[kids.length] ?? kids.length} во дворе`);
+    head.show();
 
     for (const kid of kids) {
         const line = $("<div>", { "class": "nrn-child" });
@@ -1984,6 +2052,7 @@ function renderExtraFields() {
     /* --- лист нити Фрейи --- */
     renderCycle();
     renderDraught();
+    renderHappened();
     renderAdvice();
     renderChildren();
     const hasBody = !!bodySummary();
@@ -2034,6 +2103,20 @@ function figureLabel(selector, name) {
 
 const TABS = ["user", "freyja", "char"];
 
+/*
+ * В раскладке «Дом и его нити» разделов свои три, и это не те же три.
+ *
+ * Нить Фрейи там не отдельная вкладка: она идёт внутри вкладки героини,
+ * под её одеждой, — а вот дети становятся третьей створкой, потому что на
+ * узкой книге им иначе не хватает места. И все три можно закрыть разом:
+ * пустая строка — законное состояние, а не сбой.
+ */
+const THREAD_TABS = ["user", "char", "kids", ""];
+
+function tabsForSkin() {
+    return currentSkin() === "thread" ? THREAD_TABS : TABS;
+}
+
 /**
  * Выбранный лист живёт в настройках, а не в переменной.
  *
@@ -2043,13 +2126,20 @@ const TABS = ["user", "freyja", "char"];
  */
 function activeTab() {
     const tab = settings().activeTab;
-    return TABS.includes(tab) ? tab : "freyja";
+    const tabs = tabsForSkin();
+    if (tabs.includes(tab)) return tab;
+    /* Выбор один на все раскладки, а списки у них разные. Чужую вкладку
+       сводим к своей главной, а не гасим: сменил раскладку — книга открыта,
+       а не пуста. */
+    return currentSkin() === "thread" ? "user" : "freyja";
 }
 
 function applyTab() {
     const tab = activeTab();
     el("#nrn-page").attr("data-tab", tab);
-    el(".nrn-fig").each(function () {
+    /* Створка детей — такая же кнопка со своей вкладкой, только заголовок
+       у неё свой; берём все кнопки с вкладкой, а не одни фигурки. */
+    el("button[data-tab]").each(function () {
         const fig = $(this);
         const on = fig.attr("data-tab") === tab;
         fig.toggleClass("nrn-fig-on", on).attr("aria-pressed", on ? "true" : "false");
@@ -2257,7 +2347,10 @@ function vegvisirOverlay() {
             "class": "nrn-ray-stave",
             transform: "translate(120 120)",
         });
-        stave.innerHTML = VEGVISIR_ARMS[i];
+        /* Древко — первым, завершение поверх него. В board и flat древко
+           рисуют полоски эйкты, здесь их нет, и без этой черты от става
+           оставались бы одни концы, висящие в воздухе. */
+        stave.innerHTML = `<path d="M0 0 L0 -104" />${VEGVISIR_ARMS[i]}`;
         ray.appendChild(stave);
         svg.appendChild(ray);
     }
@@ -2319,10 +2412,12 @@ function figureButton(tab, id, label) {
  * variant: "" — стрелы и ромб, "kids" — три ромба.
  */
 function buildNorseRule(variant = "") {
-    const glyph = variant === "kids"
+    const kids = variant === "kids";
+    const glyph = kids
         ? `<path d="M6 8 H30" />
            <path d="M42 3 L50 8 L42 13 L34 8 Z" />
            <path class="nrn-rule-eye" d="M66 1 L74 8 L66 15 L58 8 Z" />
+           <circle class="nrn-rule-dot" cx="66" cy="8" r="1.3" />
            <path d="M90 3 L98 8 L90 13 L82 8 Z" />
            <path d="M102 8 H126" />`
         : `<path d="M2 4 A4 4 0 0 1 2 12" />
@@ -2331,14 +2426,18 @@ function buildNorseRule(variant = "") {
            <path d="M30 4 V12" />
            <path d="M36 8 H52" />
            <path class="nrn-rule-eye" d="M66 2 L78 8 L66 14 L54 8 Z" />
+           <circle class="nrn-rule-dot" cx="66" cy="8" r="1.4" />
            <path d="M80 8 H96" />
            <path d="M102 4 V12" />
            <path d="M110 4 L114 8 L110 12" />
            <path d="M102 8 H124" />
            <path d="M130 4 A4 4 0 0 0 130 12" />`;
 
-    return $("<div>", { "class": `nrn-rule${variant ? ` nrn-rule-${variant}` : ""}`, "aria-hidden": "true" })
-        .html(`<svg width="126" height="16" viewBox="0 0 132 16">${glyph}</svg>`);
+    /* Детская черта уже взрослой: три ромба против стрел и крючьев, и
+       глиф ей отмерен по макету — 118 против 132. */
+    const width = kids ? 118 : 132;
+    return $("<div>", { "class": `nrn-rule${kids ? " nrn-rule-kids" : ""}`, "aria-hidden": "true" })
+        .html(`<svg width="${width}" height="16" viewBox="0 0 132 16">${glyph}</svg>`);
 }
 
 /** Создаёт DOM-структуру виджета (detached — вставит mountWidget). */
@@ -2483,9 +2582,24 @@ function buildWidget() {
                                 $("<span>", { id: "nrn-draught-name" }),
                                 $("<span>", { id: "nrn-draught-text", "class": "nrn-draught-text" }),
                             ),
-                            $("<div>", { id: "nrn-advice", "class": "nrn-advice" }).append(
-                                icon("advice", "nrn-advice-icon"),
-                                $("<span>", { id: "nrn-advice-text" }),
+                            /*
+                             * Подножие: что случилось с телом и слово повитухи.
+                             *
+                             * Обёртка стоит здесь, а не в книге, ради двух
+                             * других раскладок: там она `display: contents`, и
+                             * совет остаётся ровно тем же последним ребёнком
+                             * листа, каким был. В «нитях» лист сам становится
+                             * прозрачным, обёртка всплывает в книгу целиком и
+                             * прибивается к нижнему краю — на любой вкладке.
+                             */
+                            $("<div>", { "class": "nrn-foot" }).append(
+                                $("<div>", { id: "nrn-happened", "class": "nrn-happened" }).append(
+                                    $("<span>", { id: "nrn-happened-text" }),
+                                ),
+                                $("<div>", { id: "nrn-advice", "class": "nrn-advice" }).append(
+                                    icon("advice", "nrn-advice-icon"),
+                                    $("<span>", { id: "nrn-advice-text" }),
+                                ),
                             ),
                             $("<div>", { id: "nrn-freyja-empty", "class": "nrn-leaf-empty" }),
                         ),
@@ -2521,6 +2635,18 @@ function buildWidget() {
                    странице: дитя не перестаёт просить есть оттого, что
                    смотрят на {{char}}. */
                 buildNorseRule("kids"),
+                /* Третий раздел книги в «нитях»: у детей своя створка, и
+                   открывается она так же, как героиня и {{char}}. В двух
+                   других раскладках заголовка нет — там дети видны всегда. */
+                $("<button>", {
+                    id: "nrn-kids-head",
+                    "class": "nrn-kids-head",
+                    type: "button",
+                    "data-tab": "kids",
+                }).append(
+                    $("<span>", { "class": "nrn-kids-name", text: "Дети" }),
+                    $("<span>", { id: "nrn-kids-count", "class": "nrn-kids-count" }),
+                ),
                 $("<div>", { id: "nrn-children", "class": "nrn-children" }),
             ),
 
@@ -2528,10 +2654,9 @@ function buildWidget() {
         ),
     );
 
-    $widget.attr({
-        "data-theme": s.theme || "default",
-        "data-skin": s.skin || "board",
-    });
+    $widget.attr("data-theme", s.theme || "default");
+    /* Не просто атрибут: раскладка ещё и решает, где живёт подножие. */
+    applySkin(s.skin);
 
     bindWidgetHandlers();
 
@@ -2564,8 +2689,12 @@ function bindWidgetHandlers() {
        чтобы прямоугольники рисунков не воровали клики друг у друга. */
     $(document).on("click", "#nrn-widget button[data-tab]", function () {
         const tab = $(this).attr("data-tab");
-        if (!TABS.includes(tab)) return;
-        settings().activeTab = tab;
+        if (!tabsForSkin().includes(tab)) return;
+        /* В «нитях» разделы складываются, как ставни: щелчок по открытому
+           закрывает его и оставляет одни заголовки. В двух других раскладках
+           закрывать нечего — там лист открыт всегда. */
+        const close = currentSkin() === "thread" && activeTab() === tab;
+        settings().activeTab = close ? "" : tab;
         saveSettingsDebounced();
         applyTab();
     });
@@ -3129,8 +3258,28 @@ function applyTheme(theme) {
  * в стилях. Поэтому переключение мгновенное и не теряет ни выбранной
  * страницы, ни прокрутки.
  */
+/**
+ * Раскладка — атрибутом на виджете, и одно перевешивание узла.
+ *
+ * Всё остальное решает CSS: разметка у трёх раскладок одна, лишнее в
+ * каждой спрятано стилями. Подножие — единственное исключение, и вот
+ * почему. В «нитях» оно принадлежит всей панели: стоит под всеми тремя
+ * створками и говорит о ходе, а не о листе. В доске и плоской панели тех
+ * же две строки — последние строки листа нити, внутри его прокрутки.
+ * Коробки, которая была бы разом и подножием книги, и хвостом листа, в
+ * разметке нет и быть не может, а заводить вторую копию совета — значит
+ * писать одно и то же в два места (так уже было с заголовком нити, и это
+ * оказалось ошибкой). Дешевле перевесить один узел.
+ */
 function applySkin(skin) {
-    if ($widget) $widget.attr("data-skin", skin || "board");
+    if (!$widget) return;
+    const name = skin || "board";
+    $widget.attr("data-skin", name);
+
+    const foot = $widget.find(".nrn-foot");
+    const home = name === "thread" ? "#nrn-book" : "#nrn-page-freyja";
+    const $home = $widget.find(home);
+    if ($home.length && !foot.parent().is($home)) $home.append(foot);
 }
 
 function bindSettings() {

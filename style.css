@@ -3543,58 +3543,91 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 /* ============================================================
  * 19. THREAD SKIN — «Дом и его нити» (data-skin="thread")
  *
- * Третья раскладка рядом с board и flat. Слева — столбец календаря
- * (вегвизир, Хадеги, дата, седмица, погода и место), справа — книга
- * из трёх вкладок: {{user}}, {{char}}, дети. Нить Фрейи не отдельная
- * вкладка: она идёт внутри вкладки героини, под её одеждой.
+ * Третья раскладка рядом с board и flat, сделанная по макету
+ * «NORNIR Дом и его нити»: слева столбец времени и места, справа книга
+ * из трёх створок — героиня, {{char}} и дети. Нить Фрейи своей створки
+ * не имеет: она идёт внутри створки героини, под её одеждой.
  *
- * Раскладка опирается на существующий DOM. Две хитрости:
- *   .nrn-page и #nrn-page-freyja получают display: contents —
- *   их дети становятся прямыми детьми .nrn-book, и порядок можно
- *   задать через order, а совет повитухи прибить к низу.
+ * ЧЕМ ЭТА РАСКЛАДКА ОТЛИЧАЕТСЯ ОТ ДВУХ ДРУГИХ. На доске всё прибито к
+ * картинке абсолютом и процентами от неё; здесь картинки нет вовсе, и
+ * панель рисуется сеткой и потоком. Поэтому раздел начинается с того,
+ * что снимает доску, и только потом ставит своё.
  *
- * Цвета — только через переменные тем (раздел 2). Четыре темы для
- * этого скина лежат ниже, в разделе 20.
+ * ДВЕ ХИТРОСТИ РАЗМЕТКИ. Разметка у трёх раскладок одна, а порядок в ней
+ * нужен разный, и обе хитрости — про это:
+ *
+ *   1. display: contents на .nrn-wood, .nrn-beam и #nrn-datebox. Их дети
+ *      становятся прямыми детьми доски, и эйкта с погодой встают в левый
+ *      столбец, хотя в разметке лежат в верхней балке. Каждому назначен
+ *      свой ряд сетки — иначе он уехал бы по порядку разметки, а не по
+ *      смыслу.
+ *
+ *   2. display: contents на .nrn-page и #nrn-page-freyja. Лист нити
+ *      растворяется, и его части — черта, заголовок, приметы, род с
+ *      домом, отвар, подножие — становятся детьми книги. Так их можно
+ *      переставить, приписать к створке героини и прибить подножие к
+ *      нижнему краю.
+ *
+ * Цвета — только через переменные тем (раздел 20). Ролей у этого скина
+ * больше, чем у доски, и зовутся они --nrn-th-*.
  * ============================================================ */
 
 #nrn-widget[data-skin="thread"] {
-    --nrn-thread-w: 292px;
-    --nrn-thread-h: 665px;
+    --nrn-th-col: 292px;
+    --nrn-th-pad: 20px;
+    --nrn-th-h: 665px;
     font-family: "Cormorant Unicase", serif;
-    color: var(--nrn-text);
+    color: var(--nrn-th-body);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-board {
-    display: grid;
-    grid-template-columns: var(--nrn-thread-w) 1fr;
-    grid-template-rows: 1fr auto;
-    width: 100%;
-    max-width: 968px;
-    height: var(--nrn-thread-h);
-    background: var(--nrn-bg);
-    background-image:
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 1px, transparent 1px 3px),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.011) 0 1px, transparent 1px 3px);
-    border: 1px solid var(--nrn-border);
-    overflow: hidden;
+/*
+ * Шрифты. На доске Norse навешен !important-ом в семи местах — там он
+ * держит резьбу, и одним классом его не перебить (об этом сказано и в
+ * самих тех правилах). Здесь Norse оставлен именам, дате и календарику,
+ * а всё остальное набрано Cormorant Unicase и Alegreya, как в макете.
+ * Перебивать приходится тем же !important — иначе никак.
+ */
+#nrn-widget[data-skin="thread"] .nrn-beam-line,
+#nrn-widget[data-skin="thread"] #nrn-weather-text,
+#nrn-widget[data-skin="thread"] #nrn-location-text,
+#nrn-widget[data-skin="thread"] #nrn-week,
+#nrn-widget[data-skin="thread"] #nrn-moon,
+#nrn-widget[data-skin="thread"] #nrn-feast,
+#nrn-widget[data-skin="thread"] .nrn-cycle-head,
+#nrn-widget[data-skin="thread"] .nrn-chip,
+#nrn-widget[data-skin="thread"] .nrn-thought {
+    font-family: "Cormorant Unicase", serif !important;
 }
 
-/* Никаких досок и книжных картинок: скин рисуется вёрсткой. */
-#nrn-widget[data-skin="thread"] .nrn-board::before,
-#nrn-widget[data-skin="thread"] .nrn-book::before {
-    content: none;
+#nrn-widget[data-skin="thread"] .nrn-cycle-sub,
+#nrn-widget[data-skin="thread"] .nrn-attire,
+#nrn-widget[data-skin="thread"] .nrn-fact-value,
+#nrn-widget[data-skin="thread"] .nrn-leaf-empty,
+#nrn-widget[data-skin="thread"] .nrn-child-need,
+#nrn-widget[data-skin="thread"] .nrn-child-mark,
+#nrn-widget[data-skin="thread"] #nrn-draught-text {
+    font-family: "Alegreya", serif !important;
+}
+
+/* Norse — только имена, эйкта, дата и календарик. */
+#nrn-widget[data-skin="thread"] #nrn-eykt-name,
+#nrn-widget[data-skin="thread"] #nrn-date,
+#nrn-widget[data-skin="thread"] .nrn-cell,
+#nrn-widget[data-skin="thread"] .nrn-fig-name,
+#nrn-widget[data-skin="thread"] .nrn-kids-name,
+#nrn-widget[data-skin="thread"] .nrn-cycle-head::before {
+    font-family: "Norse", Georgia, serif !important;
 }
 
 /*
  * Снимаем доску.
  *
- * В раскладке board каждая часть прибита к картинке абсолютом и процентами
- * от её ширины: балка, дерево, книга, фигурки, дети. Здесь картинки нет,
- * части складываются сеткой и потоком — значит первым делом их надо вернуть
- * в поток, иначе сетка ниже просто не про них.
+ * Балка, дерево, книга, фигурки и дети прибиты к картинке абсолютом и
+ * процентами от её ширины. Здесь картинки нет — вернуть их в поток надо
+ * прежде всего остального, иначе сетка ниже просто не про них.
  *
- * Блок стоит до всего остального в разделе: он снимает, следующие правила
- * ставят. Поменять их местами — и вегвизир снова останется без размера.
+ * Блок стоит первым нарочно: он снимает, следующие правила ставят.
+ * Поменять их местами — и вегвизир снова останется без размера.
  */
 #nrn-widget[data-skin="thread"] .nrn-beam,
 #nrn-widget[data-skin="thread"] .nrn-beam-left,
@@ -3612,103 +3645,226 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     inset: auto;
     width: auto;
     height: auto;
+    margin: 0;
     zoom: 1;
     transform: none;
     filter: none;
     overflow: visible;
     /* Фигурки на доске кликов не ловят — ловит «горячее место» внутри.
-       Здесь горячих мест нет, вкладку открывает сама кнопка. */
+       Здесь горячих мест нет, створку открывает сама строка заголовка. */
     pointer-events: auto;
 }
 
-/* --- левый столбец: время и место --- */
-
-#nrn-widget[data-skin="thread"] .nrn-wood {
-    grid-column: 1;
-    grid-row: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-    padding: 24px 20px 0;
-    background: var(--nrn-bg-raised);
+/* Ни доски, ни книжной картинки, ни резьбы: скин рисуется вёрсткой. */
+#nrn-widget[data-skin="thread"] .nrn-board::before,
+#nrn-widget[data-skin="thread"] .nrn-board::after,
+#nrn-widget[data-skin="thread"] .nrn-book::before,
+#nrn-widget[data-skin="thread"] .nrn-book::after,
+#nrn-widget[data-skin="thread"] .nrn-fig::before {
+    content: none;
 }
+
+/* Знаки полей здесь не рисуются: вместо них словесные ярлыки. */
+#nrn-widget[data-skin="thread"] .nrn-icon:not(.nrn-advice-icon),
+#nrn-widget[data-skin="thread"] .nrn-dial-hub,
+#nrn-widget[data-skin="thread"] .nrn-fig-hit,
+#nrn-widget[data-skin="thread"] .nrn-medallion-svg,
+#nrn-widget[data-skin="thread"] .nrn-cycle-debug {
+    display: none;
+}
+
+/* ------------------------------------------------------------
+ * 19.1. Сетка панели
+ *
+ * Два столбца: время и место слева, книга справа. Одиннадцать рядов —
+ * это левый столбец сверху вниз; пятый пустой и тянется, он и отжимает
+ * дату с календариком к нижнему краю. Книга занимает все ряды разом.
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="thread"] .nrn-board {
+    display: grid;
+    grid-template-columns: var(--nrn-th-col) 1fr;
+    grid-template-rows: auto auto auto auto 1fr auto auto auto auto auto auto;
+    width: 100%;
+    max-width: 968px;
+    height: var(--nrn-th-h);
+    background: var(--nrn-th-bg1);
+    /* Первый слой — подложка левого столбца: своей коробки под него нет,
+       .nrn-wood растворён. Два следующих — холщовая штриховка. */
+    background-image:
+        linear-gradient(90deg, var(--nrn-th-bg2) 0 var(--nrn-th-col), rgba(0, 0, 0, 0) var(--nrn-th-col)),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 1px, rgba(0, 0, 0, 0) 1px 3px),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.011) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+    border: 1px solid var(--nrn-th-line);
+    overflow: hidden;
+}
+
+/* Балка, дерево и коробка даты растворяются — дети встают в сетку сами. */
+#nrn-widget[data-skin="thread"] .nrn-wood,
+#nrn-widget[data-skin="thread"] .nrn-beam,
+#nrn-widget[data-skin="thread"] .nrn-beam-left,
+#nrn-widget[data-skin="thread"] #nrn-datebox {
+    display: contents;
+}
+
+/* Общее для всего левого столбца: поля по краям, середина по центру. */
+#nrn-widget[data-skin="thread"] .nrn-vegvisir,
+#nrn-widget[data-skin="thread"] #nrn-time-line,
+#nrn-widget[data-skin="thread"] #nrn-sun,
+#nrn-widget[data-skin="thread"] #nrn-feast,
+#nrn-widget[data-skin="thread"] #nrn-date,
+#nrn-widget[data-skin="thread"] #nrn-grid,
+#nrn-widget[data-skin="thread"] #nrn-week,
+#nrn-widget[data-skin="thread"] #nrn-moon,
+#nrn-widget[data-skin="thread"] #nrn-weather-text,
+#nrn-widget[data-skin="thread"] #nrn-location-text {
+    grid-column: 1;
+    justify-self: center;
+    width: 100%;
+    max-width: calc(var(--nrn-th-col) - var(--nrn-th-pad) * 2);
+    text-align: center;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-vegvisir      { grid-row: 1; }
+#nrn-widget[data-skin="thread"] #nrn-time-line     { grid-row: 2; }
+#nrn-widget[data-skin="thread"] #nrn-sun           { grid-row: 3; }
+#nrn-widget[data-skin="thread"] #nrn-feast         { grid-row: 4; }
+/* ряд 5 — пустой и тянущийся: он отжимает дату к низу */
+#nrn-widget[data-skin="thread"] #nrn-date          { grid-row: 6; }
+#nrn-widget[data-skin="thread"] #nrn-grid          { grid-row: 7; }
+#nrn-widget[data-skin="thread"] #nrn-week          { grid-row: 8; }
+#nrn-widget[data-skin="thread"] #nrn-moon          { grid-row: 9; }
+#nrn-widget[data-skin="thread"] #nrn-weather-text  { grid-row: 10; }
+#nrn-widget[data-skin="thread"] #nrn-location-text { grid-row: 11; }
+
+#nrn-widget[data-skin="thread"] .nrn-book {
+    grid-column: 2;
+    grid-row: 1 / -1;
+}
+
+#nrn-widget[data-skin="thread"] #nrn-stub {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    align-self: center;
+    justify-self: center;
+    font-family: "Norse", serif;
+    font-size: 17px;
+    letter-spacing: 1.4px;
+    color: var(--nrn-th-label2);
+}
+
+/* ------------------------------------------------------------
+ * 19.2. Левый столбец: вегвизир, эйкта, дата, календарик
+ * ------------------------------------------------------------ */
 
 #nrn-widget[data-skin="thread"] .nrn-vegvisir {
     width: 176px;
     height: 176px;
-    flex: none;
+    max-width: none;
+    margin-top: 24px;
 }
 
-#nrn-widget[data-skin="thread"] #nrn-datebox {
+#nrn-widget[data-skin="thread"] .nrn-vegvisir-svg {
+    position: static;
+    width: 100%;
+    height: 100%;
+    /* Остриё става выходит за край квадрата — резать его нечем. */
+    overflow: visible;
+}
+
+/* Эйкта: имя крупно, счёт под ним мелко. */
+#nrn-widget[data-skin="thread"] #nrn-time-line {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
+    gap: 0;
 }
 
 #nrn-widget[data-skin="thread"] #nrn-eykt-name {
+    margin-top: 13px;
     font-family: "Norse", serif;
     font-size: 27px;
     letter-spacing: 1.6px;
+    line-height: 1.2;
     text-transform: uppercase;
-    color: var(--nrn-text-bright);
-    margin-top: 13px;
+    color: var(--nrn-th-name);
 }
 
 #nrn-widget[data-skin="thread"] #nrn-eykt-num {
+    margin-top: 4px;
     font-size: 12px;
     letter-spacing: 1.8px;
     text-transform: uppercase;
-    color: var(--nrn-text-dim);
-    margin-top: 4px;
+    color: var(--nrn-th-label);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-sun-line {
+#nrn-widget[data-skin="thread"] #nrn-sun {
+    display: block;
     margin-top: 6px;
     font-size: 14px;
     letter-spacing: 1.5px;
+    line-height: 1.4;
     text-transform: uppercase;
-    color: var(--nrn-text-soft);
-    text-align: center;
+    color: var(--nrn-th-sun);
 }
 
+/* Праздник — со звёздочкой вместо знака: знаки здесь не рисуются, а
+   праздник единственное в столбце, что просит взгляда. */
 #nrn-widget[data-skin="thread"] #nrn-feast {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 9px;
     margin-top: 10px;
     font-size: 16px;
     letter-spacing: 1.5px;
+    line-height: 1.35;
     text-transform: uppercase;
-    color: var(--nrn-feast);
-    text-align: center;
+    color: var(--nrn-th-accent2);
 }
 
-/* Дата обрамлена двумя чертами во всю ширину столбца. */
+#nrn-widget[data-skin="thread"] #nrn-feast::before {
+    content: "✦";
+    flex: none;
+    font-size: 9px;
+    letter-spacing: 0;
+    color: var(--nrn-th-accent);
+}
+
+/*
+ * Дата обрамлена двумя чертами во всю ширину столбца.
+ *
+ * Черты растягиваются, сама дата — нет: без flex: none она рассыпается
+ * на слова по одному в строку, как это и вышло в первой примерке.
+ */
 #nrn-widget[data-skin="thread"] #nrn-date {
     display: flex;
     align-items: center;
-    gap: 11px;
-    width: 100%;
-    margin-top: auto;
-    padding-top: 16px;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 0 5px;
+    margin-top: 16px;
     font-family: "Norse", serif;
-    font-size: 25px;
+    font-size: 22px;
     letter-spacing: 1.2px;
     text-transform: uppercase;
-    color: var(--nrn-text);
+    white-space: nowrap;
+    color: var(--nrn-th-silver);
 }
+
+#nrn-widget[data-skin="thread"] #nrn-date > * { flex: none; }
 
 #nrn-widget[data-skin="thread"] #nrn-date::before,
 #nrn-widget[data-skin="thread"] #nrn-date::after {
     content: "";
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 6px;
     height: 1px;
-    background: var(--nrn-border-soft);
+    margin: 0 6px;
+    background: var(--nrn-th-line);
 }
 
-#nrn-widget[data-skin="thread"] #nrn-grid {
-    width: 100%;
-    margin-top: 11px;
-}
+#nrn-widget[data-skin="thread"] #nrn-grid { margin-top: 11px; }
 
 #nrn-widget[data-skin="thread"] .nrn-row {
     display: grid;
@@ -3717,73 +3873,78 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 #nrn-widget[data-skin="thread"] .nrn-cell {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
     text-align: center;
     font-family: "Norse", serif;
     font-size: 15px;
-    color: var(--nrn-text-dim);
+    line-height: 1.45;
+    color: var(--nrn-th-label2);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-cell.nrn-dim { opacity: 0.55; }
-#nrn-widget[data-skin="thread"] .nrn-cell.nrn-feast-day { color: var(--nrn-feast); }
+#nrn-widget[data-skin="thread"] .nrn-cell.nrn-wd {
+    font-size: 11px;
+    letter-spacing: 0.6px;
+    color: var(--nrn-th-label);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cell.nrn-dim { color: var(--nrn-th-dim3); }
+#nrn-widget[data-skin="thread"] .nrn-cell.nrn-feast-day { color: var(--nrn-th-accent); }
 
 #nrn-widget[data-skin="thread"] .nrn-cell.nrn-today {
-    background: var(--nrn-text);
-    color: var(--nrn-bg);
+    background: var(--nrn-th-silver);
+    color: var(--nrn-th-bg0);
 }
 
+/* Седмица и Луна — двумя тихими строками под календариком. */
 #nrn-widget[data-skin="thread"] #nrn-week,
 #nrn-widget[data-skin="thread"] #nrn-moon {
-    display: inline;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 3px 9px;
     font-size: 13px;
     letter-spacing: 1.6px;
+    line-height: 1.4;
     text-transform: uppercase;
-    color: var(--nrn-text-dim);
+    color: var(--nrn-th-label2);
 }
 
 #nrn-widget[data-skin="thread"] #nrn-week { margin-top: 9px; }
 
-/* --- левый столбец, подножие: погода и место --- */
+/* Толкование фазы — в облачко по щелчку, а не строкой: в столбце шириной
+   292 оно занимало три строки и топило под собой календарик. */
+#nrn-widget[data-skin="thread"] #nrn-moon > span:not(.nrn-hintable) { display: none; }
 
-#nrn-widget[data-skin="thread"] .nrn-beam {
-    grid-column: 1;
-    grid-row: 2;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 16px 20px 20px;
-    background: var(--nrn-bg-raised);
-    border-top: 1px solid var(--nrn-border);
-    text-align: center;
-}
+/* ------------------------------------------------------------
+ * 19.3. Подножие левого столбца: погода и место
+ * ------------------------------------------------------------ */
 
-#nrn-widget[data-skin="thread"] .nrn-beam-left {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-#nrn-widget[data-skin="thread"] .nrn-beam-line {
+#nrn-widget[data-skin="thread"] #nrn-weather-text,
+#nrn-widget[data-skin="thread"] #nrn-location-text {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
     font-size: 17px;
     letter-spacing: 1.1px;
-    text-transform: uppercase;
     line-height: 1.35;
+    text-transform: uppercase;
     text-wrap: pretty;
 }
 
-#nrn-widget[data-skin="thread"] #nrn-weather-value { color: var(--nrn-text-weather); }
-#nrn-widget[data-skin="thread"] #nrn-location-value { color: var(--nrn-text-panel); }
+#nrn-widget[data-skin="thread"] #nrn-weather-text {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--nrn-th-line);
+}
 
-/* Иконки в этом скине не рисуются: вместо них словесные ярлыки. */
-#nrn-widget[data-skin="thread"] .nrn-medallion-icon,
-#nrn-widget[data-skin="thread"] .nrn-plate-icon,
-#nrn-widget[data-skin="thread"] .nrn-medallion-svg,
-#nrn-widget[data-skin="thread"] .nrn-icon,
-#nrn-widget[data-skin="thread"] .nrn-dial-hub {
-    display: none;
+#nrn-widget[data-skin="thread"] #nrn-location-text {
+    margin-top: 16px;
+    padding-bottom: 20px;
 }
 
 #nrn-widget[data-skin="thread"] #nrn-weather-text::before { content: "погода"; }
@@ -3794,175 +3955,294 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     font-size: 11px;
     letter-spacing: 1.8px;
     text-transform: uppercase;
-    color: var(--nrn-text-dim);
+    color: var(--nrn-th-label);
 }
 
-/* --- правая страница: три вкладки --- */
+#nrn-widget[data-skin="thread"] #nrn-weather-value {
+    position: static;
+    transform: none;
+    width: auto;
+    max-width: 100%;
+    color: var(--nrn-th-weather);
+}
+
+#nrn-widget[data-skin="thread"] #nrn-location-value { color: var(--nrn-th-place); }
+
+/* ------------------------------------------------------------
+ * 19.4. Книга: три створки
+ *
+ * Заголовки видны всегда, содержимое — у открытой створки. Щелчок по
+ * открытой её закрывает: тогда книга стоит одними заголовками, и это
+ * законное состояние, а не сбой (см. THREAD_TABS в index.js).
+ * ------------------------------------------------------------ */
 
 #nrn-widget[data-skin="thread"] .nrn-book {
-    grid-column: 2;
-    grid-row: 1 / span 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
-    border-left: 1px solid var(--nrn-border);
-    background: linear-gradient(90deg, var(--nrn-thread-spine, rgba(0, 0, 0, 0.4)), transparent 14px);
-    /* Прокрутка без полосы: полоса перечеркнула бы корешок. */
+    border-left: 1px solid var(--nrn-th-line);
+    /* Корешок: тень от сгиба, гаснущая к четырнадцатому пикселю. */
+    background: linear-gradient(90deg, var(--nrn-th-spine), rgba(0, 0, 0, 0) 14px);
+    /* Книга целиком не прокручивается: заголовки створок обязаны стоять
+       на месте. Прокручивается открытая створка — см. #nrn-page ниже. */
+    overflow: hidden;
+}
+
+/*
+ * Открытая створка — это #nrn-page, и она же прокручивается.
+ *
+ * Лист нити растворён (display: contents), поэтому его части — черта,
+ * заголовок, приметы, род с домом, отвар и подножие — становятся детьми
+ * страницы, а не книги. Так у открытой створки есть своя коробка: она
+ * тянется на весь остаток книги, прокручивается внутри себя и не толкает
+ * заголовки соседних створок за нижний край.
+ *
+ * Своё место в книге страница занимает по тому, что открыто: под
+ * заголовком героини, под заголовком {{char}} или в самом низу, если
+ * открыты дети или не открыто ничего.
+ */
+#nrn-widget[data-skin="thread"] #nrn-page {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    /* Закрытая — только подножие, и оно уходит вниз. */
+    order: 8;
+    flex: none;
+    margin-top: auto;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;
 }
 
-#nrn-widget[data-skin="thread"] .nrn-book::-webkit-scrollbar { width: 0; height: 0; }
+#nrn-widget[data-skin="thread"] #nrn-page::-webkit-scrollbar { width: 0; height: 0; }
 
-/* Дети страницы и листа становятся детьми книги — так их можно
-   переставить и прибить совет к нижнему краю. */
-#nrn-widget[data-skin="thread"] .nrn-page,
-#nrn-widget[data-skin="thread"] #nrn-page-freyja {
-    display: contents;
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="user"],
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] {
+    flex: 1 1 0;
+    margin-top: 0;
+    background: var(--nrn-th-bgopen);
+    box-shadow: inset 3px 0 0 var(--nrn-th-accent);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-fig {
-    order: 1;
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="user"] { order: 2; }
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] { order: 4; }
+
+#nrn-widget[data-skin="thread"] #nrn-page-freyja { display: contents; }
+
+/*
+ * Порядок в книге. Числа идут через одно — между ними ещё придётся
+ * что-то вставлять.
+ */
+#nrn-widget[data-skin="thread"] #nrn-fig-user  { order: 1; }
+#nrn-widget[data-skin="thread"] #nrn-fig-char  { order: 3; }
+#nrn-widget[data-skin="thread"] .nrn-rule-kids { order: 5; }
+#nrn-widget[data-skin="thread"] .nrn-kids-head { order: 6; }
+#nrn-widget[data-skin="thread"] .nrn-children  { order: 7; }
+/* Подножие — девятым, ниже всех трёх створок: сюда его перевесил
+   applySkin (см. index.js), в двух других раскладках оно живёт в листе. */
+#nrn-widget[data-skin="thread"] .nrn-foot      { order: 9; }
+
+#nrn-widget[data-skin="thread"] #nrn-fig-user,
+#nrn-widget[data-skin="thread"] #nrn-fig-char,
+#nrn-widget[data-skin="thread"] .nrn-rule-kids,
+#nrn-widget[data-skin="thread"] .nrn-kids-head,
+#nrn-widget[data-skin="thread"] .nrn-children,
+#nrn-widget[data-skin="thread"] .nrn-foot {
+    flex: none;
+}
+
+/* Открытая створка детей тянется и прокручивается так же, как страница. */
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="kids"] ~ .nrn-kids-head,
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="kids"] ~ .nrn-children {
+    background: var(--nrn-th-bgopen);
+    box-shadow: inset 3px 0 0 var(--nrn-th-accent);
+}
+
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="kids"] ~ .nrn-children {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Заголовок открытой створки красится заодно со своей страницей. */
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="user"] ~ #nrn-fig-user,
+#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] ~ #nrn-fig-char {
+    background: var(--nrn-th-bgopen);
+    box-shadow: inset 3px 0 0 var(--nrn-th-accent);
+}
+
+/*
+ * Порядок внутри страницы.
+ *
+ * Виден за раз один набор — сюда попадают части всех трёх листов, но
+ * показан всегда только лист открытой створки. Подножие последнее и
+ * стоит на любой створке: оно не про листы, а про всю панель.
+ */
+#nrn-widget[data-skin="thread"] #nrn-page-user    { order: 1; }
+#nrn-widget[data-skin="thread"] .nrn-rule:not(.nrn-rule-kids) { order: 2; }
+#nrn-widget[data-skin="thread"] #nrn-cycle        { order: 3; }
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs  { order: 4; }
+#nrn-widget[data-skin="thread"] #nrn-cycle-cols   { order: 5; }
+#nrn-widget[data-skin="thread"] #nrn-draught      { order: 6; }
+#nrn-widget[data-skin="thread"] #nrn-freyja-empty { order: 7; }
+#nrn-widget[data-skin="thread"] #nrn-page-char    { order: 8; }
+
+/*
+ * Ничего в странице не сплющивается.
+ *
+ * Высота панели задана числом, а сколько строк придёт с ходом — не знает
+ * никто: к концу срока одних примет десяток. Без этого правила лишнее не
+ * выталкивается, а размазывается: flex жмёт всех подряд, и лист героини
+ * первым садится в ноль.
+ */
+#nrn-widget[data-skin="thread"] #nrn-page-user,
+#nrn-widget[data-skin="thread"] #nrn-page-char,
+#nrn-widget[data-skin="thread"] .nrn-rule,
+#nrn-widget[data-skin="thread"] #nrn-cycle,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs,
+#nrn-widget[data-skin="thread"] #nrn-cycle-cols,
+#nrn-widget[data-skin="thread"] #nrn-draught,
+#nrn-widget[data-skin="thread"] #nrn-freyja-empty {
+    flex: none;
+}
+
+/* Закрытая створка показывает один заголовок. Нить закрывается вместе с
+   героиней: она внутри её створки. */
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) > #nrn-page-user,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) .nrn-rule:not(.nrn-rule-kids),
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-cycle,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-cycle-signs,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-cycle-cols,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-draught,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-freyja-empty,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="char"]) > #nrn-page-char,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="kids"]) ~ .nrn-children {
+    display: none;
+}
+
+/* Медальона нити в этом скине нет: у неё нет своей створки. */
+#nrn-widget[data-skin="thread"] #nrn-fig-freyja { display: none; }
+
+/* ------------------------------------------------------------
+ * 19.5. Заголовки створок
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="thread"] .nrn-fig,
+#nrn-widget[data-skin="thread"] .nrn-kids-head {
     display: flex;
     align-items: baseline;
     gap: 11px;
     padding: 13px 20px;
     background: none;
     border: 0;
-    cursor: pointer;
+    border-radius: 0;
     text-align: left;
+    cursor: pointer;
+    transition: none;
 }
 
-#nrn-widget[data-skin="thread"] .nrn-fig::after {
+/* Черта от имени до правого края — она и держит строку заголовка. */
+#nrn-widget[data-skin="thread"] .nrn-fig::after,
+#nrn-widget[data-skin="thread"] .nrn-kids-head::after {
     content: "";
     flex: 1;
     height: 1px;
-    background: var(--nrn-border-soft);
+    background: var(--nrn-th-line2);
 }
 
 #nrn-widget[data-skin="thread"] .nrn-fig-name {
+    flex: none;
     font-family: "Norse", serif;
     font-size: 25px;
     letter-spacing: 1.4px;
+    line-height: 1;
     text-transform: uppercase;
-    color: var(--nrn-text-muted);
+    color: var(--nrn-th-silver);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-fig-on .nrn-fig-name { color: var(--nrn-text-bright); }
-#nrn-widget[data-skin="thread"] .nrn-fig-hit { display: none; }
+#nrn-widget[data-skin="thread"] .nrn-fig-on .nrn-fig-name { color: var(--nrn-th-name); }
 
-/* Нить Фрейи своей вкладки не имеет — она внутри вкладки героини. Кнопки у
-   неё нет, поэтому на вкладке нити подсвечивается имя героини: она и открыта. */
-#nrn-widget[data-skin="thread"] #nrn-fig-freyja { display: none; }
-#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="char"]) ~ #nrn-fig-user .nrn-fig-name {
-    color: var(--nrn-text-bright);
+/* Створка детей: имя мельче, рядом счёт — «двое во дворе». */
+#nrn-widget[data-skin="thread"] .nrn-kids-head {
+    padding: 9px 20px 9px 34px;
 }
 
-/*
- * Порядок в книге. Из-за display: contents выше сюда попадают все дети
- * листа нити, а не только те, что были в макете: столбцы рода и дома,
- * приметы, отладочная строка и слово «пусто». Каждому нужен свой номер —
- * без него элемент считается нулевым и уезжает в самое начало.
- *
- * Числа идут через одно нарочно: между ними ещё придётся что-то вставлять.
- */
-#nrn-widget[data-skin="thread"] #nrn-fig-user { order: 1; }
-#nrn-widget[data-skin="thread"] #nrn-page-user { order: 2; }
-#nrn-widget[data-skin="thread"] .nrn-rule:not(.nrn-rule-kids) { order: 3; }
-#nrn-widget[data-skin="thread"] #nrn-cycle { order: 4; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-cols { order: 5; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-signs { order: 6; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-debug { order: 7; }
-#nrn-widget[data-skin="thread"] #nrn-draught { order: 8; }
-#nrn-widget[data-skin="thread"] #nrn-freyja-empty { order: 9; }
-#nrn-widget[data-skin="thread"] #nrn-fig-char { order: 10; }
-#nrn-widget[data-skin="thread"] #nrn-page-char { order: 11; }
-#nrn-widget[data-skin="thread"] .nrn-rule-kids { order: 12; }
-#nrn-widget[data-skin="thread"] .nrn-children { order: 13; }
-#nrn-widget[data-skin="thread"] #nrn-advice { order: 14; }
-
-/*
- * Ничего в книге не сплющивается.
- *
- * Высота панели задана числом, а сколько строк придёт с хода — не знает
- * никто: к концу срока одних примет десяток. Без этого правила лишнее
- * не выталкивается, а размазывается — flex сжимает всех подряд, и лист
- * героини первым садится в ноль. Пусть лучше книга прокрутится целиком:
- * тогда и слово повитухи внизу остаётся на месте, а не наезжает на детей.
- *
- * Список тот же, что и с номерами выше: из-за display: contents это не
- * прямые дети книги, и `.nrn-book > *` их не берёт.
- */
-#nrn-widget[data-skin="thread"] #nrn-fig-user,
-#nrn-widget[data-skin="thread"] #nrn-page-user,
-#nrn-widget[data-skin="thread"] .nrn-rule,
-#nrn-widget[data-skin="thread"] #nrn-cycle,
-#nrn-widget[data-skin="thread"] #nrn-cycle-cols,
-#nrn-widget[data-skin="thread"] #nrn-cycle-signs,
-#nrn-widget[data-skin="thread"] #nrn-cycle-debug,
-#nrn-widget[data-skin="thread"] #nrn-draught,
-#nrn-widget[data-skin="thread"] #nrn-freyja-empty,
-#nrn-widget[data-skin="thread"] #nrn-fig-char,
-#nrn-widget[data-skin="thread"] #nrn-page-char,
-#nrn-widget[data-skin="thread"] .nrn-children,
-#nrn-widget[data-skin="thread"] #nrn-advice {
+#nrn-widget[data-skin="thread"] .nrn-kids-name {
     flex: none;
+    font-family: "Norse", serif;
+    font-size: 19px;
+    letter-spacing: 1.4px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-th-label2);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-fig-on .nrn-kids-name { color: var(--nrn-th-name); }
+
+#nrn-widget[data-skin="thread"] .nrn-kids-count {
+    flex: none;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--nrn-th-label);
+}
+
+/* ------------------------------------------------------------
+ * 19.6. Створка героини: тело, одежда, нить Фрейи
+ * ------------------------------------------------------------ */
+
+/* Поля листа — каждой части свои: коробки, которая держала бы их разом,
+   после display: contents больше нет. */
+#nrn-widget[data-skin="thread"] #nrn-page-user,
+#nrn-widget[data-skin="thread"] #nrn-page-char,
+#nrn-widget[data-skin="thread"] .nrn-rule:not(.nrn-rule-kids),
+#nrn-widget[data-skin="thread"] #nrn-cycle,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs,
+#nrn-widget[data-skin="thread"] #nrn-cycle-cols,
+#nrn-widget[data-skin="thread"] #nrn-draught,
+#nrn-widget[data-skin="thread"] #nrn-freyja-empty {
+    min-width: 0;
+    padding: 0 26px 0 20px;
+    overflow: visible;
 }
 
 #nrn-widget[data-skin="thread"] .nrn-leaf {
-    min-width: 0;
-    padding: 0 26px 16px 20px;
-    overflow-y: auto;
-    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 0;
 }
 
-#nrn-widget[data-skin="thread"] .nrn-leaf::-webkit-scrollbar { width: 0; height: 0; }
+/* Тело — выше одежды: сперва что с ней, потом во что одета. В разметке
+   порядок обратный, здесь его правит order, а не перестановка. */
+#nrn-widget[data-skin="thread"] .nrn-state  { order: 1; }
+#nrn-widget[data-skin="thread"] .nrn-attire { order: 2; }
+#nrn-widget[data-skin="thread"] .nrn-thought { order: 3; }
+#nrn-widget[data-skin="thread"] .nrn-leaf-empty { order: 4; }
+#nrn-widget[data-skin="thread"] .nrn-chips { order: 0; }
 
-/*
- * Открытая вкладка.
- *
- * Вкладок в разметке три, а здесь их две: нить Фрейи своей кнопки не имеет
- * и живёт внутри вкладки героини. Поэтому «нить» тут читается как «героиня»
- * — иначе на нити, которая выбрана по умолчанию, книга оказалась бы пустой.
- *
- * Растягивать открытый лист не нужно: низ книги держит слово повитухи
- * своим margin-top: auto, и от переключения вкладок оно не скачет.
- */
-#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="char"]) > #nrn-page-user,
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] > #nrn-page-char { display: flex; }
-
-/* Нить Фрейи закрывается вместе с вкладкой героини — целиком, вместе с
-   разделителем, столбцами и приметами. Слово повитухи остаётся: оно прибито
-   к нижнему краю и стоит на любой вкладке. */
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] > #nrn-page-user,
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] .nrn-rule:not(.nrn-rule-kids),
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] #nrn-cycle,
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] #nrn-cycle-cols,
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] #nrn-cycle-signs,
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] #nrn-cycle-debug,
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] #nrn-draught,
-#nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] #nrn-freyja-empty,
-#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="char"]) > #nrn-page-char { display: none; }
-
-/* Состояние тела — своей строкой с чертой, отдельно от настроения. */
+/* Состояние тела — строка с ярлыком и чертой под ней. Дощечка доски
+   (подложка, рамка, скругление, центровка) здесь снята. */
 #nrn-widget[data-skin="thread"] .nrn-state {
     display: flex;
     align-items: baseline;
     justify-content: flex-start;
     gap: 11px;
-    /* Дощечка доски снята: здесь состояние тела — строка с чертой,
-       а не плашка по центру. */
     margin: 12px 0 0;
     padding: 0 0 7px;
     background: none;
     border: 0;
     border-radius: 0;
-    border-bottom: 1px solid var(--nrn-border-soft);
+    border-bottom: 1px solid var(--nrn-th-line3);
     font-size: 20px;
     letter-spacing: 1.2px;
+    line-height: 1.3;
     text-transform: uppercase;
-    color: var(--nrn-text-soft);
+    text-wrap: pretty;
+    color: var(--nrn-th-state);
 }
 
 #nrn-widget[data-skin="thread"] .nrn-state::before {
@@ -3970,19 +4250,260 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     flex: none;
     font-size: 11px;
     letter-spacing: 1.8px;
-    color: var(--nrn-text-dim);
+    line-height: 1;
+    color: var(--nrn-th-label);
 }
 
+#nrn-widget[data-skin="thread"] #nrn-user-state-text,
+#nrn-widget[data-skin="thread"] #nrn-char-state-text {
+    flex: 1;
+    min-width: 0;
+    color: inherit;
+}
+
+/* Одежда — обычным текстом: единственное место, где сцена говорит прозой. */
 #nrn-widget[data-skin="thread"] .nrn-attire {
     margin-top: 12px;
     font-family: "Alegreya", serif;
     font-size: 19px;
     line-height: 1.5;
-    color: var(--nrn-text);
+    letter-spacing: 0;
+    text-transform: none;
     text-wrap: pretty;
+    color: var(--nrn-th-body);
 }
 
-/* Настроение — только у {{char}}, крупными облачками. */
+#nrn-widget[data-skin="thread"] .nrn-rule:not(.nrn-rule-kids) { margin-top: 18px; }
+
+/*
+ * Заголовок нити Фрейи.
+ *
+ * Слева имя, справа фаза и счёт круга. Имя дописано ярлыком: в разметке
+ * его нет, там строка начинается сразу с фазы, а по макету нить должна
+ * называть себя — иначе её принимают за продолжение одежды.
+ */
+#nrn-widget[data-skin="thread"] #nrn-cycle {
+    margin-top: 0;
+    padding-top: 14px;
+    border: 0;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--nrn-th-silver);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-head::before {
+    content: "Нить Фрейи";
+    flex: none;
+    margin-right: auto;
+    font-family: "Norse", serif;
+    font-size: 23px;
+    letter-spacing: 1.4px;
+    line-height: 1;
+    color: var(--nrn-th-name);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-head > span { flex: none; }
+
+/* Счёт круга — тише фазы: фаза называет, счёт уточняет. */
+#nrn-widget[data-skin="thread"] .nrn-cycle-head > span:not(.nrn-hintable) {
+    font-size: 16px;
+    letter-spacing: 1.3px;
+    color: var(--nrn-th-label2);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-sub {
+    margin-top: 9px;
+    font-family: "Alegreya", serif;
+    font-size: 18px;
+    line-height: 1.48;
+    letter-spacing: 0;
+    text-transform: none;
+    text-wrap: pretty;
+    color: var(--nrn-th-muted);
+}
+
+/*
+ * Строки нити: ярлык слева столбцом, слово справа.
+ *
+ * Ярлык у дитяти и примет в разметке пуст — знак нёс его смысл, а знаки
+ * здесь не рисуются. Поэтому ярлык дописан словом, по строке на смысл.
+ */
+#nrn-widget[data-skin="thread"] .nrn-cycle-line,
+#nrn-widget[data-skin="thread"] .nrn-cycle-dim {
+    margin-top: 8px;
+    font-size: inherit;
+}
+
+/* Приметы — по строке на примету. На доске они стоят сеткой в два
+   столбца, потому что лист там вдвое уже; здесь ширины хватает, а в две
+   колонки строка ярлык–слово читается как таблица, которой она не есть. */
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs {
+    display: block;
+    margin-top: 8px;
+    padding-top: 0;
+    border: 0;
+    font-size: inherit;
+}
+
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-draught {
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+    margin-top: 4px;
+    font-family: "Alegreya", serif;
+    font-size: 17px;
+    line-height: 1.42;
+    letter-spacing: 0;
+    text-transform: none;
+    text-wrap: pretty;
+    color: var(--nrn-th-dim);
+}
+
+/* Ярлык дописан только там, где его нет в разметке: у дитяти и примет
+   его нёс знак, а знаки здесь не рисуются. У срока подпись своя, ей
+   второй ни к чему — она просто встаёт в тот же столбец. */
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact::before { content: "дитя"; }
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact::before { content: "примета"; }
+#nrn-widget[data-skin="thread"] #nrn-draught::before { content: "отвар"; }
+
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact::before,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact::before,
+#nrn-widget[data-skin="thread"] #nrn-draught::before,
+#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-fact-label {
+    flex: none;
+    width: 74px;
+    font-family: "Cormorant Unicase", serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-th-label);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-fact-value {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Шевеления дитяти — тем же тёплым цветом, что и праздник: это
+   единственное, о чём здесь тревожатся. */
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact-value { color: var(--nrn-th-accent2); }
+
+#nrn-widget[data-skin="thread"] .nrn-alarm,
+#nrn-widget[data-skin="thread"] .nrn-alarm .nrn-fact-value { color: var(--nrn-th-accent); }
+
+/* --- род и дом: два столбца --- */
+
+#nrn-widget[data-skin="thread"] #nrn-cycle-cols {
+    display: flex;
+    gap: 26px;
+    margin-top: 16px;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-col {
+    flex: 1;
+    min-width: 0;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+/* Заголовок столбца — слово и черта до края столбца. */
+#nrn-widget[data-skin="thread"] .nrn-group-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--nrn-th-label2);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-group-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--nrn-th-line2);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact {
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+    font-family: "Alegreya", serif;
+    font-size: 17px;
+    line-height: 1.36;
+    letter-spacing: 0;
+    text-transform: none;
+    text-wrap: pretty;
+    color: var(--nrn-th-muted);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact-label {
+    flex: none;
+    width: 74px;
+    font-family: "Cormorant Unicase", serif;
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-th-label);
+}
+
+/* В доме подписи длиннее — «льосмодир», «женщин в доме». */
+#nrn-widget[data-skin="thread"] #nrn-cycle-house .nrn-fact-label { width: 96px; }
+
+/* --- отвар --- */
+
+#nrn-widget[data-skin="thread"] #nrn-draught {
+    margin-top: 15px;
+    padding-top: 11px;
+    border: 0;
+    border-top: 1px solid var(--nrn-th-line2);
+    color: var(--nrn-th-muted);
+}
+
+#nrn-widget[data-skin="thread"] #nrn-draught-name {
+    flex: none;
+    font-family: "Cormorant Unicase", serif;
+    font-size: 16px;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--nrn-th-tag);
+}
+
+#nrn-widget[data-skin="thread"] #nrn-draught-text {
+    flex: 1;
+    min-width: 0;
+    color: var(--nrn-th-muted);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-leaf-empty {
+    margin-top: 12px;
+    padding-bottom: 14px;
+    font-family: "Alegreya", serif;
+    font-size: 17px;
+    font-style: italic;
+    color: var(--nrn-th-label);
+}
+
+/* ------------------------------------------------------------
+ * 19.7. Створка {{char}}: настроение, тело, одежда, мысль
+ * ------------------------------------------------------------ */
+
 #nrn-widget[data-skin="thread"] .nrn-chips {
     display: flex;
     flex-wrap: wrap;
@@ -3992,200 +4513,165 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 #nrn-widget[data-skin="thread"] .nrn-chip {
     padding: 5px 14px 6px;
-    border: 1px solid var(--nrn-chip-border);
-    background: var(--nrn-chip-bg);
-    color: var(--nrn-chip-text);
+    border: 1px solid var(--nrn-th-dot);
+    border-radius: 0;
+    background: var(--nrn-th-bgchip);
+    color: var(--nrn-th-tag);
     font-size: 19px;
     letter-spacing: 1.2px;
-    text-transform: uppercase;
     line-height: 1;
-    border-radius: 0;
+    text-transform: uppercase;
 }
 
+/* Мысль — единственное, что сказано голосом, и потому кавычками и цветом. */
 #nrn-widget[data-skin="thread"] .nrn-thought {
     margin-top: 12px;
+    padding: 0;
+    border: 0;
+    font-family: "Cormorant Unicase", serif;
     font-size: 23px;
-    line-height: 1.36;
+    font-style: normal;
     letter-spacing: 0.3px;
-    color: var(--nrn-feast);
-    text-wrap: pretty;
-}
-
-/* --- нить Фрейи внутри вкладки героини --- */
-
-#nrn-widget[data-skin="thread"] #nrn-cycle {
-    padding: 0 26px 4px 20px;
-    min-width: 0;
-}
-
-#nrn-widget[data-skin="thread"] .nrn-cycle-head {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-top: 14px;
-    font-family: "Norse", serif;
-    font-size: 23px;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    color: var(--nrn-text-bright);
-}
-
-#nrn-widget[data-skin="thread"] .nrn-cycle-sub {
-    margin-top: 9px;
-    font-family: "Alegreya", serif;
-    font-size: 18px;
-    line-height: 1.48;
-    color: var(--nrn-text);
-}
-
-#nrn-widget[data-skin="thread"] .nrn-cycle-cols {
-    display: flex;
-    gap: 26px;
-    margin-top: 16px;
-}
-
-#nrn-widget[data-skin="thread"] .nrn-cycle-col { flex: 1; min-width: 0; }
-
-#nrn-widget[data-skin="thread"] .nrn-group-title {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--nrn-text-dim);
-}
-
-#nrn-widget[data-skin="thread"] .nrn-group-title::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--nrn-border-soft);
-}
-
-#nrn-widget[data-skin="thread"] .nrn-fact {
-    display: flex;
-    align-items: baseline;
-    gap: 11px;
-    margin-top: 5px;
-}
-
-#nrn-widget[data-skin="thread"] .nrn-fact-label {
-    flex: none;
-    width: 88px;
-    font-size: 10px;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    color: var(--nrn-text-dim);
-}
-
-#nrn-widget[data-skin="thread"] .nrn-fact-value {
-    flex: 1;
-    min-width: 0;
-    font-family: "Alegreya", serif;
-    font-size: 17px;
     line-height: 1.36;
-    color: var(--nrn-text-muted);
     text-wrap: pretty;
+    color: var(--nrn-th-accent2);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-alarm,
-#nrn-widget[data-skin="thread"] .nrn-alarm .nrn-fact-value { color: var(--nrn-feast); }
+#nrn-widget[data-skin="thread"] #nrn-thought-text::before { content: "«"; }
+#nrn-widget[data-skin="thread"] #nrn-thought-text::after { content: "»"; }
 
-#nrn-widget[data-skin="thread"] #nrn-draught {
-    display: flex;
-    align-items: baseline;
-    gap: 11px;
-    margin: 15px 26px 0 20px;
-    padding-top: 11px;
-    border-top: 1px solid var(--nrn-border-soft);
-    font-size: 16px;
-    letter-spacing: 1.3px;
-    text-transform: uppercase;
-    color: var(--nrn-chip-text);
+/* ------------------------------------------------------------
+ * 19.8. Створка детей
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="thread"] .nrn-rule-kids {
+    padding: 9px 22px 0 20px;
 }
-
-#nrn-widget[data-skin="thread"] #nrn-draught::before {
-    content: "отвар";
-    flex: none;
-    width: 74px;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    color: var(--nrn-text-dim);
-}
-
-#nrn-widget[data-skin="thread"] .nrn-draught-text {
-    font-family: "Alegreya", serif;
-    font-size: 17px;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--nrn-text-muted);
-}
-
-/* --- дети --- */
 
 #nrn-widget[data-skin="thread"] .nrn-children {
     display: flex;
     flex-direction: column;
     gap: 9px;
-    padding: 9px 26px 13px 34px;
+    padding: 0 26px 14px 34px;
+    scrollbar-width: none;
 }
 
 #nrn-widget[data-skin="thread"] .nrn-child {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto auto 1fr;
     align-items: baseline;
-    gap: 10px;
+    gap: 2px 10px;
+    padding: 0;
+    border: 0;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-child > .nrn-hintable {
     font-size: 19px;
     letter-spacing: 1.1px;
     text-transform: uppercase;
-    color: var(--nrn-chip-text);
+    color: var(--nrn-th-tag);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-child-mark,
+/* Возраст — соседним столбцом, не отдельной строкой. */
+#nrn-widget[data-skin="thread"] .nrn-child > span:not(.nrn-hintable):not(.nrn-icon) {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--nrn-th-label);
+}
+
+/* Нужда — по правому краю той же строки: на неё смотрят первой. */
 #nrn-widget[data-skin="thread"] .nrn-child-need {
+    grid-column: 3;
+    justify-self: end;
     font-family: "Alegreya", serif;
-    font-size: 16px;
+    font-size: 17px;
     letter-spacing: 0;
     text-transform: none;
-    color: var(--nrn-text-dim);
+    color: var(--nrn-th-accent2);
 }
 
-/* --- подножие: слово повитухи --- */
+/* Веха — своей строкой во всю ширину, под именем. */
+#nrn-widget[data-skin="thread"] .nrn-child-mark {
+    grid-column: 1 / -1;
+    font-family: "Alegreya", serif;
+    font-size: 16px;
+    line-height: 1.4;
+    letter-spacing: 0;
+    text-transform: none;
+    text-wrap: pretty;
+    color: var(--nrn-th-dim2);
+}
+
+/* ------------------------------------------------------------
+ * 19.9. Подножие книги: что было и слово повитухи
+ *
+ * Стоит на любой створке и не скачет при переключении: margin-top: auto
+ * прижимает его к нижнему краю, пока место есть, а sticky держит там же,
+ * когда листа больше, чем высоты. Совет затем и написан, чтобы его
+ * прочли, — уезжать за край ему нельзя.
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="thread"] .nrn-foot {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin: 0;
+    padding: 11px 22px 13px;
+    border-top: 1px solid var(--nrn-th-line);
+    background: var(--nrn-th-bg2);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-happened {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 16px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--nrn-th-accent2);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-happened::before {
+    content: "что было";
+    flex: none;
+    font-size: 11px;
+    letter-spacing: 1.7px;
+    color: var(--nrn-th-label);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-happened::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--nrn-th-line2);
+}
+
+#nrn-widget[data-skin="thread"] #nrn-happened-text { flex: none; }
 
 /*
- * Слово повитухи — подножие книги.
- *
- * margin-top: auto прижимает его к нижнему краю, пока место есть; sticky
- * держит его там же, когда листа больше, чем высоты. Иначе на длинном
- * сроке, когда примет набирается десяток, совет уезжал бы за нижний край —
- * а он тут ради того, чтобы его прочли.
+ * Слово повитухи. Врезанная табличка доски снята: подножие уже отделено
+ * чертой сверху, и оправа ему не нужна. Зарубки-руны по углам оттуда же —
+ * левая становится словесным ярлыком в строке, правая звёздочкой.
  */
 #nrn-widget[data-skin="thread"] #nrn-advice {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
+    position: static;
     display: flex;
     align-items: baseline;
     justify-content: flex-start;
     gap: 13px;
-    margin: auto 0 0;
-    padding: 12px 22px 14px;
-    /* Врезанная табличка доски снята: подножие книги отделено одной
-       чертой сверху, и оправа ему больше не нужна. */
+    margin: 0;
+    padding: 0;
     border: 0;
     border-radius: 0;
-    border-top: 1px solid var(--nrn-border);
-    background: var(--nrn-bg-raised);
+    background: none;
     font-size: 21px;
     letter-spacing: 0.4px;
     line-height: 1.34;
-    color: var(--nrn-text-bright);
     text-wrap: pretty;
+    color: var(--nrn-th-advice);
 }
 
-/* Зарубки-руны по углам таблички — оттуда же, с доски. Здесь левая
-   становится словесным ярлыком в самой строке, правой не нужно вовсе. */
 #nrn-widget[data-skin="thread"] #nrn-advice::before {
     content: "слово повитухи";
     position: static;
@@ -4196,22 +4682,55 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     font-size: 11px;
     letter-spacing: 1.7px;
     text-transform: uppercase;
-    color: var(--nrn-text-dim);
+    color: var(--nrn-th-label);
 }
 
 #nrn-widget[data-skin="thread"] #nrn-advice::after { content: none; }
 
-/* Кликнутая подсказка перевода — тем же тёплым цветом, что праздник. */
-#nrn-widget[data-skin="thread"] .nrn-hintable { cursor: pointer; }
-#nrn-widget[data-skin="thread"] .nrn-hint { color: var(--nrn-feast); }
+/* Звёздочка — на месте знака совета: он стоит ровно между ярлыком и
+   словом, куда её и просит макет, и своей коробки заводить не надо. */
+#nrn-widget[data-skin="thread"] #nrn-advice .nrn-advice-icon {
+    display: block;
+    flex: none;
+    width: auto;
+    height: auto;
+    background: none;
+    font-size: 10px;
+    line-height: 1;
+    color: var(--nrn-th-accent);
+}
 
-/* Разделители-ставы (см. вставку в index.js: buildNorseRule). */
+#nrn-widget[data-skin="thread"] #nrn-advice .nrn-advice-icon::before { content: "✦"; }
+
+#nrn-widget[data-skin="thread"] #nrn-advice-text {
+    flex: 1;
+    min-width: 0;
+    font-style: normal;
+    color: inherit;
+}
+
+/* ------------------------------------------------------------
+ * 19.10. Общее: подсказки, разделители, вегвизир
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="thread"] .nrn-hintable { cursor: pointer; }
+#nrn-widget[data-skin="thread"] .nrn-hint { color: var(--nrn-th-accent2); }
+
+/* Разделители-ставы (см. buildNorseRule в index.js). */
 #nrn-widget[data-skin="thread"] .nrn-rule {
     display: flex;
     align-items: center;
-    gap: 10px;
     width: 100%;
-    margin: 18px 0 0;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-rule svg {
+    flex: none;
+    margin: 0 10px;
+    stroke: var(--nrn-th-line3);
+    fill: none;
+    stroke-width: 1.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 #nrn-widget[data-skin="thread"] .nrn-rule::before,
@@ -4219,30 +4738,28 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     content: "";
     flex: 1;
     height: 1px;
-    background: var(--nrn-border-soft);
+    background: var(--nrn-th-line3);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-rule svg {
-    flex: none;
-    stroke: var(--nrn-border-soft);
-    fill: none;
-    stroke-width: 1.2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+#nrn-widget[data-skin="thread"] .nrn-rule .nrn-rule-eye { stroke: var(--nrn-th-accent); }
+#nrn-widget[data-skin="thread"] .nrn-rule .nrn-rule-dot {
+    fill: var(--nrn-th-accent);
+    stroke: none;
 }
 
-#nrn-widget[data-skin="thread"] .nrn-rule .nrn-rule-eye {
-    stroke: var(--nrn-accent);
-}
+#nrn-widget[data-skin="thread"] .nrn-rule-kids .nrn-rule-eye { stroke: var(--nrn-th-place); }
+#nrn-widget[data-skin="thread"] .nrn-rule-kids .nrn-rule-dot { fill: var(--nrn-th-place); }
 
-#nrn-widget[data-skin="thread"] .nrn-rule-kids .nrn-rule-eye {
-    stroke: var(--nrn-text-panel);
-}
-
-/* Разделители и новые ставы вегвизира — только в этом скине.
-   Старые лучи в нём, наоборот, не рисуются. */
+/* Разделители и ставы вегвизира — только здесь. Старые полоски эйкт,
+   наоборот, в этом скине не рисуются: древко есть у самого става. */
 #nrn-widget:not([data-skin="thread"]) .nrn-rule,
+#nrn-widget:not([data-skin="thread"]) .nrn-kids-head,
+#nrn-widget:not([data-skin="thread"]) .nrn-happened,
 #nrn-widget:not([data-skin="thread"]) .nrn-ray-stave { display: none; }
+
+/* Обёртка подножия в двух других раскладках прозрачна: совет остаётся
+   ровно тем же последним ребёнком листа нити, каким был. */
+#nrn-widget:not([data-skin="thread"]) .nrn-foot { display: contents; }
 
 #nrn-widget[data-skin="thread"] .nrn-ray-halo,
 #nrn-widget[data-skin="thread"] .nrn-ray-core { display: none; }
@@ -4254,7 +4771,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 #nrn-widget[data-skin="thread"] .nrn-ray-stave {
     fill: none;
-    stroke: var(--nrn-text-muted);
+    stroke: var(--nrn-th-label2);
     stroke-width: 4;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -4269,148 +4786,274 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"] .nrn-ray-stave,
 #nrn-widget[data-skin="thread"] .nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"] .nrn-ray-stave,
 #nrn-widget[data-skin="thread"] .nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] .nrn-ray-stave {
-    stroke: var(--nrn-feast);
+    stroke: var(--nrn-th-accent);
     stroke-width: 5;
     opacity: 1;
+    /* Свет вокруг горящего става. drop-shadow считается в пикселях экрана,
+       и на 176 пикселях знака это ровно та мягкость, что была в макете. */
+    filter: drop-shadow(0 0 3px var(--nrn-th-accent));
 }
+
+/* ------------------------------------------------------------
+ * 19.11. Узкий чат
+ *
+ * Ниже 720 столбец времени встаёт над книгой, а не рядом: два столбца в
+ * такой ширине превращают книгу в колодец шириной в слово.
+ * ------------------------------------------------------------ */
 
 @media (max-width: 720px) {
     #nrn-widget[data-skin="thread"] .nrn-board {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr;
+        grid-template-rows: repeat(11, auto) 1fr;
         height: auto;
+        background-image:
+            linear-gradient(180deg, var(--nrn-th-bg2) 0 100%, rgba(0, 0, 0, 0) 100%),
+            repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
     }
-    #nrn-widget[data-skin="thread"] .nrn-wood { grid-column: 1; grid-row: 1; }
-    #nrn-widget[data-skin="thread"] .nrn-beam { grid-column: 1; grid-row: 2; }
-    #nrn-widget[data-skin="thread"] .nrn-book { grid-column: 1; grid-row: 3; border-left: 0; }
+    #nrn-widget[data-skin="thread"] .nrn-book {
+        grid-column: 1;
+        grid-row: 12;
+        border-left: 0;
+        border-top: 1px solid var(--nrn-th-line);
+        background: var(--nrn-th-bg1);
+        overflow: visible;
+    }
+    #nrn-widget[data-skin="thread"] .nrn-foot {
+        position: static;
+        margin-top: 0;
+    }
+    #nrn-widget[data-skin="thread"] #nrn-cycle-cols {
+        flex-direction: column;
+        gap: 14px;
+    }
 }
 
 /* ============================================================
  * 20. ТЕМЫ ДЛЯ СКИНА «ДОМ И ЕГО НИТИ»
  *
- * Работают и с другими скинами, но подобраны под thread.
+ * Четыре палитры, снятые с макета один в один. Ролей у скина больше, чем
+ * у доски: там хватало «текста», «тусклого» и «яркого», здесь у погоды,
+ * места, тела и совета свои голоса, а линий три силы вместо одной.
+ * Поэтому переменные свои, с приставкой --nrn-th-, а в конце каждой темы
+ * общие --nrn-* переставлены на те же цвета: подсказки, тревога и знаки
+ * живут в общих правилах и должны краситься заодно.
+ *
+ * Темы работают и в board с flat — цвета там встанут, но раскладка эта
+ * рисовалась под них, и смотреть их лучше с ней.
  * ============================================================ */
 
-/* Тьма — чёрное сукно, серебро и запёкшаяся кровь */
+/* Тьма — уголь и старое серебро, свеча в углу */
 .nrn-themed[data-theme="thread-dark"] {
+    --nrn-th-bg0: #0a0a0c;
+    --nrn-th-bg1: #101013;
+    --nrn-th-bg2: #0d0d10;
+    --nrn-th-bgopen: #15151a;
+    --nrn-th-bgchip: #17171d;
+    --nrn-th-line: #2a2a31;
+    --nrn-th-line2: #1f1f25;
+    --nrn-th-line3: #26262e;
+    --nrn-th-name: #e6e9ee;
+    --nrn-th-silver: #c3c8d0;
+    --nrn-th-body: #d8d2c3;
+    --nrn-th-muted: #a8a294;
+    --nrn-th-dim: #9c968a;
+    --nrn-th-dim2: #8a8578;
+    --nrn-th-dim3: #43464d;
+    --nrn-th-label2: #7d828c;
+    --nrn-th-label: #5f636c;
+    --nrn-th-dot: #3a3b45;
+    --nrn-th-accent: #b5443c;
+    --nrn-th-accent2: #c96a4a;
+    --nrn-th-tag: #d2c7ae;
+    --nrn-th-state: #8fa3b8;
+    --nrn-th-weather: #a8b6c9;
+    --nrn-th-place: #c4b694;
+    --nrn-th-advice: #e0d3b4;
+    --nrn-th-sun: #7d92a6;
+    --nrn-th-spine: rgba(0, 0, 0, 0.55);
+
     --nrn-bg: #101013;
     --nrn-bg-raised: #0d0d10;
     --nrn-bg-open: #15151a;
-    --nrn-bg-hover: #1b1b21;
+    --nrn-bg-hover: #15151a;
     --nrn-border: #2a2a31;
     --nrn-border-soft: #1f1f25;
     --nrn-text: #d8d2c3;
     --nrn-text-bright: #e6e9ee;
     --nrn-text-dim: #5f636c;
     --nrn-text-muted: #a8a294;
-    --nrn-text-soft: #8fa3b8;
+    --nrn-text-soft: #9c968a;
     --nrn-text-panel: #c4b694;
     --nrn-text-weather: #a8b6c9;
     --nrn-text-day: #c3c8d0;
     --nrn-accent: #b5443c;
-    --nrn-accent-contrast: #0a0a0c;
-    --nrn-accent-glow: rgba(181, 68, 60, 0.45);
-    --nrn-accent-glow-strong: rgba(181, 68, 60, 0.75);
-    --nrn-accent-border-dim: rgba(181, 68, 60, 0.35);
+    --nrn-accent-contrast: #101013;
     --nrn-chip-text: #d2c7ae;
     --nrn-chip-bg: #17171d;
     --nrn-chip-border: #3a3b45;
     --nrn-feast: #c96a4a;
-    --nrn-feast-bg: rgba(201, 106, 74, 0.16);
-    --nrn-art-filter: opacity(1);
-    --nrn-thread-spine: rgba(0, 0, 0, 0.55);
+    --nrn-art-filter: sepia(0.2) saturate(0.9);
 }
 
-/* Свет — белая бумага, чёрные чернила, кровавый акцент */
+/* Свет — беленый лен и сургуч */
 .nrn-themed[data-theme="thread-light"] {
+    --nrn-th-bg0: #e9e5dd;
+    --nrn-th-bg1: #faf8f4;
+    --nrn-th-bg2: #f2efe8;
+    --nrn-th-bgopen: #ffffff;
+    --nrn-th-bgchip: #f4f1ea;
+    --nrn-th-line: #cec8bc;
+    --nrn-th-line2: #e3ded4;
+    --nrn-th-line3: #d9d3c7;
+    --nrn-th-name: #12100e;
+    --nrn-th-silver: #2b2722;
+    --nrn-th-body: #241f19;
+    --nrn-th-muted: #4a4239;
+    --nrn-th-dim: #5d554a;
+    --nrn-th-dim2: #6b6357;
+    --nrn-th-dim3: #b3aa9c;
+    --nrn-th-label2: #6e675c;
+    --nrn-th-label: #8a8175;
+    --nrn-th-dot: #b8b0a2;
+    --nrn-th-accent: #8c1c13;
+    --nrn-th-accent2: #a52a1f;
+    --nrn-th-tag: #3a332a;
+    --nrn-th-state: #3c5566;
+    --nrn-th-weather: #3c5566;
+    --nrn-th-place: #6b4f22;
+    --nrn-th-advice: #1a1611;
+    --nrn-th-sun: #4f6c7a;
+    --nrn-th-spine: rgba(90, 80, 64, 0.22);
+
     --nrn-bg: #faf8f4;
     --nrn-bg-raised: #f2efe8;
     --nrn-bg-open: #ffffff;
-    --nrn-bg-hover: #efeae0;
+    --nrn-bg-hover: #ffffff;
     --nrn-border: #cec8bc;
     --nrn-border-soft: #e3ded4;
     --nrn-text: #241f19;
     --nrn-text-bright: #12100e;
     --nrn-text-dim: #8a8175;
     --nrn-text-muted: #4a4239;
-    --nrn-text-soft: #3c5566;
+    --nrn-text-soft: #5d554a;
     --nrn-text-panel: #6b4f22;
     --nrn-text-weather: #3c5566;
     --nrn-text-day: #2b2722;
     --nrn-accent: #8c1c13;
     --nrn-accent-contrast: #faf8f4;
-    --nrn-accent-glow: rgba(140, 28, 19, 0.35);
-    --nrn-accent-glow-strong: rgba(140, 28, 19, 0.6);
-    --nrn-accent-border-dim: rgba(140, 28, 19, 0.4);
     --nrn-chip-text: #3a332a;
     --nrn-chip-bg: #f4f1ea;
-    --nrn-chip-border: #cec8bc;
+    --nrn-chip-border: #b8b0a2;
     --nrn-feast: #a52a1f;
-    --nrn-feast-bg: rgba(165, 42, 31, 0.12);
-    --nrn-art-filter: brightness(1.18) saturate(0.75);
     --nrn-text-halo: rgba(255, 255, 255, 0.85);
     --nrn-text-halo-soft: rgba(255, 255, 255, 0.6);
-    --nrn-thread-spine: rgba(90, 80, 64, 0.22);
+    --nrn-art-filter: brightness(1.12) saturate(0.6);
 }
 
-/* Ланнистеры — багрянец и золото */
+/* Ланнистеры — багрец и золото */
 .nrn-themed[data-theme="thread-lannister"] {
+    --nrn-th-bg0: #170809;
+    --nrn-th-bg1: #280e10;
+    --nrn-th-bg2: #1f0b0c;
+    --nrn-th-bgopen: #341616;
+    --nrn-th-bgchip: #3a1a18;
+    --nrn-th-line: #5a2a22;
+    --nrn-th-line2: #43201d;
+    --nrn-th-line3: #4f2622;
+    --nrn-th-name: #f2dc9a;
+    --nrn-th-silver: #e2c67e;
+    --nrn-th-body: #efe2c8;
+    --nrn-th-muted: #c9b58c;
+    --nrn-th-dim: #b09b74;
+    --nrn-th-dim2: #9b8763;
+    --nrn-th-dim3: #7a5238;
+    --nrn-th-label2: #b08a5a;
+    --nrn-th-label: #96754a;
+    --nrn-th-dot: #6b4630;
+    --nrn-th-accent: #d4af37;
+    --nrn-th-accent2: #e8c85c;
+    --nrn-th-tag: #f2dc9a;
+    --nrn-th-state: #dcb98c;
+    --nrn-th-weather: #dcc3a2;
+    --nrn-th-place: #e2c67e;
+    --nrn-th-advice: #f7e6b6;
+    --nrn-th-sun: #dba845;
+    --nrn-th-spine: rgba(0, 0, 0, 0.5);
+
     --nrn-bg: #280e10;
     --nrn-bg-raised: #1f0b0c;
     --nrn-bg-open: #341616;
-    --nrn-bg-hover: #3c1a19;
+    --nrn-bg-hover: #341616;
     --nrn-border: #5a2a22;
     --nrn-border-soft: #43201d;
     --nrn-text: #efe2c8;
     --nrn-text-bright: #f2dc9a;
     --nrn-text-dim: #96754a;
     --nrn-text-muted: #c9b58c;
-    --nrn-text-soft: #dcb98c;
+    --nrn-text-soft: #b09b74;
     --nrn-text-panel: #e2c67e;
     --nrn-text-weather: #dcc3a2;
     --nrn-text-day: #e2c67e;
     --nrn-accent: #d4af37;
     --nrn-accent-contrast: #280e10;
-    --nrn-accent-glow: rgba(212, 175, 55, 0.45);
-    --nrn-accent-glow-strong: rgba(212, 175, 55, 0.8);
-    --nrn-accent-border-dim: rgba(212, 175, 55, 0.4);
     --nrn-chip-text: #f2dc9a;
-    --nrn-chip-bg: rgba(212, 175, 55, 0.10);
-    --nrn-chip-border: rgba(212, 175, 55, 0.35);
+    --nrn-chip-bg: #3a1a18;
+    --nrn-chip-border: #6b4630;
     --nrn-feast: #e8c85c;
-    --nrn-feast-bg: rgba(232, 200, 92, 0.16);
-    --nrn-art-filter: sepia(0.35) saturate(1.3) hue-rotate(-12deg);
-    --nrn-thread-spine: rgba(0, 0, 0, 0.5);
+    --nrn-art-filter: sepia(0.2) saturate(0.9);
 }
 
-/* Покой — светлая бумага и приглушённая зелень, для отдыха глаз */
+/* Покой — светлая бумага и приглушенная зелень */
 .nrn-themed[data-theme="thread-calm"] {
+    --nrn-th-bg0: #e6e4dc;
+    --nrn-th-bg1: #f6f4ef;
+    --nrn-th-bg2: #efece5;
+    --nrn-th-bgopen: #fcfbf8;
+    --nrn-th-bgchip: #f0ede5;
+    --nrn-th-line: #d2cec4;
+    --nrn-th-line2: #e5e1d8;
+    --nrn-th-line3: #dcd8ce;
+    --nrn-th-name: #2c302d;
+    --nrn-th-silver: #3d4441;
+    --nrn-th-body: #383e3a;
+    --nrn-th-muted: #5b625d;
+    --nrn-th-dim: #6b726c;
+    --nrn-th-dim2: #7b827c;
+    --nrn-th-dim3: #b6bbb5;
+    --nrn-th-label2: #7c837d;
+    --nrn-th-label: #939a94;
+    --nrn-th-dot: #bcc1bb;
+    --nrn-th-accent: #5d7a63;
+    --nrn-th-accent2: #7a9a80;
+    --nrn-th-tag: #3d4441;
+    --nrn-th-state: #4d6b74;
+    --nrn-th-weather: #4d6b74;
+    --nrn-th-place: #6d6146;
+    --nrn-th-advice: #2c302d;
+    --nrn-th-sun: #6d8a92;
+    --nrn-th-spine: rgba(70, 78, 72, 0.18);
+
     --nrn-bg: #f6f4ef;
     --nrn-bg-raised: #efece5;
     --nrn-bg-open: #fcfbf8;
-    --nrn-bg-hover: #eae7de;
+    --nrn-bg-hover: #fcfbf8;
     --nrn-border: #d2cec4;
     --nrn-border-soft: #e5e1d8;
     --nrn-text: #383e3a;
     --nrn-text-bright: #2c302d;
     --nrn-text-dim: #939a94;
     --nrn-text-muted: #5b625d;
-    --nrn-text-soft: #4d6b74;
+    --nrn-text-soft: #6b726c;
     --nrn-text-panel: #6d6146;
     --nrn-text-weather: #4d6b74;
     --nrn-text-day: #3d4441;
     --nrn-accent: #5d7a63;
     --nrn-accent-contrast: #f6f4ef;
-    --nrn-accent-glow: rgba(93, 122, 99, 0.35);
-    --nrn-accent-glow-strong: rgba(93, 122, 99, 0.6);
-    --nrn-accent-border-dim: rgba(93, 122, 99, 0.4);
     --nrn-chip-text: #3d4441;
     --nrn-chip-bg: #f0ede5;
-    --nrn-chip-border: #d2cec4;
+    --nrn-chip-border: #bcc1bb;
     --nrn-feast: #7a9a80;
-    --nrn-feast-bg: rgba(122, 154, 128, 0.16);
-    --nrn-art-filter: brightness(1.12) saturate(0.6);
     --nrn-text-halo: rgba(255, 255, 255, 0.85);
     --nrn-text-halo-soft: rgba(255, 255, 255, 0.6);
-    --nrn-thread-spine: rgba(70, 78, 72, 0.18);
+    --nrn-art-filter: brightness(1.12) saturate(0.6);
 }
