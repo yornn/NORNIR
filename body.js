@@ -193,8 +193,12 @@ const QUICKENING_DAY = 130;
  * другого не случилось, панель месяцами твердила «кровь не приходила», хотя
  * поясок давно не сходится. Четвёртая часть ношения — это уже не догадка
  * и не подозрение, а видимый живот и четвёртые несостоявшиеся тидир.
+ *
+ * Наружу вывешен затем, что то же самое правило действует и в Tímatal:
+ * выставлять руками «не знает» на четвёртой части нельзя — движок эту отметку
+ * всё равно перебьёт сроком, и форма врала бы про собственный результат.
  */
-const OBVIOUS_DAY = 90;
+export const OBVIOUS_DAY = 90;
 
 /** Последняя часть ношения — «подошедшая к падению». */
 const LAST_PART_DAY = TERM_DAYS - 30;
@@ -2162,4 +2166,185 @@ function plural(n, one, few, many) {
     if (mod10 === 1 && mod100 !== 11) return one;
     if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
     return many;
+}
+
+/* ============================================================
+ * 8. ПРАВДА
+ *
+ * Всё, что выше, устроено вокруг одного правила: наружу отдаётся то, что
+ * женщина XI века знает о себе сама. Она не знает, тяжела ли на третьей
+ * неделе, — она знает, что кровь не пришла. Она не знает пола дитяти — она
+ * знает, что сказала повитуха, а повитуха врёт в четырёх случаях из десяти.
+ *
+ * Здесь наоборот. Это не панель и не промпт, это форточка для автора: тяжела
+ * или нет, кем, от какого дня, что выпало на броске и чем кончится угроза.
+ * К модели отсюда не уходит ни слова и в инфоблок тоже — `bodyTruth` зовут
+ * из одного места, окна Tímatal, и только по нажатию.
+ *
+ * Отчего это отдельная функция, а не расширенный `debugLines`. Отладочный
+ * слой пишет по строке на факт, без подписей, и читается как лог: он и есть
+ * лог. Здесь нужны пары «что — сколько», потому что читают их не по диагонали,
+ * а с одним вопросом: получилось или нет.
+ * ============================================================ */
+
+/** Дата обычными словами: «5 сольмануд 1015». */
+function dayWords(d) {
+    if (!d || d.year == null) return null;
+    const name = isAuk(d.month) ? "аукнэтр" : MONTHS[d.month - 1].ru.toLowerCase();
+    return `${d.day} ${name} ${d.year}`;
+}
+
+/** «сын» · «оба — сыновья» · «сын и дочь» — по списку полов, как он в записи. */
+function sexWords(sexes) {
+    if (!sexes?.length) return null;
+    const words = sexes.map((s) => (s === "m" ? "сын" : s === "f" ? "дочь" : "неведомо"));
+    if (words.every((w) => w === words[0])) {
+        if (words.length === 1) return words[0];
+        return `${words.length === 3 ? "трое" : "оба"} — ${words[0] === "сын" ? "сыновья" : "дочери"}`;
+    }
+    return words.join(" и ");
+}
+
+/**
+ * Что на самом деле с телом — для автора, не для героини.
+ *
+ * @param {object|null} body Состояние тела с конца чата
+ * @param {object|null} today Дата сцены
+ * @param {{accuracy?: number}} opts
+ * @returns {{headline: string, rows: Array<{label: string, value: string}>}|null}
+ */
+export function bodyTruth(body, today, opts = {}) {
+    if (!today) return null;
+    const accuracy = opts.accuracy ?? DIVINATION_ACCURACY;
+    const rows = [];
+    const push = (label, value) => { if (value) rows.push({ label, value }); };
+    const days = (n) => `${n} ${plural(n, "день", "дня", "дней")}`;
+
+    /* Тела нет вовсе — в чате ещё ни одного ответа. Пустая форточка честнее
+       выдуманного «первого дня цикла»: счёт заведётся с первого же хода. */
+    if (!body) return { headline: "Счёт ещё не начат", rows };
+
+    const preg = body.pregnancy;
+    const nursing = body.nursing;
+
+    let headline;
+    if (preg) {
+        const term = pregnancyTerm(preg.conceived, today);
+        const summary = pregnancySummary(preg, today, accuracy);
+        const births = preg.births ?? 1;
+        headline = births === 3 ? "Тяжела тройней" : births === 2 ? "Тяжела двойней" : "Тяжела";
+
+        if (term) {
+            push("Срок", `${Math.min(term.part, 9)}/9 · ${days(term.days)} от зачатия`
+                + ` · до родов ${days(Math.max(0, TERM_DAYS - term.days))}`);
+        }
+        push("Зачато", dayWords(preg.conceived)
+            + (preg.guessedDate ? " · дата вычислена от части срока, а не настоящая" : ""));
+        push("Дитя", sexWords(preg.sexes ?? (preg.sex ? [preg.sex] : null)));
+        push("Отец", preg.father ?? "не назван");
+
+        /* Шевеление и знание — две разные вещи, и путать их нельзя: дитя может
+           шевельнуться раньше, чем героиня признает, что оно есть. */
+        push("Шевельнулось", preg.quickened
+            ? dayWords(preg.quickened)
+            : (term && term.days >= QUICKENING_DAY
+                ? "по сроку пора, а в сцене ещё не было"
+                : `ещё нет · по сроку ждать к ${QUICKENING_DAY}-му дню`));
+        const kick = kickWatch(preg, today, !!summary?.quickened);
+        if (kick) push("Слышно ли", kick.text + (kick.alarm ? " · тревожно" : ""));
+
+        push("Знает ли", preg.knownSince
+            ? `знает с ${dayWords(preg.knownSince)}`
+            : (term && term.days >= OBVIOUS_DAY
+                ? "скрывать уже нечего: живот виден, счёт объявил сам"
+                : "не знает — только гадает"));
+        if (summary?.due) push("Ждать", summary.due);
+        /* Единственное место, где видно, врёт ли повитуха. */
+        if (summary?.guess) {
+            push("Гадание", `${summary.guess.text ?? "сказано"} — ${summary.guess.right ? "верно" : "врёт"}`);
+        }
+        if (preg.labour) {
+            push("Схватки", `начались ${dayWords(preg.labour)}`
+                + (preg.early ? " · раньше срока" : "")
+                + (preg.summoned ? " · призыв Фригг" : ""));
+        }
+
+        const threat = threatView(preg.threat, today);
+        if (threat) {
+            push("Угроза", `${threat.title} · сбудется через ${days(Math.max(0, threat.left))}`
+                + ` · ${threat.outcome === "lost" ? "выкидыш" : "роды раньше срока"}`
+                + ` · ${threat.savable ? "отлежаться можно" : "отлежаться нельзя"}`);
+        }
+        if (preg.herbExposure) {
+            push("Плод задет отваром", HERBS[preg.herbExposure.id]?.ru ?? preg.herbExposure.id);
+        }
+    } else if (nursing) {
+        const since = daysSinceBleeding(nursing.since, today) ?? 0;
+        const stage = postpartumStage(since);
+        headline = "После родов";
+        push("От родов", `${days(since)} · ${stage.ru}`);
+        push("Кровь", "пока кормит — цикл стоит, зачатия не будет");
+    } else {
+        headline = "Не тяжела";
+        const cycle = cycleSummary(body, today, CYCLE_DEFAULT);
+        if (cycle) {
+            push("День цикла", `${cycle.day}/${cycle.length} · ${cycle.phase.ru}`);
+            push("До крови", days(cycle.toBleeding));
+            /* Шанс показываем оба разом. Разница впятеро — то самое, что решает,
+               стоило ли беречься, и по одному числу её не увидеть. */
+            push("Возьмётся ли дитя",
+                `внутрь ${(conceptionChance(cycle.phase.id, true) * 100).toFixed(1)}%`
+                + ` · мимо ${(conceptionChance(cycle.phase.id, false) * 100).toFixed(1)}%`);
+        } else {
+            push("День цикла", "крови ещё не было — счёт не с чего вести");
+        }
+        const late = daysSinceBleeding(body.lastBleed, today);
+        if (late != null) push("От крови", days(late));
+    }
+
+    /* Дальше общее: оно одинаково важно и носящей, и нет. */
+
+    /* Бросок на зачатие. Главная строка всей форточки — ради неё сюда и лезут.
+       Показываем и день: бросок один на игровые сутки, и если он вчерашний,
+       значит сегодняшняя близость своего броска ещё не получила. */
+    if (body.lastRoll) {
+        const r = body.lastRoll;
+        push("Последний бросок", `${dayWords(r.at)} · ${r.value.toFixed(3)} против ${r.chance.toFixed(3)}`
+            + ` → ${r.hit ? "зачатие" : "мимо"} · семя ${r.internal ? "внутрь" : "мимо"}`);
+    } else if (!preg) {
+        push("Последний бросок", "близости в счёте ещё не было");
+    }
+    if (body.lastSeed) push("Последняя близость", dayWords(body.lastSeed));
+
+    const draught = herbView(body.herb, today);
+    if (draught) {
+        push("Отвар", `${draught.herb.ru} · ${body.herb.worked ? "подействовал" : "не подействовал"}`
+            + ` · ${body.herb.wasPregnant ? "было что прерывать" : "прерывать было нечего"}`
+            + (draught.fatal ? " · СМЕРТЕЛЬНО" : ""));
+        if (draught.barrenLeft > 0) {
+            push("Утроба закрыта", `не примет семени ещё ${days(draught.barrenLeft)}`);
+        }
+    }
+
+    const strains = activeStrains(body.strain, today);
+    const load = strainLoad(body.strain, today);
+    if (load > 0) {
+        const term = preg ? pregnancyTerm(preg.conceived, today) : null;
+        push("Тягота", `${load.toFixed(1)}`
+            + (term
+                ? ` · уязвимость ${(termVulnerability(term.days) * 100).toFixed(1)}%`
+                  + ` → угроза ${(Math.min(0.9, termVulnerability(term.days) * load) * 100).toFixed(0)}%`
+                : "")
+            + (strains.length ? ` · ${strains.map((s) => s.ru).join(", ")}` : ""));
+    }
+
+    const loss = lossView(body.lastLoss, today);
+    if (loss) push("Потеря", `${loss.title} · ${days(loss.age)} назад`);
+
+    for (const child of body.children ?? []) {
+        const kid = childSummary(child, today);
+        if (kid) push("Дитя на руках", `${kid.title} · ${kid.age}`);
+    }
+
+    return { headline, rows };
 }

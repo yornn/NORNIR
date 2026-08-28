@@ -1928,6 +1928,109 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     opacity: 0.9;
 }
 
+/*
+ * Форточка правды.
+ *
+ * Выглядит нарочно не как остальная Утроба: всё вокруг — то, что героиня знает
+ * о себе, а это — то, чего она знать не может. Отсюда рамка пунктиром и фон
+ * чуть глубже фона блока: место читается как выломанное из общего строя,
+ * и случайно принять его за панель нельзя.
+ */
+.nrn-t-truth {
+    margin-top: 6px;
+}
+
+.nrn-timatal .nrn-t-truth-toggle {
+    padding: 4px 13px;
+    font-family: inherit;
+    font-size: 12.5px;
+    letter-spacing: 0.4px;
+    color: var(--nrn-text-muted);
+    background: transparent;
+    border: 1px dashed var(--nrn-border-soft);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.nrn-timatal .nrn-t-truth-toggle:hover {
+    color: var(--nrn-accent);
+    border-color: var(--nrn-accent-border-dim);
+}
+
+.nrn-t-truth-body {
+    margin-top: 8px;
+    padding: 9px 12px 10px;
+    border: 1px dashed var(--nrn-border-soft);
+    border-radius: 12px;
+    background: var(--nrn-bg);
+}
+
+/* Заголовок — один ответ на один вопрос: тяжела или нет. Всё остальное
+   в форточке это уточняет, поэтому набран он крупнее и в цвет акцента. */
+.nrn-t-truth-headline {
+    margin-bottom: 7px;
+    font-family: "Norse", Georgia, serif;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: 0.6px;
+    color: var(--nrn-accent);
+}
+
+/*
+ * Строка правды — пара «что: сколько».
+ *
+ * Подпись не даём сжиматься до переноса по букве: «Последний бросок» в одну
+ * колонку с числами читается только целиком. На узком экране пара сама
+ * переламывается на две строки — flex-wrap, а не таблица, ровно ради этого.
+ */
+.nrn-t-truth-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    padding: 3px 0;
+    font-size: 15px;
+    line-height: 1.35;
+}
+
+/* Разделитель между строками, а не над каждой: `:first-of-type` тут не
+   годится — первым div'ом в форточке идёт заголовок, и черта досталась бы
+   первой же строке, отбивая её от «Тяжела». */
+.nrn-t-truth-row + .nrn-t-truth-row {
+    border-top: 1px solid var(--nrn-border-soft);
+}
+
+.nrn-t-truth-label {
+    flex: 0 0 auto;
+    min-width: 9.5em;
+    color: var(--nrn-text-dim);
+}
+
+.nrn-t-truth-value {
+    flex: 1 1 12em;
+    color: var(--nrn-text);
+}
+
+/* Погашенная кнопка Утробы: без даты сцены считать не от чего, и нажатие
+   молча не сработало бы. Вид тот же, что у погашенного призыва Фригг. */
+.nrn-timatal .nrn-t-picker-apply:disabled {
+    opacity: 0.45;
+    cursor: default;
+    border-color: var(--nrn-border-soft);
+    color: var(--nrn-text-muted);
+}
+
+.nrn-timatal .nrn-t-picker-apply:disabled:hover {
+    background: var(--nrn-bg);
+}
+
+/* То же для списка «знает / не знает», погашенного на видном сроке. */
+.nrn-timatal .nrn-t-picker-select:disabled {
+    opacity: 0.55;
+    cursor: default;
+    color: var(--nrn-text-muted);
+}
+
 /* --- разделы-аккордеон --- */
 
 .nrn-t-hidden {
@@ -3887,18 +3990,29 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  * Черты растягиваются, сама дата — нет: без flex: none она рассыпается
  * на слова по одному в строку.
  */
+/*
+ * Дата: слово между двумя чертами.
+ *
+ * Три числа под кегль. Самая длинная дата в этом счёте — «30 Haustmánuðr
+ * í Sumar 1018»: на 22 пикселях ей нужно 245 при 252 доступных, и чертам
+ * не остаётся ничего. На 20 остаётся по одиннадцать на каждую.
+ *
+ * Строка отмерена явно: Norse выше своей строки, и по умолчанию верхушки
+ * букв выходят за коробку. Резать их нечем — overflow здесь нет нарочно,
+ * пусть длинная дата лучше зайдёт в поле столбца, чем окажется срезанной.
+ */
 #nrn-widget[data-skin="thread"] #nrn-date {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-wrap: nowrap;
-    gap: 0 5px;
+    gap: 0 6px;
     margin-top: 16px;
-    font-size: 22px;
+    font-size: 20px;
+    line-height: 1.35;
     letter-spacing: 1.2px;
     text-transform: uppercase;
     white-space: nowrap;
-    overflow: hidden;
     color: var(--nrn-th-silver);
 }
 
@@ -3908,11 +4022,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-date::after {
     content: "";
     /* До нуля: «í Vetr» переводится в «Зимнее полугодие», и на черты
-       места уже не остаётся — пусть уступают они, а не дата. */
+       места уже не остаётся — пусть уступают они, а не дата. Поля им не
+       нужны, зазоры держит gap самой строки. */
     flex: 1 1 0;
     min-width: 0;
     height: 1px;
-    margin: 0 6px;
+    margin: 0;
     background: var(--nrn-th-line);
 }
 
@@ -4121,6 +4236,9 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-page[data-tab="user"],
 #nrn-widget[data-skin="thread"] #nrn-page[data-tab="char"] {
     flex: 1 1 0;
+    /* Воздух под последней строкой: без него текст упирался в заголовок
+       соседней створки и лист обрывался на полуслове. */
+    padding-bottom: 16px;
     background: var(--nrn-th-bgopen);
     box-shadow: inset 3px 0 0 var(--nrn-th-accent);
 }
@@ -4172,8 +4290,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-page-user    { order: 1; }
 #nrn-widget[data-skin="thread"] .nrn-rule:not(.nrn-rule-kids) { order: 2; }
 #nrn-widget[data-skin="thread"] #nrn-cycle        { order: 3; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-signs  { order: 4; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-cols   { order: 5; }
+#nrn-widget[data-skin="thread"] #nrn-cycle-cols   { order: 4; }
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs  { order: 5; }
 #nrn-widget[data-skin="thread"] #nrn-draught      { order: 6; }
 #nrn-widget[data-skin="thread"] #nrn-freyja-empty { order: 7; }
 #nrn-widget[data-skin="thread"] #nrn-page-char    { order: 8; }
@@ -4425,11 +4543,14 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 /* Приметы — по строке на примету. На доске они стоят сеткой в два
    столбца, потому что лист там вдвое уже. */
+/* Приметы стоят ниже рода с домом и отделены от них чертой во всю ширину
+   листа: их к концу срока десяток, и без черты они прирастают к дому. */
 #nrn-widget[data-skin="thread"] #nrn-cycle-signs {
     display: block;
-    margin-top: 8px;
-    padding-top: 0;
+    margin-top: 15px;
+    padding-top: 11px;
     border: 0;
+    border-top: 1px solid var(--nrn-th-line2);
     font-size: inherit;
 }
 
@@ -4541,10 +4662,21 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 /* Заголовок столбца — слово и черта до края столбца. */
+/*
+ * «Род» и «Дом» — слово и одна черта до края столбца.
+ *
+ * На доске у заголовка своя черта снизу, во всю ширину, и вместе с этой
+ * их выходило две подряд. Ту снимаем: черта здесь идёт от слова вбок,
+ * а не под ним.
+ */
 #nrn-widget[data-skin="thread"] .nrn-group-title {
     display: flex;
     align-items: center;
     gap: 9px;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border: 0;
+    opacity: 1;
     font-size: 11px;
     letter-spacing: 2px;
     text-transform: uppercase;

@@ -741,6 +741,27 @@ syncWholeChat(soonGuess);
 check("а недавняя — датирует",
     findBodyState(soonGuess, null, { chances: noChance }).pregnancy.conceived.day, 1);
 
+/*
+ * Близость помнится и тогда, когда броска не было вовсе.
+ *
+ * Якорь крови поставлен на двадцатое, а сцена идёт вторым числом: счёт цикла
+ * в минусе, фазы нет, бросать не по чему. Раньше tryConceive на этом выходе
+ * возвращался молча и терял день близости вместе с броском — и «понесла»
+ * тремя днями позже заводило дитя от дня догадки, а не от той ночи. Ношение
+ * отставало на месяц, и заметить это было нечем.
+ */
+const blindSeed = [
+    marked(2, ["sex: да", "internal: да"]),
+    mk("хадеги", "date: 5 сольмануд 1015", "понесла"),
+];
+syncWholeChat(blindSeed);
+const blind = findBodyState(blindSeed, null, {
+    manualBody: { at: dayAt(1), body: { lastBleed: dayAt(20) } },
+});
+check("несчитаемый цикл не отменяет броска", !!blind.lastRoll, false);
+check("но близость всё равно помнится", blind.lastSeed?.day, 2);
+check("и «понесла» датирует дитя от неё", blind.pregnancy.conceived.day, 2);
+
 console.log("\n=== Чтение чата ===");
 
 const stable = chatOf([[1, "кровь пришла"], [2, null]]);

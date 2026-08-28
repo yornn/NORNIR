@@ -806,13 +806,29 @@ function matureThreat(body, today, ctx = {}) {
 function tryConceive(body, today, internal, ctx) {
     const next = { ...body };
     if (next.pregnancy || next.nursing) return next;
+
+    /*
+     * День близости запоминаем раньше всех проверок и независимо от них.
+     *
+     * Бросок может не состояться — утроба закрыта отваром, счёт цикла ещё
+     * не заведён или дата сцены ушла раньше якоря крови, — а близость всё
+     * равно была, и помнить её надо. Ради этого lastSeed и существует: если
+     * сцена позже напишет «понесла», дитя отсчитается от этой ночи, а не от
+     * дня, когда героиня о нём догадалась (см. newPregnancy).
+     *
+     * Раньше строка стояла в двух местах из трёх, и средний выход — тот,
+     * что по несчитаемому циклу, — терял близость молча. Кончалось это
+     * ношением, отставшим на месяц: панель показывала 1/9 там, где по счёту
+     * было 2/9, и роды приезжали позже срока.
+     */
+    next.lastSeed = { ...today };
+
     /* После чёрных рожков утроба месяц не примет семени вовсе — это и есть
        настоящая цена спорыньи, а не смертельный исход по тумблеру. */
-    if (herbBarren(next.herb, today)) {
-        next.lastSeed = { ...today };
-        return next;
-    }
+    if (herbBarren(next.herb, today)) return next;
 
+    /* Фазу без якоря крови не вычислить, а без фазы нет и шанса. Бросок
+       пропускаем, но выше уже записано, что близость была. */
     const cycle = cycleSummary(next, today, CYCLE_DEFAULT);
     if (!cycle) return next;
 
@@ -825,9 +841,6 @@ function tryConceive(body, today, internal, ctx) {
         chances: ctx.chances,
     });
     next.lastRoll = { at: { ...today }, ...roll, internal };
-    /* Запоминаем день близости: если сцена позже объявит беременность, дитя
-       отсчитается отсюда, а не от дня объявления. */
-    next.lastSeed = { ...today };
     if (roll.hit) {
         next.pregnancy = startedPregnancy({ ...today }, ctx);
     }

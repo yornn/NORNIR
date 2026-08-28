@@ -33,7 +33,7 @@
 
 import { t } from "../../../i18n.js";
 
-import { phaseOf, pregnancySummary } from "./body.js";
+import { OBVIOUS_DAY, phaseOf, pregnancySummary } from "./body.js";
 
 import { NOTICE_KINDS } from "./notify.js";
 
@@ -321,6 +321,62 @@ function dateWords(d) {
     return `${d.day} ${name} ${d.year}`;
 }
 
+/*
+ * Открыта ли форточка правды.
+ *
+ * Флаг живёт в модуле, а не в настройках, и это выбор. Сохранённый в настройки
+ * спойлер встречал бы автора распахнутым на новом чате — а он ровно то, на что
+ * не хотят наткнуться случайно. Здесь он забывается вместе с перезагрузкой
+ * страницы и переживает только пересборку окна: нажала «Поставить» — правда
+ * не захлопнулась под руками.
+ */
+let truthOpen = false;
+
+/**
+ * Форточка правды — то, чего героиня знать не может.
+ *
+ * Панель, промпт и приметы устроены вокруг незнания: женщина видит, что кровь
+ * не пришла, а не то, что бросок на зачатие лёг 0.417 против 0.250. Но автор
+ * иногда обязан знать наверняка — иначе остаётся ждать полсотни ходов, чтобы
+ * выяснить, было ли вообще о чём писать.
+ *
+ * Поэтому: закрыто по умолчанию, открывается нажатием, и ни одна строка отсюда
+ * не уходит ни в промпт, ни в инфоблок.
+ *
+ * @param {{headline: string, rows: Array<{label: string, value: string}>}|null} truth
+ */
+function truthBox(truth) {
+    const box = h("div", "nrn-t-truth");
+
+    const toggle = h("button", "nrn-t-truth-toggle");
+    toggle.type = "button";
+    const body = h("div", "nrn-t-truth-body");
+
+    if (!truth) {
+        body.append(h("div", "nrn-t-picker-echo",
+            t`Nothing to tell yet: the date of the scene is not set, so there is nothing to count from.`));
+    } else {
+        body.append(h("div", "nrn-t-truth-headline", truth.headline));
+        for (const row of truth.rows) {
+            const line = h("div", "nrn-t-truth-row");
+            line.append(h("span", "nrn-t-truth-label", row.label),
+                h("span", "nrn-t-truth-value", row.value));
+            body.append(line);
+        }
+    }
+
+    const syncOpen = () => {
+        toggle.textContent = truthOpen ? t`Close it` : t`Look`;
+        toggle.setAttribute("aria-expanded", String(truthOpen));
+        body.classList.toggle("nrn-t-hidden", !truthOpen);
+    };
+    toggle.addEventListener("click", () => { truthOpen = !truthOpen; syncOpen(); });
+    syncOpen();
+
+    box.append(toggle, body);
+    return box;
+}
+
 /**
  * Управление циклом.
  *
@@ -330,6 +386,11 @@ function dateWords(d) {
  *
  * Показываем не «дату последней крови», а человеческое «сегодня такой-то
  * день»: внутри-то хранится дата, но пользователю считать её в уме незачем.
+ *
+ * Блок показывается и без даты сцены. Раньше он до неё не существовал вовсе —
+ * и на новом чате Утроба просто отсутствовала, а из окна не было видно, есть
+ * она вообще или отключена настройкой. Теперь блок на месте, кнопки в нём
+ * погашены, и сказано почему.
  *
  * @param {{summary: object|null, length: number, onSet: (day:number)=>boolean}} cycle
  */
@@ -356,6 +417,21 @@ function cyclePicker(cycle) {
     }
     box.append(now);
 
+    /* Без даты сцены считать не от чего: цикл ведётся вычитанием дат, и первая
+       из них приходит сверху. Блок остаётся на месте, но кнопки погашены —
+       иначе нажатие молча ничего не делало бы. */
+    const ready = !!cycle.today;
+    if (!ready) {
+        box.append(h("div", "nrn-t-picker-echo nrn-t-picker-warn",
+            t`The date of the scene is not set yet, and the whole count runs from it. Set it above and this block comes alive.`));
+    }
+
+    /* ── Форточка правды ── */
+    box.append(h("div", "nrn-t-picker-sub", t`The truth`));
+    box.append(h("div", "nrn-t-picker-echo",
+        t`What the panel knows and she does not: whether the seed took, from which day, how the roll fell. Not a word of it goes to the model.`));
+    box.append(truthBox(cycle.truth));
+
     /* ── День цикла ── */
     const dayRow = h("div", "nrn-t-picker-row");
     dayRow.append(h("span", "nrn-t-picker-label", t`Today is day`));
@@ -368,6 +444,7 @@ function cyclePicker(cycle) {
     }
     const setDay = h("button", "nrn-t-picker-apply", t`Set day`);
     setDay.type = "button";
+    setDay.disabled = !ready;
     dayRow.append(dayEl, setDay);
     box.append(dayRow);
 
@@ -415,6 +492,25 @@ function cyclePicker(cycle) {
         if ((value === "known") === !!cycle.known) opt.selected = true;
         knownEl.append(opt);
     }
+
+    /*
+     * «Не знает» — только пока живот не выдал.
+     *
+     * С четвёртой части ношения движок объявляет знание сам (OBVIOUS_DAY):
+     * тидир не пришли четырежды, поясок не сходится, отрицать нечего. Форма
+     * при этом позволяла выставить «не знает» хоть на сроке 9/9 — и обещала
+     * то, чего движок не исполнит: панель тут же показывала «знает», а
+     * пользователь оставался с ощущением, что кнопка сломана. Гасим её там,
+     * где выбор всё равно ничего не решает.
+     */
+    const syncKnown = (days) => {
+        const obvious = days != null && days >= OBVIOUS_DAY;
+        if (obvious) knownEl.value = "known";
+        knownEl.disabled = obvious;
+        knownEl.title = obvious
+            ? t`By this part of the term there is no hiding it: the belly shows and the blood has not come four times over.`
+            : "";
+    };
 
     const fatherEl = h("input", "nrn-t-picker-text");
     fatherEl.type = "text";
@@ -494,8 +590,14 @@ function cyclePicker(cycle) {
     const syncEcho = () => {
         syncSexLabels();
         const d = seed.read();
-        if (!isValidDate(d) || !today) { pregEcho.textContent = t`Not a date in this calendar`; return; }
+        if (!today) {
+            syncKnown(null);
+            pregEcho.textContent = t`The date of the scene is not set yet, and the whole count runs from it. Set it above and this block comes alive.`;
+            return;
+        }
+        if (!isValidDate(d)) { syncKnown(null); pregEcho.textContent = t`Not a date in this calendar`; return; }
         const days = serialOf(today.year, today.month, today.day) - serialOf(d.year, d.month, d.day);
+        syncKnown(days);
         if (days < 0) { pregEcho.textContent = t`The conception has not happened yet`; return; }
 
         const births = Number(birthsEl.value);
@@ -526,8 +628,10 @@ function cyclePicker(cycle) {
     const buttons = h("div", "nrn-t-picker-row");
     const setPreg = h("button", "nrn-t-picker-apply", cycle.pregnant ? t`Update` : t`Set carrying`);
     setPreg.type = "button";
+    setPreg.disabled = !ready;
     const clearPreg = h("button", "nrn-t-picker-apply nrn-t-picker-clear", t`Clear the child`);
     clearPreg.type = "button";
+    clearPreg.disabled = !ready;
     buttons.append(setPreg, clearPreg);
 
     /*
@@ -575,6 +679,7 @@ function cyclePicker(cycle) {
     const drinkRow = h("div", "nrn-t-picker-row");
     const drink = h("button", "nrn-t-picker-apply nrn-t-picker-herb", t`Drink the draught`);
     drink.type = "button";
+    drink.disabled = !ready;
     drink.title = t`She drinks whatever was given to her. Herbs of this age take their toll.`;
     drinkRow.append(drink);
     box.append(drinkRow);

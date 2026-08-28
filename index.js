@@ -91,7 +91,7 @@ import {
     syncWholeChat,
 } from "./chat-state.js";
 
-import { CYCLE_DEFAULT, DIVINATION_ACCURACY, bodyView, pregnancyTerm } from "./body.js";
+import { CYCLE_DEFAULT, DIVINATION_ACCURACY, bodyTruth, bodyView, pregnancyTerm } from "./body.js";
 
 import { DEFAULT_TIERS, HOLIDAY_TIERS, holidayView, markWeek } from "./holidays.js";
 
@@ -344,14 +344,38 @@ const BLOCK_BODY = [
     "Two things in one scene: separate with \"; \". Nothing happened — no line, and that is the ordinary turn. The panel counts the days itself.",
     "→ body: <words from the list above>",
     "",
-    "sex — the scene held coupling.",
-    "→ sex: да",
-    "",
-    "internal — whether the seed was spilled inside. Only ever alongside sex.",
-    "→ internal: <да / нет / неизвестно>",
-    "",
     "Состояние утробы известно только рассказчику. Персонажи не знают о беременности и не упоминают её, пока героиня не объявит об этом сама. Симптомы (тошнота, слабость, отвращение к запахам) могут быть замечены окружающими, но истолкованы как хворь, усталость или порча — не как беременность.",
     "Задержка тидир сама по себе ничего не доказывает: её приносят и голод, и дорога, и тревога. Пока строка состояния не назвала срок, догадку о дитяти оставь героине — сама она может гадать, сомневаться и отмахиваться, но подтверждать за неё нельзя.",
+    "",
+];
+
+/*
+ * Близость — своя часть со своей условной шапкой, а не поле внутри [BODY].
+ *
+ * Стояла она полем среди определений тела, и значение в шаблоне было
+ * проставлено готовым: «→ sex: да». Во всём промпте это была единственная
+ * строка с ответом вместо <плейсхолдера> — двадцать полей показывали форму,
+ * одно показывало ответ. Модель его и списывала: «да» приезжало каждый ход,
+ * в том числе в сценах, где близости не было и быть не могло, а панель
+ * послушно кидала на зачатие.
+ *
+ * Условность поля вдобавок нигде не была сказана. У body своя оговорка
+ * («Nothing happened — no line»), у passed своя («On an ordinary turn there
+ * is no such line»), а у sex — ни одной, и шапка [BODY] через двадцать строк
+ * списка событий читалась как условие для одного лишь body.
+ *
+ * Теперь это часть с шапкой «only when …», на которую действует общее правило
+ * из BLOCK_HEADER, и запрет стоит в ней первой строкой — раньше значения,
+ * а не после примера в конце промпта.
+ */
+const BLOCK_SEX = [
+    "[COUPLING — only when the scene actually held coupling]",
+    "No coupling in this scene — no line at all, and that is the ordinary turn. Take this part from what the prose showed, never from the shape of the block.",
+    "sex — да, and no other value: the line exists because there was coupling, so writing it at all is the answer.",
+    "→ sex: да",
+    "",
+    "internal — whether the seed was spilled inside. Never without sex.",
+    "→ internal: <да / нет / неизвестно>",
     "",
 ];
 
@@ -561,7 +585,7 @@ function promptHead() {
         ...BLOCK_PLACE,
         ...BLOCK_PEOPLE,
         ...BLOCK_SKIP,
-        ...(withBody ? BLOCK_BODY : []),
+        ...(withBody ? [...BLOCK_BODY, ...BLOCK_SEX] : []),
         ...(nearBirth ? BLOCK_BIRTH : []),
         ...(known || born ? BLOCK_LEGAL : []),
         ...(unnamed ? BLOCK_NAMING : []),
@@ -852,13 +876,18 @@ function bodyPhrase() {
 /**
  * Что Tímatal показывает и умеет про тело.
  *
- * Возвращаем null, когда отслеживание выключено или дата ещё не поставлена:
- * без даты считать не от чего, и пустой блок в справочнике только мешает.
+ * Возвращаем null только когда отслеживание выключено настройкой: тогда блока
+ * в справочнике нет, потому что нет и самого счёта.
+ *
+ * А вот без даты сцены блок теперь остаётся. Раньше его тут же не было —
+ * и на новом чате Утроба просто отсутствовала, без единого слова о том,
+ * почему: выключена она, сломалась или не бывает вовсе. Считать без даты
+ * действительно не от чего, поэтому наружу едет `today: null`, а справочник
+ * по нему гасит кнопки и говорит, чего не хватает.
  */
 function cycleControls(repaint = () => {}) {
     if (!settings().bodyTracking) return null;
     const today = sceneDate();
-    if (!today) return null;
 
     const body = readState().body;
 
@@ -880,6 +909,13 @@ function cycleControls(repaint = () => {}) {
         view: bodySummary(),
         length: CYCLE_DEFAULT,
         pregnant: !!body?.pregnancy,
+        /* Форточка правды. Считается здесь, а не в справочнике: справочник
+           рисует, а знать, какая у гадания точность и где лежит состояние, —
+           не его дело. Наружу из окна эти строки не уходят никуда: ни в промпт,
+           ни в инфоблок, ни в маркер. */
+        truth: bodyTruth(body, today, {
+            accuracy: settings().divinationAccuracy ?? DIVINATION_ACCURACY,
+        }),
         /* Поля формы заполняем текущим положением дел: открыла Tímatal —
            видишь то же, что в панели, и правишь от него, а не с нуля. */
         today,
