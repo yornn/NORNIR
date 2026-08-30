@@ -25,7 +25,8 @@
  * 14. Icons ............. Знаки полей из папки icons/ и строки фактов
  * 18. Flat Skin ......... Прежняя плоская раскладка (data-skin="flat")
  * 19. Thread Skin ....... Раскладка «Дом и его нити» (data-skin="thread")
- * 20. Thread Themes ..... Четыре темы к ней
+ * 20. Thread Themes ..... Три темы к ней, писанные в ролях --nrn-th-*
+ * 20b. Thread Palettes .. Мост ролей и ещё восемнадцать тем к «нитям»
  */
 
 /* ============================================================
@@ -1422,9 +1423,20 @@ dialog.popup.nrn-popup[open] {
     overflow: hidden !important;
 }
 
-/* Тело окна таверны — только рама: всю раскладку внутри ведёт справочник. */
+/*
+ * Тело окна таверны — только рама: всю раскладку внутри ведёт справочник.
+ *
+ * `.popup-content > *` в списке не для красоты. Popup таверны кладёт
+ * переданный ему элемент в обёртку, и обёртка эта — обычный блок: она
+ * вырастает по содержимому, а `min-height: auto` у неё не даёт полосе
+ * прокрутки внутри узнать свою высоту. Справочник от этого не листался
+ * вовсе — ни колесом, ни пальцем: лишнее просто обрезалось. Цепочка
+ * гибких коробок от <dialog> до `.nrn-t-hub` должна идти без разрывов,
+ * поэтому обёртку выпрямляем здесь, какой бы она ни была.
+ */
 dialog.popup.nrn-popup .popup-body,
-dialog.popup.nrn-popup .popup-content {
+dialog.popup.nrn-popup .popup-content,
+dialog.popup.nrn-popup .popup-content > * {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -1554,18 +1566,91 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 /*
- * Поля и кнопки. Темы таверны красят `select`, `input`, `textarea` и `button`
- * через один — своим фоном, своим кеглем, своими полями. Здесь у них снова
- * наш шрифт и наша рама; собственные цвета и размеры каждому виду кнопки
- * прописаны ниже, тоже с !important.
+ * Полоса прокрутки убрана с глаз.
+ *
+ * Листается всё по-прежнему — колесом, пальцем, клавишами: спрятана только
+ * сама полоска. Справочник теперь стоит в раме окна, и серая черта у края
+ * рвала её сильнее, чем помогала: где кончается страница, видно и так.
+ *
+ * Два правила, потому что браузеры расходятся: `scrollbar-width` понимает
+ * Firefox, `::-webkit-scrollbar` — всё на Chromium и WebKit. Оба заведены
+ * только внутри справочника: полосы таверны — не наше дело.
  */
-.nrn-timatal button,
-.nrn-timatal select,
-.nrn-timatal input,
-.nrn-timatal textarea {
+.nrn-timatal,
+.nrn-timatal * {
+    scrollbar-width: none !important;
+}
+
+.nrn-timatal::-webkit-scrollbar,
+.nrn-timatal *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none;
+}
+
+/*
+ * Поля и кнопки. Темы таверны красят `select`, `input`, `textarea` и `button`
+ * через один — своим фоном, своим кеглем, своими полями.
+ *
+ * Класс повторён трижды не по описке. Общая броня выше — это `.nrn-timatal *`,
+ * вес 0-1-0, и чужое `.popup select { border-radius: 10px !important }` (0-1-1)
+ * её перебивало: списки с числами скруглялись, а поле года, до которого та же
+ * тема не дотягивалась, оставалось прямым — оттого рядом стояли круглая
+ * коробка и прямая. Повтор класса поднимает вес до 0-3-1, ничего не меняя
+ * в том, на что правило указывает.
+ */
+.nrn-timatal.nrn-timatal.nrn-timatal button,
+.nrn-timatal.nrn-timatal.nrn-timatal select,
+.nrn-timatal.nrn-timatal.nrn-timatal input,
+.nrn-timatal.nrn-timatal.nrn-timatal textarea {
     font-family: "Cormorant Unicase", Georgia, serif !important;
+    border-radius: 0 !important;
     background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
     outline-offset: -2px;
+}
+
+/*
+ * ── 2. Одна высота на все поля строки ──
+ *
+ * `min-height` тут не годился: <select> и <input> считают высоту строки
+ * по-разному, и список выходил на пару пикселей выше поля рядом. При своей
+ * теме таверны разница росла до заметной — строка «зачато: день · месяц ·
+ * год» разъезжалась, и год стоял ниже прочих. Высота задана жёстко, поля
+ * по горизонтали, а текст внутри браузер центрует сам.
+ */
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-picker-select,
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-picker-year,
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-picker-text,
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-look-select {
+    height: 42px !important;
+    min-height: 0 !important;
+    padding: 0 14px !important;
+}
+
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-picker-apply {
+    height: 42px !important;
+    min-height: 0 !important;
+    padding: 0 20px !important;
+}
+
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-css-apply,
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-css-restore {
+    height: 42px !important;
+    min-height: 0 !important;
+    padding: 0 18px !important;
+}
+
+/* Облачки колонок — та же история строкой выше: все одной высоты. */
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-chip {
+    height: 34px !important;
+    padding: 0 14px !important;
+}
+
+.nrn-timatal.nrn-timatal.nrn-timatal .nrn-t-reset {
+    height: 34px !important;
+    padding: 0 15px !important;
 }
 
 /* --- карта: одиннадцать клейм в двух ларях --- */
@@ -1639,7 +1724,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     align-items: center;
     gap: 6px;
     margin-top: 22px;
-    padding: 7px 15px !important;
     font-size: 14px !important;
     color: var(--nrn-text-muted) !important;
     background: var(--nrn-bg-raised) !important;
@@ -2156,9 +2240,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 .nrn-timatal .nrn-t-picker-select,
 .nrn-timatal .nrn-t-picker-year,
 .nrn-timatal .nrn-t-picker-text {
-    min-height: 42px;
-    padding: 9px 14px !important;
-    font-family: "Cormorant Unicase", Georgia, serif !important;
     font-size: 18px !important;
     line-height: 1.2 !important;
     letter-spacing: 0.5px;
@@ -2186,9 +2267,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-timatal .nrn-t-picker-apply {
-    min-height: 42px;
-    padding: 9px 20px !important;
-    font-family: "Cormorant Unicase", Georgia, serif !important;
     font-size: 16px !important;
     letter-spacing: 1.2px;
     text-transform: uppercase;
@@ -2406,9 +2484,9 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 .nrn-timatal .nrn-t-chip {
-    padding: 6px 14px !important;
+    display: inline-flex;
+    align-items: center;
     font-size: 14px !important;
-    line-height: 1.25;
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: var(--nrn-text-dim) !important;
@@ -2690,9 +2768,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 .nrn-timatal .nrn-t-look-select {
     min-width: 0;
-    min-height: 42px;
-    padding: 9px 14px !important;
-    font-family: "Cormorant Unicase", Georgia, serif !important;
     font-size: 17px !important;
     cursor: pointer;
     color: var(--nrn-text-bright) !important;
@@ -2773,9 +2848,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 .nrn-timatal .nrn-t-css-apply,
 .nrn-timatal .nrn-t-css-restore {
-    min-height: 42px;
-    padding: 9px 18px !important;
-    font-family: "Cormorant Unicase", Georgia, serif !important;
     font-size: 16px !important;
     letter-spacing: 0.6px;
     cursor: pointer;
@@ -5662,15 +5734,19 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 /* ============================================================
  * 20. ТЕМЫ ДЛЯ СКИНА «ДОМ И ЕГО НИТИ»
  *
- * Четыре палитры, снятые с макета один в один. Ролей у скина больше, чем
+ * Три палитры, снятые с макета один в один. Ролей у скина больше, чем
  * у доски: там хватало «текста», «тусклого» и «яркого», здесь у погоды,
  * места, тела и совета свои голоса, а линий три силы вместо одной.
  * Поэтому переменные свои, с приставкой --nrn-th-, а в конце каждой темы
  * общие --nrn-* переставлены на те же цвета: подсказки, тревога и знаки
  * живут в общих правилах и должны краситься заодно.
  *
- * Темы работают и в board с flat — цвета там встанут, но раскладка эта
- * рисовалась под них, и смотреть их лучше с ней.
+ * Ланнистеры отсюда ушли в раздел 20b — старая тема несла золото на всём
+ * тексте разом, и переписана она целиком, а не поправлена.
+ *
+ * Эти темы — только для «нитей», и список в index.js их туда и запирает:
+ * на доске у них нет половины ролей, а у доски нет этих. Новые темы (20b)
+ * пишутся уже в общих именах и разбираются мостом в начале того раздела.
  * ============================================================ */
 
 /* Тьма — уголь и старое серебро, свеча в углу */
@@ -5781,59 +5857,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-art-filter: brightness(1.12) saturate(0.6);
 }
 
-/* Ланнистеры — багрец и золото */
-.nrn-themed[data-theme="thread-lannister"] {
-    --nrn-th-bg0: #170809;
-    --nrn-th-bg1: #280e10;
-    --nrn-th-bg2: #1f0b0c;
-    --nrn-th-bgopen: #341616;
-    --nrn-th-bgchip: #3a1a18;
-    --nrn-th-line: #5a2a22;
-    --nrn-th-line2: #43201d;
-    --nrn-th-line3: #4f2622;
-    --nrn-th-name: #f2dc9a;
-    --nrn-th-silver: #e2c67e;
-    --nrn-th-body: #efe2c8;
-    --nrn-th-muted: #c9b58c;
-    --nrn-th-dim: #b09b74;
-    --nrn-th-dim2: #9b8763;
-    --nrn-th-dim3: #7a5238;
-    --nrn-th-label2: #b08a5a;
-    --nrn-th-label: #96754a;
-    --nrn-th-dot: #6b4630;
-    --nrn-th-accent: #d4af37;
-    --nrn-th-accent2: #e8c85c;
-    --nrn-th-tag: #f2dc9a;
-    --nrn-th-state: #dcb98c;
-    --nrn-th-weather: #dcc3a2;
-    --nrn-th-place: #e2c67e;
-    --nrn-th-advice: #f7e6b6;
-    --nrn-th-sun: #dba845;
-    --nrn-th-spine: rgba(0, 0, 0, 0.5);
-
-    --nrn-bg: #280e10;
-    --nrn-bg-raised: #1f0b0c;
-    --nrn-bg-open: #341616;
-    --nrn-bg-hover: #341616;
-    --nrn-border: #5a2a22;
-    --nrn-border-soft: #43201d;
-    --nrn-text: #efe2c8;
-    --nrn-text-bright: #f2dc9a;
-    --nrn-text-dim: #96754a;
-    --nrn-text-muted: #c9b58c;
-    --nrn-text-soft: #b09b74;
-    --nrn-text-panel: #e2c67e;
-    --nrn-text-weather: #dcc3a2;
-    --nrn-text-day: #e2c67e;
-    --nrn-accent: #d4af37;
-    --nrn-accent-contrast: #280e10;
-    --nrn-chip-text: #f2dc9a;
-    --nrn-chip-bg: #3a1a18;
-    --nrn-chip-border: #6b4630;
-    --nrn-feast: #e8c85c;
-    --nrn-art-filter: sepia(0.2) saturate(0.9);
-}
-
 /* Покой — светлая бумага и приглушенная зелень */
 .nrn-themed[data-theme="thread-calm"] {
     --nrn-th-bg0: #e6e4dc;
@@ -5887,4 +5910,794 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-halo: rgba(255, 255, 255, 0.85);
     --nrn-text-halo-soft: rgba(255, 255, 255, 0.6);
     --nrn-art-filter: brightness(1.12) saturate(0.6);
+}
+
+/* ============================================================
+ * 20b. МОСТ РОЛЕЙ И ЕЩЁ ВОСЕМНАДЦАТЬ ТЕМ ДЛЯ «НИТЕЙ»
+ *
+ * Скин «нити» (раздел 19) красится ролями с приставкой --nrn-th-*, а
+ * новые темы написаны в общих именах --nrn-*: так их считает генератор
+ * палитр, так же зовутся роли в макете. Переписывать восемнадцать палитр
+ * в старые имена — значит поймать восемнадцать опечаток; переписывать
+ * раздел 19 в новые — значит тронуть тысячу семьсот строк ради цвета.
+ * Поэтому между ними стоит мост: одна таблица соответствий на всех.
+ *
+ * Он нарочно слабее любого блока темы: `.nrn-themed` — это (0,1,0), а
+ * `.nrn-themed[data-theme="..."]` — (0,2,0). Значит старые четыре темы,
+ * где --nrn-th-* прописаны руками, мост не трогает: их значения сильнее.
+ * А темы, которые говорят только на общих именах, получают через него
+ * весь набор ролей скина.
+ *
+ * Здесь же три новые роли — черта средней силы, тусклый день календаря и
+ * приглушённое имя створки. Они появились вместе с новыми темами; старым
+ * их взять неоткуда, и без этих трёх строк они поехали бы на пустых
+ * значениях. Тем же слабым весом: тема, где они заданы, перебьёт.
+ * ============================================================ */
+
+.nrn-themed {
+    /* Новые роли — от ближайшей старой, чтобы темы без них не осыпались. */
+    --nrn-border-mid: var(--nrn-border-soft);
+    --nrn-text-faint: var(--nrn-text-dim);
+    --nrn-text-name-dim: var(--nrn-text-dim);
+
+    /* Подложки. bg0 — не фон, а буква на серебре сегодняшнего дня:
+       единственное место, где скину нужен цвет, обратный тексту. */
+    --nrn-th-bg0: var(--nrn-accent-contrast);
+    --nrn-th-bg1: var(--nrn-bg);
+    --nrn-th-bg2: var(--nrn-bg-raised);
+    --nrn-th-bgopen: var(--nrn-bg-open);
+    --nrn-th-bgchip: var(--nrn-chip-bg);
+
+    /* Три силы черты. */
+    --nrn-th-line: var(--nrn-border);
+    --nrn-th-line2: var(--nrn-border-soft);
+    --nrn-th-line3: var(--nrn-border-mid);
+
+    /* Текст: яркий, обычный, дневной и три оттенка тусклого. Тусклые
+       сведены в один нарочно — в новой системе ниже «текста» ступень
+       ровно одна, и растягивать её на три значило бы выдумывать цвета. */
+    --nrn-th-name: var(--nrn-text-bright);
+    --nrn-th-body: var(--nrn-text);
+    --nrn-th-silver: var(--nrn-text-day);
+    --nrn-th-muted: var(--nrn-text-muted);
+    --nrn-th-dim: var(--nrn-text-muted);
+    --nrn-th-dim2: var(--nrn-text-muted);
+
+    /* Ярлыки капсом — своя лесенка, от приглушённого имени до точки. */
+    --nrn-th-label2: var(--nrn-text-name-dim);
+    --nrn-th-label: var(--nrn-text-dim);
+    --nrn-th-dim3: var(--nrn-text-faint);
+    --nrn-th-dot: var(--nrn-chip-border);
+
+    /* Пятна: акцент, праздник, холодное и тёплое. */
+    --nrn-th-accent: var(--nrn-accent);
+    --nrn-th-accent2: var(--nrn-feast);
+    --nrn-th-tag: var(--nrn-chip-text);
+    --nrn-th-advice: var(--nrn-chip-text);
+    --nrn-th-weather: var(--nrn-text-weather);
+    --nrn-th-place: var(--nrn-text-panel);
+    --nrn-th-state: var(--nrn-text-weather);
+    --nrn-th-sun: var(--nrn-text-soft);
+    --nrn-th-spine: var(--nrn-thread-spine, rgba(0, 0, 0, 0.55));
+}
+
+/* ------------------------------------------------------------
+ * Восемнадцать перекрасов: дома Вестероса и северные мотивы.
+ *
+ * Палитры считаны от шести опор (оттенок, насыщенность, сдвиг светлоты,
+ * акцент, холодное и тёплое пятно) по одной лесенке светлот — потому
+ * контраст текста у всех восемнадцати одинаков и правка одной темы не
+ * портит читаемость остальных. Ланнистеры идут ВМЕСТО прежней темы из
+ * раздела 20: там золото лежало на всём тексте разом.
+ * ------------------------------------------------------------ */
+
+/* Старки */
+.nrn-themed[data-theme="thread-starks"] {
+    --nrn-bg:                 #0d0e0f;
+    --nrn-bg-raised:          #0b0b0c;
+    --nrn-bg-open:            #131416;
+    --nrn-bg-hover:           #191b1c;
+    --nrn-border:             #232629;
+    --nrn-border-mid:         #1e2124;
+    --nrn-border-soft:        #1a1c1e;
+    --nrn-text:               #d8d5cf;
+    --nrn-text-bright:        #eae9e6;
+    --nrn-text-dim:           #596169;
+    --nrn-text-faint:         #3f454a;
+    --nrn-text-name-dim:      #717a84;
+    --nrn-text-muted:         #aeaaa2;
+    --nrn-text-soft:          #a9bac6;
+    --nrn-text-weather:       #b6c4ce;
+    --nrn-text-panel:         #bdb5a8;
+    --nrn-text-day:           #cdcbc6;
+    --nrn-accent:             #6a8ea0;
+    --nrn-accent-contrast:    #070808;
+    --nrn-accent-glow:        rgba(106, 142, 160, 0.45);
+    --nrn-accent-glow-strong: rgba(106, 142, 160, 0.75);
+    --nrn-accent-border-dim:  rgba(106, 142, 160, 0.35);
+    --nrn-chip-text:          #ded9cf;
+    --nrn-chip-bg:            #17181a;
+    --nrn-chip-border:        #34383d;
+    --nrn-feast:              #678e7a;
+    --nrn-feast-bg:           rgba(103, 142, 122, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Ланнистеры */
+.nrn-themed[data-theme="thread-lannister"] {
+    --nrn-bg:                 #120c0c;
+    --nrn-bg-raised:          #100a0a;
+    --nrn-bg-open:            #271113;
+    --nrn-bg-hover:           #311618;
+    --nrn-border:             #584b2d;
+    --nrn-border-mid:         #413925;
+    --nrn-border-soft:        #2f281e;
+    --nrn-text:               #dfd8c8;
+    --nrn-text-bright:        #f1ede4;
+    --nrn-text-dim:           #7b684c;
+    --nrn-text-faint:         #594b36;
+    --nrn-text-name-dim:      #9b835f;
+    --nrn-text-muted:         #bbb095;
+    --nrn-text-soft:          #d2c5b2;
+    --nrn-text-weather:       #d9cfbf;
+    --nrn-text-panel:         #d1bd94;
+    --nrn-text-day:           #d5cebe;
+    --nrn-accent:             #be2d40;
+    --nrn-accent-contrast:    #0c0808;
+    --nrn-accent-glow:        rgba(190, 45, 64, 0.45);
+    --nrn-accent-glow-strong: rgba(190, 45, 64, 0.75);
+    --nrn-accent-border-dim:  rgba(190, 45, 64, 0.35);
+    --nrn-chip-text:          #ece3cb;
+    --nrn-chip-bg:            #2c1416;
+    --nrn-chip-border:        #493d2d;
+    --nrn-feast:              #d6b351;
+    --nrn-feast-bg:           rgba(214, 179, 81, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Таргариены */
+.nrn-themed[data-theme="thread-targaryen"] {
+    --nrn-bg:                 #0e0c0c;
+    --nrn-bg-raised:          #0b090a;
+    --nrn-bg-open:            #141212;
+    --nrn-bg-hover:           #1b1818;
+    --nrn-border:             #282223;
+    --nrn-border-mid:         #221d1e;
+    --nrn-border-soft:        #1d1919;
+    --nrn-text:               #d0d2d8;
+    --nrn-text-bright:        #e7e8e9;
+    --nrn-text-dim:           #675859;
+    --nrn-text-faint:         #493e3f;
+    --nrn-text-name-dim:      #836f71;
+    --nrn-text-muted:         #a4a7ad;
+    --nrn-text-soft:          #afb6c0;
+    --nrn-text-weather:       #bac1c9;
+    --nrn-text-panel:         #bec1c5;
+    --nrn-text-day:           #c7c9cc;
+    --nrn-accent:             #932f2f;
+    --nrn-accent-contrast:    #070606;
+    --nrn-accent-glow:        rgba(147, 47, 47, 0.45);
+    --nrn-accent-glow-strong: rgba(147, 47, 47, 0.75);
+    --nrn-accent-border-dim:  rgba(147, 47, 47, 0.35);
+    --nrn-chip-text:          #d8dbdf;
+    --nrn-chip-bg:            #191516;
+    --nrn-chip-border:        #3b3233;
+    --nrn-feast:              #a48170;
+    --nrn-feast-bg:           rgba(164, 129, 112, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Баратеоны */
+.nrn-themed[data-theme="thread-baratheon"] {
+    --nrn-bg:                 #0e0d0c;
+    --nrn-bg-raised:          #0b0a09;
+    --nrn-bg-open:            #151412;
+    --nrn-bg-hover:           #1c1a17;
+    --nrn-border:             #282622;
+    --nrn-border-mid:         #22211d;
+    --nrn-border-soft:        #1d1b19;
+    --nrn-text:               #dad6ce;
+    --nrn-text-bright:        #eae9e6;
+    --nrn-text-dim:           #676258;
+    --nrn-text-faint:         #49453e;
+    --nrn-text-name-dim:      #837c6f;
+    --nrn-text-muted:         #b1aba0;
+    --nrn-text-soft:          #bab4ab;
+    --nrn-text-weather:       #c3beb6;
+    --nrn-text-panel:         #bba58b;
+    --nrn-text-day:           #cfcbc4;
+    --nrn-accent:             #b38942;
+    --nrn-accent-contrast:    #070706;
+    --nrn-accent-glow:        rgba(179, 137, 66, 0.45);
+    --nrn-accent-glow-strong: rgba(179, 137, 66, 0.75);
+    --nrn-accent-border-dim:  rgba(179, 137, 66, 0.35);
+    --nrn-chip-text:          #dfd8c3;
+    --nrn-chip-bg:            #191815;
+    --nrn-chip-border:        #3b3832;
+    --nrn-feast:              #bfa969;
+    --nrn-feast-bg:           rgba(191, 169, 105, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Грейджои */
+.nrn-themed[data-theme="thread-greyjoy"] {
+    --nrn-bg:                 #0d0f0f;
+    --nrn-bg-raised:          #0a0c0d;
+    --nrn-bg-open:            #121516;
+    --nrn-bg-hover:           #181c1d;
+    --nrn-border:             #22282a;
+    --nrn-border-mid:         #1e2324;
+    --nrn-border-soft:        #191d1f;
+    --nrn-text:               #cfd5d8;
+    --nrn-text-bright:        #e7e9e9;
+    --nrn-text-dim:           #57666b;
+    --nrn-text-faint:         #3e484c;
+    --nrn-text-name-dim:      #6e8187;
+    --nrn-text-muted:         #a3aaae;
+    --nrn-text-soft:          #abc0c4;
+    --nrn-text-weather:       #b7c9cd;
+    --nrn-text-panel:         #b4b09c;
+    --nrn-text-day:           #c6cbcd;
+    --nrn-accent:             #4f8770;
+    --nrn-accent-contrast:    #070808;
+    --nrn-accent-glow:        rgba(79, 135, 112, 0.45);
+    --nrn-accent-glow-strong: rgba(79, 135, 112, 0.75);
+    --nrn-accent-border-dim:  rgba(79, 135, 112, 0.35);
+    --nrn-chip-text:          #d8dedf;
+    --nrn-chip-bg:            #16191b;
+    --nrn-chip-border:        #323b3e;
+    --nrn-feast:              #9d916c;
+    --nrn-feast-bg:           rgba(157, 145, 108, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Тиреллы */
+.nrn-themed[data-theme="thread-tyrell"] {
+    --nrn-bg:                 #0e0f0d;
+    --nrn-bg-raised:          #0b0c0b;
+    --nrn-bg-open:            #141613;
+    --nrn-bg-hover:           #1a1d19;
+    --nrn-border:             #252923;
+    --nrn-border-mid:         #20241e;
+    --nrn-border-soft:        #1b1e1a;
+    --nrn-text:               #dbd8cc;
+    --nrn-text-bright:        #ebeae5;
+    --nrn-text-dim:           #5e6959;
+    --nrn-text-faint:         #434a3f;
+    --nrn-text-name-dim:      #778471;
+    --nrn-text-muted:         #b4af9c;
+    --nrn-text-soft:          #afbda8;
+    --nrn-text-weather:       #bac6b3;
+    --nrn-text-panel:         #bc9fa6;
+    --nrn-text-day:           #d1cdc2;
+    --nrn-accent:             #6b924f;
+    --nrn-accent-contrast:    #070807;
+    --nrn-accent-glow:        rgba(107, 146, 79, 0.45);
+    --nrn-accent-glow-strong: rgba(107, 146, 79, 0.75);
+    --nrn-accent-border-dim:  rgba(107, 146, 79, 0.35);
+    --nrn-chip-text:          #e2dccb;
+    --nrn-chip-bg:            #181a16;
+    --nrn-chip-border:        #373d34;
+    --nrn-feast:              #b79f66;
+    --nrn-feast-bg:           rgba(183, 159, 102, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Мартеллы */
+.nrn-themed[data-theme="thread-martell"] {
+    --nrn-bg:                 #110f0e;
+    --nrn-bg-raised:          #0e0d0b;
+    --nrn-bg-open:            #181613;
+    --nrn-bg-hover:           #1f1c19;
+    --nrn-border:             #2c2723;
+    --nrn-border-mid:         #26221f;
+    --nrn-border-soft:        #211d1a;
+    --nrn-text:               #dcd6cb;
+    --nrn-text-bright:        #ece9e4;
+    --nrn-text-dim:           #6d6157;
+    --nrn-text-faint:         #4e463e;
+    --nrn-text-name-dim:      #897b6e;
+    --nrn-text-muted:         #b6ac9a;
+    --nrn-text-soft:          #c3baac;
+    --nrn-text-weather:       #ccc3b8;
+    --nrn-text-panel:         #c6b28b;
+    --nrn-text-day:           #d2ccc1;
+    --nrn-accent:             #c2723d;
+    --nrn-accent-contrast:    #0a0908;
+    --nrn-accent-glow:        rgba(194, 114, 61, 0.45);
+    --nrn-accent-glow-strong: rgba(194, 114, 61, 0.75);
+    --nrn-accent-border-dim:  rgba(194, 114, 61, 0.35);
+    --nrn-chip-text:          #e4dbc8;
+    --nrn-chip-bg:            #1c1917;
+    --nrn-chip-border:        #403933;
+    --nrn-feast:              #a278b0;
+    --nrn-feast-bg:           rgba(162, 120, 176, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Аррены */
+.nrn-themed[data-theme="thread-arryn"] {
+    --nrn-bg:                 #0e0f11;
+    --nrn-bg-raised:          #0b0d0e;
+    --nrn-bg-open:            #141518;
+    --nrn-bg-hover:           #191c1f;
+    --nrn-border:             #24272b;
+    --nrn-border-mid:         #1f2226;
+    --nrn-border-soft:        #1a1d20;
+    --nrn-text:               #ced4d9;
+    --nrn-text-bright:        #e6e8ea;
+    --nrn-text-dim:           #58616c;
+    --nrn-text-faint:         #3f454d;
+    --nrn-text-name-dim:      #6f7a88;
+    --nrn-text-muted:         #a0a8b0;
+    --nrn-text-soft:          #b2c4d2;
+    --nrn-text-weather:       #bfced9;
+    --nrn-text-panel:         #b7bdc2;
+    --nrn-text-day:           #c5c9ce;
+    --nrn-accent:             #6496b9;
+    --nrn-accent-contrast:    #08090a;
+    --nrn-accent-glow:        rgba(100, 150, 185, 0.45);
+    --nrn-accent-glow-strong: rgba(100, 150, 185, 0.75);
+    --nrn-accent-border-dim:  rgba(100, 150, 185, 0.35);
+    --nrn-chip-text:          #dce1e5;
+    --nrn-chip-bg:            #17191c;
+    --nrn-chip-border:        #34383f;
+    --nrn-feast:              #919cac;
+    --nrn-feast-bg:           rgba(145, 156, 172, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Талли */
+.nrn-themed[data-theme="thread-tully"] {
+    --nrn-bg:                 #0d0e0f;
+    --nrn-bg-raised:          #0a0c0d;
+    --nrn-bg-open:            #121516;
+    --nrn-bg-hover:           #181b1d;
+    --nrn-border:             #22272a;
+    --nrn-border-mid:         #1e2224;
+    --nrn-border-soft:        #191d1f;
+    --nrn-text:               #cfd4d8;
+    --nrn-text-bright:        #e6e8ea;
+    --nrn-text-dim:           #57636b;
+    --nrn-text-faint:         #3e464c;
+    --nrn-text-name-dim:      #6e7c87;
+    --nrn-text-muted:         #a2a9ae;
+    --nrn-text-soft:          #a8bdc7;
+    --nrn-text-weather:       #b4c6cf;
+    --nrn-text-panel:         #9fb096;
+    --nrn-text-day:           #c6cacd;
+    --nrn-accent:             #964a4a;
+    --nrn-accent-contrast:    #070808;
+    --nrn-accent-glow:        rgba(150, 74, 74, 0.45);
+    --nrn-accent-glow-strong: rgba(150, 74, 74, 0.75);
+    --nrn-accent-border-dim:  rgba(150, 74, 74, 0.35);
+    --nrn-chip-text:          #d7dde0;
+    --nrn-chip-bg:            #16191b;
+    --nrn-chip-border:        #32393e;
+    --nrn-feast:              #749669;
+    --nrn-feast-bg:           rgba(116, 150, 105, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Болтоны */
+.nrn-themed[data-theme="thread-bolton"] {
+    --nrn-bg:                 #0d0b0a;
+    --nrn-bg-raised:          #0a0808;
+    --nrn-bg-open:            #131110;
+    --nrn-bg-hover:           #1a1616;
+    --nrn-border:             #272120;
+    --nrn-border-mid:         #211c1c;
+    --nrn-border-soft:        #1c1817;
+    --nrn-text:               #d9d2ce;
+    --nrn-text-bright:        #eae8e6;
+    --nrn-text-dim:           #675756;
+    --nrn-text-faint:         #483d3c;
+    --nrn-text-name-dim:      #836f6d;
+    --nrn-text-muted:         #afa6a1;
+    --nrn-text-soft:          #b4aba7;
+    --nrn-text-weather:       #bdb6b2;
+    --nrn-text-panel:         #c5beb5;
+    --nrn-text-day:           #cec8c5;
+    --nrn-accent:             #7f2f2f;
+    --nrn-accent-contrast:    #060505;
+    --nrn-accent-glow:        rgba(127, 47, 47, 0.45);
+    --nrn-accent-glow-strong: rgba(127, 47, 47, 0.75);
+    --nrn-accent-border-dim:  rgba(127, 47, 47, 0.35);
+    --nrn-chip-text:          #dad6d2;
+    --nrn-chip-bg:            #181414;
+    --nrn-chip-border:        #3a3231;
+    --nrn-feast:              #886c63;
+    --nrn-feast-bg:           rgba(136, 108, 99, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Ночной Дозор */
+.nrn-themed[data-theme="thread-watch"] {
+    --nrn-bg:                 #0b0b0c;
+    --nrn-bg-raised:          #090909;
+    --nrn-bg-open:            #111213;
+    --nrn-bg-hover:           #171819;
+    --nrn-border:             #212327;
+    --nrn-border-mid:         #1c1e21;
+    --nrn-border-soft:        #17191c;
+    --nrn-text:               #d0d2d7;
+    --nrn-text-bright:        #e7e8e9;
+    --nrn-text-dim:           #575c66;
+    --nrn-text-faint:         #3d4148;
+    --nrn-text-name-dim:      #6e7581;
+    --nrn-text-muted:         #a5a7ac;
+    --nrn-text-soft:          #a9bcc6;
+    --nrn-text-weather:       #b6c6ce;
+    --nrn-text-panel:         #afb2b6;
+    --nrn-text-day:           #c7c9cc;
+    --nrn-accent:             #56a4bd;
+    --nrn-accent-contrast:    #050505;
+    --nrn-accent-glow:        rgba(86, 164, 189, 0.45);
+    --nrn-accent-glow-strong: rgba(86, 164, 189, 0.75);
+    --nrn-accent-border-dim:  rgba(86, 164, 189, 0.35);
+    --nrn-chip-text:          #d7dce0;
+    --nrn-chip-bg:            #151517;
+    --nrn-chip-border:        #31343a;
+    --nrn-feast:              #7e8a95;
+    --nrn-feast-bg:           rgba(126, 138, 149, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Морской поход */
+.nrn-themed[data-theme="thread-voyage"] {
+    --nrn-bg:                 #0c0e0e;
+    --nrn-bg-raised:          #090b0b;
+    --nrn-bg-open:            #111415;
+    --nrn-bg-hover:           #171b1c;
+    --nrn-border:             #222728;
+    --nrn-border-mid:         #1d2223;
+    --nrn-border-soft:        #181d1d;
+    --nrn-text:               #cfd7d8;
+    --nrn-text-bright:        #e7e9e9;
+    --nrn-text-dim:           #576668;
+    --nrn-text-faint:         #3d484a;
+    --nrn-text-name-dim:      #6e8184;
+    --nrn-text-muted:         #a3acae;
+    --nrn-text-soft:          #abc2c4;
+    --nrn-text-weather:       #b7cbcd;
+    --nrn-text-panel:         #ac9d91;
+    --nrn-text-day:           #c6cccd;
+    --nrn-accent:             #a2423f;
+    --nrn-accent-contrast:    #060707;
+    --nrn-accent-glow:        rgba(162, 66, 63, 0.45);
+    --nrn-accent-glow-strong: rgba(162, 66, 63, 0.75);
+    --nrn-accent-border-dim:  rgba(162, 66, 63, 0.35);
+    --nrn-chip-text:          #d8dedf;
+    --nrn-chip-bg:            #151819;
+    --nrn-chip-border:        #323a3c;
+    --nrn-feast:              #799a9a;
+    --nrn-feast-bg:           rgba(121, 154, 154, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Длинный дом */
+.nrn-themed[data-theme="thread-longhouse"] {
+    --nrn-bg:                 #13110e;
+    --nrn-bg-raised:          #100e0c;
+    --nrn-bg-open:            #1a1714;
+    --nrn-bg-hover:           #211d1a;
+    --nrn-border:             #2e2923;
+    --nrn-border-mid:         #28241f;
+    --nrn-border-soft:        #231f1b;
+    --nrn-text:               #dcd5cb;
+    --nrn-text-bright:        #ece9e4;
+    --nrn-text-dim:           #706357;
+    --nrn-text-faint:         #51473e;
+    --nrn-text-name-dim:      #8d7d6d;
+    --nrn-text-muted:         #b6ab9a;
+    --nrn-text-soft:          #bdb3a8;
+    --nrn-text-weather:       #c6bdb3;
+    --nrn-text-panel:         #b4957e;
+    --nrn-text-day:           #d2cbc1;
+    --nrn-accent:             #b8763d;
+    --nrn-accent-contrast:    #0c0a09;
+    --nrn-accent-glow:        rgba(184, 118, 61, 0.45);
+    --nrn-accent-glow-strong: rgba(184, 118, 61, 0.75);
+    --nrn-accent-border-dim:  rgba(184, 118, 61, 0.35);
+    --nrn-chip-text:          #e4dac8;
+    --nrn-chip-bg:            #1e1b17;
+    --nrn-chip-border:        #423b33;
+    --nrn-feast:              #c1a067;
+    --nrn-feast-bg:           rgba(193, 160, 103, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Кузница */
+.nrn-themed[data-theme="thread-forge"] {
+    --nrn-bg:                 #0e0d0c;
+    --nrn-bg-raised:          #0b0a09;
+    --nrn-bg-open:            #141312;
+    --nrn-bg-hover:           #1b1918;
+    --nrn-border:             #282422;
+    --nrn-border-mid:         #221f1d;
+    --nrn-border-soft:        #1d1a19;
+    --nrn-text:               #d9d4ce;
+    --nrn-text-bright:        #eae8e6;
+    --nrn-text-dim:           #675e58;
+    --nrn-text-faint:         #49423e;
+    --nrn-text-name-dim:      #83776f;
+    --nrn-text-muted:         #b0a8a0;
+    --nrn-text-soft:          #b4aca7;
+    --nrn-text-weather:       #bdb7b2;
+    --nrn-text-panel:         #ad9885;
+    --nrn-text-day:           #cec9c5;
+    --nrn-accent:             #b75f34;
+    --nrn-accent-contrast:    #070606;
+    --nrn-accent-glow:        rgba(183, 95, 52, 0.45);
+    --nrn-accent-glow-strong: rgba(183, 95, 52, 0.75);
+    --nrn-accent-border-dim:  rgba(183, 95, 52, 0.35);
+    --nrn-chip-text:          #dbd2c7;
+    --nrn-chip-bg:            #191715;
+    --nrn-chip-border:        #3b3632;
+    --nrn-feast:              #a0856a;
+    --nrn-feast-bg:           rgba(160, 133, 106, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Курганное золото */
+.nrn-themed[data-theme="thread-hoard"] {
+    --nrn-bg:                 #100d0c;
+    --nrn-bg-raised:          #0d0b0a;
+    --nrn-bg-open:            #171312;
+    --nrn-bg-hover:           #1e1918;
+    --nrn-border:             #2a2422;
+    --nrn-border-mid:         #251f1e;
+    --nrn-border-soft:        #1f1a19;
+    --nrn-text:               #dbd5cc;
+    --nrn-text-bright:        #ebe8e5;
+    --nrn-text-dim:           #6c5b56;
+    --nrn-text-faint:         #4c413d;
+    --nrn-text-name-dim:      #88736d;
+    --nrn-text-muted:         #b4aa9c;
+    --nrn-text-soft:          #b6aba5;
+    --nrn-text-weather:       #bfb5b0;
+    --nrn-text-panel:         #bba881;
+    --nrn-text-day:           #d1cac2;
+    --nrn-accent:             #983e50;
+    --nrn-accent-contrast:    #080707;
+    --nrn-accent-glow:        rgba(152, 62, 80, 0.45);
+    --nrn-accent-glow-strong: rgba(152, 62, 80, 0.75);
+    --nrn-accent-border-dim:  rgba(152, 62, 80, 0.35);
+    --nrn-chip-text:          #dfd5c3;
+    --nrn-chip-bg:            #1b1716;
+    --nrn-chip-border:        #3e3532;
+    --nrn-feast:              #b6935d;
+    --nrn-feast-bg:           rgba(182, 147, 93, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Сейд и вёльва */
+.nrn-themed[data-theme="thread-seidr"] {
+    --nrn-bg:                 #0d0c10;
+    --nrn-bg-raised:          #0b0a0d;
+    --nrn-bg-open:            #131217;
+    --nrn-bg-hover:           #19181e;
+    --nrn-border:             #23222b;
+    --nrn-border-mid:         #1e1d25;
+    --nrn-border-soft:        #1a191f;
+    --nrn-text:               #d0ced9;
+    --nrn-text-bright:        #e7e6ea;
+    --nrn-text-dim:           #59556d;
+    --nrn-text-faint:         #3f3d4d;
+    --nrn-text-name-dim:      #716c89;
+    --nrn-text-muted:         #a4a1af;
+    --nrn-text-soft:          #b3b1c9;
+    --nrn-text-weather:       #bebdd1;
+    --nrn-text-panel:         #c3c0b6;
+    --nrn-text-day:           #c7c5ce;
+    --nrn-accent:             #525ead;
+    --nrn-accent-contrast:    #070709;
+    --nrn-accent-glow:        rgba(82, 94, 173, 0.45);
+    --nrn-accent-glow-strong: rgba(82, 94, 173, 0.75);
+    --nrn-accent-border-dim:  rgba(82, 94, 173, 0.35);
+    --nrn-chip-text:          #d8d7e0;
+    --nrn-chip-bg:            #16151b;
+    --nrn-chip-border:        #34313f;
+    --nrn-feast:              #9783a5;
+    --nrn-feast-bg:           rgba(151, 131, 165, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Йоль */
+.nrn-themed[data-theme="thread-yule"] {
+    --nrn-bg:                 #0c0d10;
+    --nrn-bg-raised:          #0a0b0d;
+    --nrn-bg-open:            #121317;
+    --nrn-bg-hover:           #17191f;
+    --nrn-border:             #21232c;
+    --nrn-border-mid:         #1d1f26;
+    --nrn-border-soft:        #181a20;
+    --nrn-text:               #ced2d9;
+    --nrn-text-bright:        #e6e8ea;
+    --nrn-text-dim:           #535a6e;
+    --nrn-text-faint:         #3b404e;
+    --nrn-text-name-dim:      #69718c;
+    --nrn-text-muted:         #a1a6af;
+    --nrn-text-soft:          #b4c0cf;
+    --nrn-text-weather:       #c1cad7;
+    --nrn-text-panel:         #c3b398;
+    --nrn-text-day:           #c5c8ce;
+    --nrn-accent:             #c7944d;
+    --nrn-accent-contrast:    #070709;
+    --nrn-accent-glow:        rgba(199, 148, 77, 0.45);
+    --nrn-accent-glow-strong: rgba(199, 148, 77, 0.75);
+    --nrn-accent-border-dim:  rgba(199, 148, 77, 0.35);
+    --nrn-chip-text:          #e6dfd1;
+    --nrn-chip-bg:            #15161c;
+    --nrn-chip-border:        #303440;
+    --nrn-feast:              #5e8d79;
+    --nrn-feast-bg:           rgba(94, 141, 121, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+/* Нифльхейм */
+.nrn-themed[data-theme="thread-niflheim"] {
+    --nrn-bg:                 #0e1011;
+    --nrn-bg-raised:          #0c0d0e;
+    --nrn-bg-open:            #141617;
+    --nrn-bg-hover:           #1a1d1e;
+    --nrn-border:             #24292b;
+    --nrn-border-mid:         #202325;
+    --nrn-border-soft:        #1b1e20;
+    --nrn-text:               #cfd5d8;
+    --nrn-text-bright:        #e7e9e9;
+    --nrn-text-dim:           #5a656a;
+    --nrn-text-faint:         #41484c;
+    --nrn-text-name-dim:      #727f86;
+    --nrn-text-muted:         #a3aaae;
+    --nrn-text-soft:          #b6c8ce;
+    --nrn-text-weather:       #c2d1d6;
+    --nrn-text-panel:         #b3b9bc;
+    --nrn-text-day:           #c6cbcd;
+    --nrn-accent:             #72a4b6;
+    --nrn-accent-contrast:    #08090a;
+    --nrn-accent-glow:        rgba(114, 164, 182, 0.45);
+    --nrn-accent-glow-strong: rgba(114, 164, 182, 0.75);
+    --nrn-accent-border-dim:  rgba(114, 164, 182, 0.35);
+    --nrn-chip-text:          #dde2e4;
+    --nrn-chip-bg:            #171a1c;
+    --nrn-chip-border:        #353b3e;
+    --nrn-feast:              #afaca1;
+    --nrn-feast-bg:           rgba(175, 172, 161, 0.16);
+    --nrn-art-filter:         opacity(1);
+    --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
+}
+
+
+/* ============================================================
+ * 20c. «КАК В ТАВЕРНЕ» — перекрас, снятый с самой SillyTavern
+ *
+ * Двадцать одна тема выше — палитры: в них написано, какого цвета блок.
+ * Здесь не написано ничего. Тема берёт четыре цвета, которыми таверна
+ * красит саму себя, и выводит из них весь ряд ролей; сменил читатель
+ * тему UI — блок переоделся вместе с ней, и ничего перевыбирать не надо.
+ *
+ * ЧЕТЫРЕ ЦВЕТА И БОЛЬШЕ НИЧЕГО.
+ *
+ *   --SmartThemeBodyColor       обычный текст чата   → весь ряд текста и черт
+ *   --SmartThemeQuoteColor      «прямая речь»        → акцент: маркер, ✦, дни
+ *   --SmartThemeEmColor         *выделение*          → праздник и место
+ *   --SmartThemeUnderlineColor  подчёркнутое         → погода и строка тела
+ *
+ * Плюс --SmartThemeBlurTintColor — подложка панелей таверны; она и
+ * становится фоном блока. Если она у читателя полупрозрачная, блок будет
+ * полупрозрачным ровно так же, как всё остальное в таверне: это не изъян,
+ * а условие сходства.
+ *
+ * ПОЧЕМУ ЛЕСЕНКА СЧИТАЕТСЯ ПРОЗРАЧНОСТЬЮ, А НЕ ПОДМЕШИВАНИЕМ ФОНА.
+ *
+ * У прочих тем тусклые ступени выведены подмешиванием фона к тексту:
+ * фон известен, и «текст на 38%» — это конкретный хекс. Здесь фон
+ * неизвестен и может быть каким угодно, вплоть до светлого; хуже того,
+ * он бывает полупрозрачным, и что окажется под ним — дело чата. Поэтому
+ * ступени берутся прозрачностью самого текста: `color-mix` с transparent
+ * умножает альфу, не трогая цвет. Такая ступень тускнеет одинаково верно
+ * и на чёрной теме, и на белой, и поверх картинки-обоев.
+ *
+ * Подложки — наоборот, накладки поверх фона панели: створка «раскрыта»
+ * не своим цветом, а чернилами чата, подмешанными на 7%. На тёмной теме
+ * это высветление, на светлой — затемнение, и оба раза правильное.
+ *
+ * ЧЕРТЫ БЕРУТСЯ ОТ ТЕКСТА, А НЕ ОТ --SmartThemeBorderColor. Тот цвет у
+ * таверны — рамка панели, вещь заведомо заметная; у «нитей» же черта
+ * тоньше волоса и держит ритм, а не отделяет коробку. Насыщенная рамка
+ * в этой роли выглядит обводкой таблицы.
+ *
+ * ЗАПАСНЫЕ ЗНАЧЕНИЯ у каждой переменной — цвета темы «Нити: тьма». Они
+ * встают, если расширение открыли вне таверны (стенд `_preview.html`)
+ * или таверна переименовала переменную: тема тогда просто станет тёмной,
+ * а не осыплется в чёрное по чёрному.
+ * ============================================================ */
+
+.nrn-themed[data-theme="thread-tavern"] {
+    /* Четыре цвета таверны — единственное, что здесь задано прямо. */
+    --nrn-tav-ink:   var(--SmartThemeBodyColor, #d8d2c3);
+    --nrn-tav-quote: var(--SmartThemeQuoteColor, #b5443c);
+    --nrn-tav-em:    var(--SmartThemeEmColor, #c96a4a);
+    --nrn-tav-under: var(--SmartThemeUnderlineColor, #a8b6c9);
+
+    /* Фон — подложка панелей таверны. Накладки поверх неё — чернилами. */
+    --nrn-bg:                 var(--SmartThemeBlurTintColor, #101013);
+    --nrn-bg-raised:          color-mix(in srgb, var(--nrn-tav-ink) 4%, transparent);
+    --nrn-bg-open:            color-mix(in srgb, var(--nrn-tav-ink) 7%, transparent);
+    --nrn-bg-hover:           color-mix(in srgb, var(--nrn-tav-ink) 10%, transparent);
+    --nrn-chip-bg:            color-mix(in srgb, var(--nrn-tav-ink) 8%, transparent);
+
+    /* Три силы черты и точка разделителя. */
+    --nrn-border:             color-mix(in srgb, var(--nrn-tav-ink) 18%, transparent);
+    --nrn-border-mid:         color-mix(in srgb, var(--nrn-tav-ink) 13%, transparent);
+    --nrn-border-soft:        color-mix(in srgb, var(--nrn-tav-ink) 10%, transparent);
+    --nrn-chip-border:        color-mix(in srgb, var(--nrn-tav-ink) 26%, transparent);
+
+    /* Текст: имена и «ХАДЕГИ» в полную силу, дальше вниз по лесенке. */
+    --nrn-text-bright:        var(--nrn-tav-ink);
+    --nrn-chip-text:          color-mix(in srgb, var(--nrn-tav-ink) 92%, transparent);
+    --nrn-text:               color-mix(in srgb, var(--nrn-tav-ink) 90%, transparent);
+    --nrn-text-day:           color-mix(in srgb, var(--nrn-tav-ink) 86%, transparent);
+    --nrn-text-soft:          color-mix(in srgb, var(--nrn-tav-ink) 78%, transparent);
+    --nrn-text-muted:         color-mix(in srgb, var(--nrn-tav-ink) 76%, transparent);
+
+    /* Ярлыки капсом — своя лесенка, ниже текстовой. */
+    --nrn-text-name-dim:      color-mix(in srgb, var(--nrn-tav-ink) 52%, transparent);
+    --nrn-text-dim:           color-mix(in srgb, var(--nrn-tav-ink) 42%, transparent);
+    --nrn-text-faint:         color-mix(in srgb, var(--nrn-tav-ink) 30%, transparent);
+
+    /* Пятна: речь — акцент, выделение — праздник и место, подчёркнутое —
+       погода и строка тела. */
+    --nrn-accent:             var(--nrn-tav-quote);
+    --nrn-accent-contrast:    var(--SmartThemeBlurTintColor, #101013);
+    --nrn-accent-glow:        color-mix(in srgb, var(--nrn-tav-quote) 45%, transparent);
+    --nrn-accent-glow-strong: color-mix(in srgb, var(--nrn-tav-quote) 75%, transparent);
+    --nrn-accent-border-dim:  color-mix(in srgb, var(--nrn-tav-quote) 35%, transparent);
+    --nrn-feast:              var(--nrn-tav-em);
+    --nrn-feast-bg:           color-mix(in srgb, var(--nrn-tav-em) 16%, transparent);
+    --nrn-text-panel:         color-mix(in srgb, var(--nrn-tav-em) 82%, transparent);
+    --nrn-text-weather:       var(--nrn-tav-under);
+
+    /* Корешок книги — тенью таверны, если она у неё задана. */
+    --nrn-thread-spine:       var(--SmartThemeShadowColor, rgba(0, 0, 0, 0.55));
+    --nrn-art-filter:         opacity(1);
+}
+
+/*
+ * Сегодняшний день — обводкой, а не заливкой.
+ *
+ * Во всех прочих темах ячейка залита цветом даты, а цифра написана
+ * фоном панели: два известных цвета, заведомо противоположных. Здесь
+ * фон панели — чужая переменная, и она бывает полупрозрачной; цифра,
+ * писанная полупрозрачным по залитому, расплывается в кашу, а на иных
+ * темах таверны пропадает вовсе. Кольцо акцентом говорит «сегодня» не
+ * хуже заливки и не зависит от того, что за цвет пришёл из таверны.
+ *
+ * Про box-shadow: отсечка 19.0 гасит тени у всего в «нитях» правилом
+ * `#nrn-widget[data-skin="thread"] *` — это (1,1,0). Здесь (1,4,0),
+ * и !important не нужен.
+ */
+#nrn-widget[data-skin="thread"][data-theme="thread-tavern"] .nrn-cell.nrn-today,
+#nrn-widget[data-skin="thread"][data-theme="thread-tavern"] .nrn-cell.nrn-feast-day.nrn-today {
+    background: none;
+    color: var(--nrn-accent);
+    box-shadow: inset 0 0 0 1px var(--nrn-accent);
 }

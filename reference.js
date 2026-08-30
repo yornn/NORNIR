@@ -1049,16 +1049,24 @@ function lookSelect(labelText, options, current, onPick) {
     label.append(h("span", "nrn-t-look-name", labelText));
 
     const select = h("select", "nrn-t-look-select");
-    for (const opt of options) {
-        const node = h("option", null, opt.label);
-        node.value = opt.id;
-        select.append(node);
-    }
-    select.value = current;
+
+    /* Список тем зависит от раскладки, а раскладка меняется в соседнем
+       списке — поэтому строки не прибиты при сборке, а перестилаются. */
+    const fill = (items, pick) => {
+        select.replaceChildren();
+        for (const opt of items) {
+            const node = h("option", null, opt.label);
+            node.value = opt.id;
+            select.append(node);
+        }
+        select.value = pick;
+    };
+
+    fill(options, current);
     select.addEventListener("input", () => onPick(select.value));
 
     label.append(select);
-    return { node: label, select };
+    return { node: label, select, fill };
 }
 
 /**
@@ -1093,8 +1101,8 @@ function cssSection(body, state, prefs, extras) {
     /* --- раскладка и тема --- */
 
     const picks = h("div", "nrn-t-look-row");
-    const skin = lookSelect(t`Layout`, look.skins, look.skin(), (id) => look.setSkin(id));
-    const theme = lookSelect(t`Theme`, look.themes, look.theme(), (id) => pickTheme(id));
+    const skin = lookSelect(t`Layout`, look.skins, look.skin(), (id) => pickSkin(id));
+    const theme = lookSelect(t`Theme`, look.themes(), look.theme(), (id) => pickTheme(id));
     picks.append(skin.node, theme.node);
     body.append(picks);
 
@@ -1145,14 +1153,32 @@ function cssSection(body, state, prefs, extras) {
      * Перекрасить достаточно корень справочника: подложку окна красит
      * setTheme, а всё остальное здесь наследует переменные от корня.
      */
-    function pickTheme(id) {
-        look.setTheme(id);
+    function repaint() {
         const root = body.closest(".nrn-timatal");
         if (root) root.dataset.theme = look.theme();
         themeName.textContent = look.themeLabel(look.theme());
         area.value = look.read(look.theme());
         syncBadge();
         echo.textContent = "";
+    }
+
+    function pickTheme(id) {
+        look.setTheme(id);
+        repaint();
+    }
+
+    /*
+     * Раскладка меняет и список тем под собой.
+     *
+     * Перекрасы у раскладок разные — чужой цвет знает не те роли и красит
+     * блок наполовину. Поэтому в списке остаются только родные, а сама
+     * раскладка приходит с тем цветом, на котором её оставили: список
+     * перестилается, поле CSS перечитывается под новую тему.
+     */
+    function pickSkin(id) {
+        look.setSkin(id);
+        theme.fill(look.themes(), look.theme());
+        repaint();
     }
 
     apply.addEventListener("click", () => {
@@ -1452,7 +1478,8 @@ function buildPage(def, state, prefs, extras) {
  * @param {function|null} onSetDate Установка даты сцены из календарика
  * @param {object|null} cycle Ручная правка счёта тела
  * @param {object|null} look Вид блока: раскладка, тема и CSS темы —
- *   skins, themes, skin(), theme(), setSkin(id), setTheme(id),
+ *   skins, themes() (родные перекрасы нынешней раскладки),
+ *   skin(), theme(), setSkin(id), setTheme(id),
  *   themeLabel(id), read(theme), original(theme), isEdited(theme),
  *   apply(theme, text), restore(theme)
  * @param {object|null} notify Уведомления: enabled(), setEnabled(on),

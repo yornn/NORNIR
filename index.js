@@ -118,6 +118,10 @@ const defaultSettings = {
      * лишнее в каждой раскладке спрятано стилями, а не пересобрано.
      */
     skin: "board",
+    /* Последний цвет КАЖДОЙ раскладки. theme выше — цвет нынешней, он и
+       красит блок; здесь лежат отложенные, чтобы возврат к раскладке не
+       начинался с её первой темы. */
+    skinThemes: { board: "default", flat: "default", thread: "thread-dark" },
     /* Какой лист разворота открыт. Нить Фрейи первой не по алфавиту:
        ради неё расширение и писалось. */
     activeTab: "freyja",
@@ -2696,7 +2700,9 @@ function buildWidget() {
         ),
     );
 
-    $widget.attr("data-theme", s.theme || "default");
+    /* Через currentTheme(), а не через s.theme: цвет обязан быть родным
+       для раскладки, и спрашивают его в одном месте на всё расширение. */
+    $widget.attr("data-theme", currentTheme());
     /* Не просто атрибут: раскладка ещё и решает, где живёт подножие. */
     applySkin(s.skin);
 
@@ -2902,10 +2908,28 @@ const THEME_LABELS = {
     light: () => t`Light`,
     frost: () => t`Hoarfrost`,
     parchment: () => t`Parchment`,
+    "thread-tavern": () => t`Threads: like the tavern`,
     "thread-dark": () => t`Threads: dark`,
     "thread-light": () => t`Threads: light`,
-    "thread-lannister": () => t`Threads: Lannister`,
     "thread-calm": () => t`Threads: calm`,
+    "thread-starks": () => t`Threads: Starks`,
+    "thread-lannister": () => t`Threads: Lannister`,
+    "thread-targaryen": () => t`Threads: Targaryen`,
+    "thread-baratheon": () => t`Threads: Baratheon`,
+    "thread-greyjoy": () => t`Threads: Greyjoy`,
+    "thread-tyrell": () => t`Threads: Tyrell`,
+    "thread-martell": () => t`Threads: Martell`,
+    "thread-arryn": () => t`Threads: Arryn`,
+    "thread-tully": () => t`Threads: Tully`,
+    "thread-bolton": () => t`Threads: Bolton`,
+    "thread-watch": () => t`Threads: Night's Watch`,
+    "thread-voyage": () => t`Threads: Sea voyage`,
+    "thread-longhouse": () => t`Threads: Longhouse`,
+    "thread-forge": () => t`Threads: Forge`,
+    "thread-hoard": () => t`Threads: Barrow gold`,
+    "thread-seidr": () => t`Threads: Seidr`,
+    "thread-yule": () => t`Threads: Yule`,
+    "thread-niflheim": () => t`Threads: Niflheim`,
 };
 
 const SKIN_LABELS = {
@@ -2914,16 +2938,74 @@ const SKIN_LABELS = {
     thread: () => t`House and its threads`,
 };
 
+/*
+ * Перекрасы — у каждой раскладки свои, и общего списка больше нет.
+ *
+ * Раньше темы лежали одной кучей, а выбор из чужой кучи ломал блок молча:
+ * «нити» красятся ролями, которых у доски нет (погода, место, тело, совет),
+ * а доска — деревом и свечением, которых нет у «нитей». Ни та ни другая
+ * сторона не виновата: это просто два разных набора переменных, и путать
+ * их нельзя. Поэтому список тем спрашивается у раскладки, а не у файла.
+ *
+ * Доска и плоская панель делят один набор нарочно: в style.css у них одни
+ * и те же переменные, и девять палитр написаны сразу на обе. Появятся у
+ * панели свои блоки в CSS — здесь достаточно развести два списка.
+ */
+const PLATE_THEMES = [
+    "default", "midnight", "ember", "blood", "forest", "stone",
+    "light", "frost", "parchment",
+];
+
+const SKIN_THEMES = {
+    board: PLATE_THEMES,
+    flat: PLATE_THEMES,
+    thread: [
+        /* Первой — та, что цвета не имеет: она берёт их у таверны. */
+        "thread-tavern",
+        "thread-dark", "thread-light", "thread-calm",
+        "thread-starks", "thread-lannister", "thread-targaryen", "thread-baratheon",
+        "thread-greyjoy", "thread-tyrell", "thread-martell", "thread-arryn",
+        "thread-tully", "thread-bolton", "thread-watch",
+        "thread-voyage", "thread-longhouse", "thread-forge", "thread-hoard",
+        "thread-seidr", "thread-yule", "thread-niflheim",
+    ],
+};
+
 function themeLabel(theme) {
     return (THEME_LABELS[theme] ?? (() => theme))();
 }
 
-function currentTheme() {
-    return THEME_LABELS[settings().theme] ? settings().theme : "default";
-}
-
 function currentSkin() {
     return SKIN_LABELS[settings().skin] ? settings().skin : "board";
+}
+
+/** Родные перекрасы раскладки — в том порядке, в каком они встанут в список. */
+function themesOfSkin(skin) {
+    return SKIN_THEMES[skin] ?? SKIN_THEMES.board;
+}
+
+function themeFitsSkin(theme, skin) {
+    return themesOfSkin(skin).includes(theme);
+}
+
+/**
+ * Чем красить эту раскладку.
+ *
+ * Каждая раскладка помнит СВОЙ последний выбор: ушли с «нитей» на доску и
+ * вернулись — Ланнистеры на месте, а доска осталась при своём. Иначе один
+ * общий цвет на три раскладки означал бы, что переход туда и обратно
+ * стирает выбор, сделанный минуту назад.
+ */
+function themeOfSkin(skin) {
+    const kept = settings().skinThemes?.[skin];
+    return themeFitsSkin(kept, skin) ? kept : themesOfSkin(skin)[0];
+}
+
+/* Чистая: настройки не правит. Сохранённая тема может быть от прежней
+   раскладки — тогда берётся та, что помнит нынешняя. */
+function currentTheme() {
+    const skin = currentSkin();
+    return themeFitsSkin(settings().theme, skin) ? settings().theme : themeOfSkin(skin);
 }
 
 /*
@@ -3036,27 +3118,41 @@ function originalThemeCss(theme) {
 function lookControls(getDialog) {
     const list = (labels) => Object.keys(labels).map((id) => ({ id, label: labels[id]() }));
 
+    /* Окно справочника красится той же темой, что и блок: иначе выбор
+       пришлось бы сверять с чатом за спиной у окна. */
+    const paintDialog = () => {
+        const dlg = getDialog?.();
+        if (dlg) dlg.dataset.theme = settings().theme;
+    };
+
     return {
         skins: list(SKIN_LABELS),
-        themes: list(THEME_LABELS),
+        /* Списком тем ведает раскладка: чужие в него не попадают, и выбрать
+           то, что сломает вид, попросту нечем. */
+        themes: () => themesOfSkin(currentSkin()).map((id) => ({ id, label: themeLabel(id) })),
         skin: () => currentSkin(),
         theme: () => currentTheme(),
         themeLabel,
 
         setSkin: (id) => {
-            settings().skin = SKIN_LABELS[id] ? id : "board";
+            const skin = SKIN_LABELS[id] ? id : "board";
+            settings().skin = skin;
+            /* Раскладка тянет за собой свой цвет — тот, на котором её
+               оставили в прошлый раз. */
+            settings().theme = themeOfSkin(skin);
             saveSettingsDebounced();
-            applySkin(settings().skin);
+            applySkin(skin);
+            applyTheme(settings().theme);
+            paintDialog();
         },
 
         setTheme: (id) => {
-            settings().theme = THEME_LABELS[id] ? id : "default";
+            const skin = currentSkin();
+            settings().theme = themeFitsSkin(id, skin) ? id : themeOfSkin(skin);
+            settings().skinThemes[skin] = settings().theme;
             saveSettingsDebounced();
             applyTheme(settings().theme);
-            /* Окно справочника красится той же темой, что и блок: иначе
-               выбор пришлось бы сверять с чатом за спиной у окна. */
-            const dlg = getDialog?.();
-            if (dlg) dlg.dataset.theme = settings().theme;
+            paintDialog();
         },
 
         original: (theme) => originalThemeCss(theme),
@@ -3088,7 +3184,14 @@ async function openTimatal() {
      * «что сейчас» над формой перестаёт врать: раньше там до конца сеанса
      * висело то, что было на момент открытия.
      */
+    /*
+     * Popup таверны кладёт эту коробку в свою `.popup-content`, и коробка
+     * эта — звено в цепочке гибких блоков от <dialog> до полосы прокрутки
+     * внутри справочника. Класс на ней затем и нужен: без него обёртка
+     * растекается по содержимому, и справочник перестаёт листаться вовсе.
+     */
     const shell = document.createElement("div");
+    shell.className = "nrn-t-shell";
     /* Подложка окна появляется после первой сборки содержимого, поэтому
        раздел оформления получает не её саму, а способ её спросить. */
     let dialog = null;
@@ -3244,11 +3347,24 @@ function loadSettings() {
     for (const key of Object.keys(defaultSettings)) {
         if (extension_settings[extensionName][key] === undefined) {
             const value = defaultSettings[key];
-            // Массивы копируем: иначе настройки получат ссылку на сам
-            // defaultSettings, и первый же push испортит константу.
-            extension_settings[extensionName][key] = Array.isArray(value) ? [...value] : value;
+            // Массивы и коробки копируем: иначе настройки получат ссылку на
+            // сам defaultSettings, и первая же правка испортит константу.
+            extension_settings[extensionName][key] = Array.isArray(value) ? [...value]
+                : (value && typeof value === "object" ? { ...value } : value);
         }
     }
+    /*
+     * Тема из прежней схемы могла остаться от чужой раскладки: списка тогда
+     * не было, и в «нитях» легко было выбрать доскины цвета. Сводим одно с
+     * другим один раз при загрузке, чтобы дальше всё считалось от раскладки.
+     */
+    const settingsNow = extension_settings[extensionName];
+    const skinNow = SKIN_LABELS[settingsNow.skin] ? settingsNow.skin : "board";
+    if (!settingsNow.skinThemes || typeof settingsNow.skinThemes !== "object") {
+        settingsNow.skinThemes = { ...defaultSettings.skinThemes };
+    }
+    if (themeFitsSkin(settingsNow.theme, skinNow)) settingsNow.skinThemes[skinNow] = settingsNow.theme;
+    settingsNow.theme = themeOfSkin(skinNow);
     // Наследие прежней схемы, где хранился список скрытых колонок.
     delete extension_settings[extensionName].timatalHiddenColumns;
     /* Сетка дней больше не сворачивается: кнопку убрали, блок всегда открыт. */
