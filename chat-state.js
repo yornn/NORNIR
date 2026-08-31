@@ -373,7 +373,7 @@ export function findLatestState(chat, options = {}) {
 const HALF_YEAR = 182;
 
 function rollLostYear(date, carried, source) {
-    if (source !== "marker" || !carried) return date;
+    if (!date || source !== "marker" || !carried) return date;
     const was = serialOf(carried.year, carried.month, carried.day);
     const now = serialOf(date.year, date.month, date.day);
     if (was - now <= HALF_YEAR) return date;
@@ -966,11 +966,30 @@ export function resolveDates(chat, startDate = null, options = {}) {
            в том же маркере могут стоять и события тела. Раньше здесь стоял
            continue, и «семя пролилось» в сообщении с датой просто терялось. */
         const anchor = msg.extra[KEY_DATE];
-        const anchored = !!anchor?.anchored;
+        const anchorDate = dateOf(anchor);
+
+        /* Якорь без года — не якорь.
+           Модель, сбившись посреди маркера, пишет «date: 6 сольмануд» без
+           года; старая проверка на дату года не требовала, и такая запись
+           уезжала в extra якорем с year: null. Дальше её читали как дату —
+           и всё чтение чата падало на первом же обращении к year. Панель
+           после этого замирала на прошлой истории, Tímatal не открывался,
+           а инжект молча переставал собираться: одно исключение гасило всю
+           цепочку.
+
+           Такие записи вычищаем на месте. Рукой их не поставить —
+           setSceneDate всегда пишет полную дату, — так что терять нечего,
+           а чат, уже испорченный старой сборкой, лечится сам. */
+        if (anchor?.anchored && !anchorDate) {
+            delete msg.extra[KEY_DATE];
+            changed = true;
+        }
+
+        const anchored = !!anchor?.anchored && !!anchorDate;
         if (anchored) {
             /* Дату из маркера сверяем с той, что доехала сюда: время вперёд
                или стоит, но назад на полгода оно не ходит. */
-            carried = rollLostYear(dateOf(anchor), carried, anchor.source);
+            carried = rollLostYear(anchorDate, carried, anchor.source);
             lastEykt = eyktIndex(msg.extra[KEY_STATE]);
             /* Первая же известная дата открывает и счёт цикла: иначе он начнётся
                со следующего сообщения, то есть на сутки позже календаря. */

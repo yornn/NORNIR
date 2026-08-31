@@ -39,6 +39,8 @@
     "Threads: Yule": "Нити: Йоль",
     "Threads: Niflheim": "Нити: Нифльхейм",
     "Waiting for the infoblock…": "Ожидание инфоблока…",
+    "the infoblock is broken": "инфоблок сломался",
+    "NORNIR could not read this chat. The infoblock is off until it is fixed — details in the browser console (F12).": "NORNIR не смог прочитать этот чат. Инфоблок отключён, пока это не починят — подробности в консоли браузера (F12).",
     "eykt ${0} of 8": "эйкта ${0} из 8",
     "eykt ${0}": "${0}-я эйкта",
     "Special mid-summer days before the haymaking": "Особые дни в середине лета перед сенокосом",

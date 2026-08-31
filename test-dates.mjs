@@ -199,6 +199,21 @@ syncWholeChat(reloaded);
 check("снимок переживает перезагрузку", findLatestState(reloaded)?.state?.weather, "мокрый снег");
 check("и дата вместе с ним", dateOf(reloaded), "5 сольмануд 1015");
 
+console.log("\n=== Оборванная дата в маркере ===");
+
+/* Модель сбилась посреди маркера и написала дату без года. Такая запись
+   уезжала в extra якорем с year: null, и чтение чата падало целиком — вместе
+   с панелью, справочником и инжектом. */
+const torn = run(mk("хадеги", "date: 5 сольмануд 1015"), mk("моргун", "date: 6 сольмануд"));
+check("дата без года не роняет чтение", dateOf(torn), "6 сольмануд 1015");
+check("и не становится якорем", torn[1].extra.nornirDate?.anchored, false);
+
+/* Старый чат, где битый якорь уже лежит в extra, лечится при первом чтении. */
+const rotten = run(mk("хадеги", "date: 5 сольмануд 1015"), mk("моргун"));
+rotten[1].extra.nornirDate = { year: null, month: 9, day: 6, anchored: true, source: "marker" };
+syncWholeChat(rotten);
+check("битый якорь из старого чата вычищен", dateOf(rotten), "6 сольмануд 1015");
+
 console.log("\n" + "─".repeat(60));
 console.log(`Пройдено: ${ok}   Провалено: ${bad}`);
 process.exit(bad ? 1 : 0);

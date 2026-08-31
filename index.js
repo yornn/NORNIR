@@ -1172,7 +1172,18 @@ function injectPrompt() {
 
     const chatKey = extensionName;
     const sysKey = `${extensionName}_sys`;
-    const value = settings()?.inject ? buildPrompt() : "";
+
+    /* Слот один на всю таверну и переживает смену чата. Значит упасть на
+       сборке нельзя: без записи в нём останется инфоблок ПРОШЛОЙ ролевой,
+       и модель получит чужую сцену как свою. Поэтому отказ — это пустая
+       строка, а не пропущенный вызов: отсутствие инфоблока модель переживёт,
+       чужой инфоблок — нет. */
+    let value = "";
+    try {
+        value = settings()?.inject ? buildPrompt() : "";
+    } catch (e) {
+        panelFailed("injectPrompt()", e);
+    }
 
     context.setExtensionPrompt(chatKey, value, extension_prompt_types.IN_CHAT, 0, false, extension_prompt_roles.SYSTEM);
     context.setExtensionPrompt(sysKey, value, extension_prompt_types.IN_PROMPT, 0);
@@ -1255,7 +1266,63 @@ function setChatStartDate(date) {
     return true;
 }
 
+/* ── Отказ читается вслух ───────────────────────────────────────────────
+ *
+ * Всё, что панель рисует и шлёт модели, стоит на одном чтении чата. Стоит
+ * readChat() бросить исключение — а бросить его может одна битая запись
+ * в extra, — и раньше замолкало сразу всё, беззвучно, в промис.
+ *
+ * Тише всего было именно там, где громче всего надо: refresh() падал ДО
+ * Object.assign(state, EMPTY_STATE), поэтому на доске оставалась прошлая
+ * отрисовка — в новом чате буквально данные предыдущего, — а injectPrompt()
+ * не доходил до setExtensionPrompt, и модель час получала чужой инфоблок.
+ * Со стороны это выглядит как «расширение подвисло», и искать причину идут
+ * куда угодно, только не в консоль.
+ *
+ * Отсюда два правила. Первое: отказ называет себя — в консоль с меткой
+ * расширения, в панель словами, один раз всплывашкой (и снова, если сломается
+ * заново после починки). Второе: показываем и шлём ПУСТО, а не прошлое.
+ *
+ * Ловить исключения здесь — не способ жить с багом: он всё равно лежит
+ * в консоли и всё равно требует правки. Это способ не потерять его молча.
+ */
+let panelBroken = false;
+
+function panelFailed(where, e) {
+    console.error(`[${extensionName}] ${where}: чтение чата не удалось`, e);
+    if (panelBroken) return;
+    panelBroken = true;
+    /* Эта функция — последняя в цепочке, и падать ей нельзя ни при каких
+       условиях: её зовут ИЗ catch, и брошенное отсюда исключение вернуло бы
+       ровно ту немоту, ради которой всё и затевалось. */
+    try {
+        toastr?.error?.(t`NORNIR could not read this chat. The infoblock is off until it is fixed — details in the browser console (F12).`);
+    } catch { /* всплывашки нет — хватит и консоли */ }
+}
+
+/** Пустая доска со словами об отказе — вместо сцены из прошлого чата. */
+function showFailure() {
+    try {
+        Object.assign(state, EMPTY_STATE);
+        mountWidget();
+        renderAll();
+        el("#nrn-stub").text(`ᚱ ${t`the infoblock is broken`}`).show();
+    } catch (e) {
+        console.error(`[${extensionName}] и показать отказ не удалось:`, e);
+    }
+}
+
 function refresh() {
+    try {
+        readAndRender();
+        panelBroken = false;
+    } catch (e) {
+        panelFailed("refresh()", e);
+        showFailure();
+    }
+}
+
+function readAndRender() {
     forgetChat();
     const context = getContext();
     const read = readState();
@@ -1683,7 +1750,9 @@ function renderAll() {
         el("#nrn-attire-user-text, #nrn-attire-char-text, #nrn-thought-text, #nrn-cycle-text, #nrn-cycle-status, #nrn-cycle-kicks, #nrn-cycle-extra, #nrn-cycle-kin, #nrn-cycle-house, #nrn-cycle-signs, #nrn-cycle-debug, #nrn-char-state-text, #nrn-user-state-text, #nrn-advice-text").text("");
         el("#nrn-beam, #nrn-wood, #nrn-book").hide();
         el("#nrn-grid").addClass("nrn-hidden");
-        stub.show();
+        /* Текст ставим заново, а не только показываем: showFailure() пишет
+           поверх него свой, и после починки надпись обязана вернуться. */
+        stub.text(`ᚱ ${t`Waiting for the infoblock…`}`).show();
         return;
     }
     stub.hide();
@@ -3208,7 +3277,16 @@ async function openTimatal() {
         paint();
         return true;
     };
-    paint();
+
+    /* Первая сборка идёт до показа окна, и её падение выглядело как «кнопка
+       не нажимается»: ни окна, ни слова. Пусть лучше не откроется вовсе,
+       но скажет почему. */
+    try {
+        paint();
+    } catch (e) {
+        panelFailed("Tímatal", e);
+        return;
+    }
 
     // Popup, а не callGenericPopup: нужен доступ к <dialog> ДО показа, чтобы
     // покрасить подложку своей темой без мигания таверновской.
