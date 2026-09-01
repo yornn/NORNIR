@@ -91,7 +91,7 @@ import {
     syncWholeChat,
 } from "./chat-state.js";
 
-import { CYCLE_DEFAULT, DIVINATION_ACCURACY, bodyTruth, bodyView, pregnancyTerm } from "./body.js";
+import { CYCLE_DEFAULT, DIVINATION_ACCURACY, SCENE_SIGN_KINDS, bodyTruth, bodyView, pregnancyTerm } from "./body.js";
 
 import { DEFAULT_TIERS, HOLIDAY_TIERS, holidayView, markWeek } from "./holidays.js";
 
@@ -156,71 +156,67 @@ function settings() {
  * ВНИМАНИЕ: этот текст проверяется в живой ролевой, и менять его «на глаз»
  * нельзя. Один раз так уже сделали, и пришлось откатывать дословно.
  *
- * ── Что здесь есть и почему ──────────────────────────────────────────────
+ * ── Устройство ───────────────────────────────────────────────────────────
  *
- *  - блок ставится в КОНЦЕ ответа. Требование «перед прозой» думающие модели
- *    роняют первыми: они сначала планируют текст, а служебный блок до текста
- *    в план не попадает. Виджету это безразлично — он вставляет себя в начало
- *    сообщения через DOM;
- *  - объясняется, что это HTML-комментарий и читателю он не виден: иначе
- *    RP-пресеты «не выходи из роли» его подавляют;
- *  - есть прямая оговорка, что требование сильнее запретов на OOC, и что ответ
- *    без блока считается незаконченным;
- *  - отдельный абзац про думалку: синтаксис блока нельзя писать внутри
- *    рассуждений. Формулировку один раз попробовали ужесточить — «ни скобку,
- *    ни заполненные поля». Стало хуже: из шести прогонов в трёх модель выписала
- *    блок целиком, чего до ужесточения не делала ни разу. Названный запретный
- *    токен становится заметнее — здесь это проверено на живых прогонах, а не
- *    выведено из общих соображений. Поэтому запреты формулируются положительно;
- *  - есть заполненный пример. Схема с <плейсхолдерами> показывает форму, но не
- *    показывает ни одного значения, и модель сочиняет их в рассуждениях;
- *  - эталон состояния приходит инжектом (<norse_time>, <norse_body>,
- *    <norse_child>, <norse_scene>), а не из истории: старые блоки из чата
- *    вырезаны, модели их взять неоткуда.
- *
- * ── Справка против требования ────────────────────────────────────────────
- *
- * Самое дорогое правило файла. Всё, что лежит ВНУТРИ <norse_calendar>,
- * модель читает как поле для заполнения, а не как факт сцены. Поэтому дата,
- * тело и дитя вынесены наружу, в свои теги, другим тоном и без единой стрелки:
- * их не записывают, их ЗНАЮТ — как человек знает, какой нынче месяц и что
- * у него ломит поясницу.
- *
- * Отсюда же деление на два потока, и оно теперь названо прямо:
+ * Два потока, и они идут в разные стороны:
  *
  *   вниз  — <norse_time>, <norse_body>, <norse_child>, <norse_scene>:
  *           панель рассказывает модели, что есть. Ничего не спрашивает.
  *   вверх — <norse_calendar>: модель отдаёт панели то, что показала сцена.
  *
- * Что уходит вниз, решает одно правило: показываем ровно то, что героиня
- * знает о себе сама, плюс то, что видно окружающим. Числа счёта — день цикла,
- * часть ношения, день зачатия — не показываем никогда: в этом веке их неоткуда
- * взять, и модель начинает считать вслух. Слова вместо чисел («дитя с кошку»,
- * «ждать к середине гои») говорят то же самое и стоят дешевле.
+ * Разделять их обязательно. Всё, что лежит ВНУТРИ <norse_calendar>, модель
+ * читает как поле для заполнения, а не как факт сцены: дата, положенная туда,
+ * превращалась в «дата такая-то, записал». Поэтому справки живут снаружи,
+ * другим тоном и без единой стрелки — их не записывают, их ЗНАЮТ.
  *
- * ── Раскладка блоков ─────────────────────────────────────────────────────
+ * Что уходит вниз, решает одно правило: показываем то, что героиня знает
+ * о себе сама, плюс то, что видно окружающим. Числа счёта — день цикла, часть
+ * ношения, день зачатия — не показываем никогда: в этом веке их взять
+ * неоткуда, и модель принимается считать вслух.
  *
- * Каждый блок отвечает за одну тему и собирается отдельно. Так видно, во что
- * обходится новое поле, и так блок можно выключить целиком, не разбирая
- * остальной текст.
+ * ── Маркер на тему ───────────────────────────────────────────────────────
  *
- * Определение поля и строка, которую модель за него отдаёт, стоят вплотную,
- * через «→». Раньше список полей лежал ТРИЖДЫ — определения, плейсхолдеры
- * в шаблоне, значения в примере, — и связать копии модель могла только по имени
- * поля. На восьми полях это сходило с рук, на восемнадцати перестало: редкие
- * поля выпадали, а условные заполнялись в обычный ход.
+ * Наверх едет не один общий блок, а по маркеру на тему, одной строкой:
  *
- * Копий теперь две: определения со стрелками и один заполненный пример.
+ *   <!-- NRN PLACE | weather: Мокрый снег | location: старая пристань -->
+ *
+ * Общий блок из двадцати строк стоил двух классов ошибок разом. Условное поле
+ * в нём выглядело ровно так же, как обязательное, — отсюда midwife и faderni
+ * в обычный ход и выпадающие advice и char_state. Теперь у условной темы нет
+ * маркера вовсе, и само его отсутствие есть ответ.
+ *
+ * Второе, ради чего это делалось: у каждой темы своя мера и свой тон, и сказать
+ * их можно только рядом с самой темой. В общем блоке «три-пять слов» читалось
+ * особенностью одного поля, а не мерой, которую держат все.
+ *
+ * Цена признаётся честно: синтаксиса в ответе стало больше, а чем чаще он
+ * мелькает, тем охотнее думающая модель выписывает его в рассуждениях. Против
+ * этого здесь два приёма. Первый — обёртка `<!--` … `-->` названа ровно ДВА
+ * раза на весь промпт: в шапке и в примере. В блоках тем стоит только полезная
+ * нагрузка, после стрелки. Второй — запреты положительные: названный запретный
+ * токен модель начинает выписывать именно там, где его запретили, и это здесь
+ * проверено на живых прогонах, а не выведено из общих соображений.
+ *
+ * Старый формат `<!-- [URD: … ] -->` парсер по-прежнему понимает: в живых
+ * чатах его полно, и терять на нём историю нельзя.
+ *
+ * ── Раскладка блока темы ─────────────────────────────────────────────────
+ *
+ * Сперва правила полей, потом строка, которую тема отдаёт, после «→».
+ * Определение и вывод стоят вплотную: раньше список полей лежал ТРИЖДЫ —
+ * определения, шаблон, пример, — и связать копии модель могла только по имени
+ * поля. Копий теперь две: правила со стрелкой и один заполненный пример.
+ *
  * Обязательность живёт в заголовке блока («every reply» / «only when …»),
- * порядок чтения совпадает с порядком строк в блоке, а пример собирается
- * по тому же состоянию, что и сами блоки.
+ * порядок маркеров в ответе совпадает с порядком блоков, а пример собирается
+ * по тому же состоянию, что и сами блоки, — иначе он показывал бы ответ без
+ * полей, которые тут же требуются каждый ход.
  *
  * ── Рамки полей ──────────────────────────────────────────────────────────
  *
- * У каждого поля сказано, сколько слов и чего в нём быть не должно. Приём
- * не новый: у char_state «три-пять слов» стояло с самого начала, потому что
- * без этого выходил второй thought. Теперь так у всех — иначе модель пишет
- * абзац там, где панели нужна строка, и абзац этот виден в панели целиком.
+ * У каждого поля сказано, о чём оно, сколько слов и чего в нём быть не должно.
+ * Приём не новый: у char_state «три-пять слов» стояло с самого начала, потому
+ * что без этого выходил второй thought. Теперь так у всех.
  *
  * ── Язык ─────────────────────────────────────────────────────────────────
  *
@@ -229,58 +225,51 @@ function settings() {
  * значения обязаны быть русскими, потому что едут прямо в панель.
  *
  * Исключение — список событий тела и четыре слова о положении дитяти: это
- * не свободный текст, а опознавательные слова, которые ищет парсер. Их перевод
- * стоит отдельной правкой, вместе с парсером, и до неё они русские.
+ * не свободный текст, а опознавательные слова, которые ищет парсер.
  *
  * ── История, чтобы не ходить по кругу ────────────────────────────────────
  *
  * Этот блок один раз переписали целиком: сократили вчетверо, выкинули пример,
  * чек-лист и абзац про думалку. Рассуждения были стройные. На практике вышло
- * наоборот: у пользователя поехала думалка, модель начала писать в рассуждениях
- * черновик прозы и расписывать блок по полям. Пришлось откатывать дословно.
+ * наоборот: поехала думалка, модель начала писать в рассуждениях черновик
+ * прозы и расписывать блок по полям. Пришлось откатывать дословно.
  *
  * Мораль не в том, что короткий промпт хуже длинного, а в том, что здесь
  * теория ничего не стоит: единственное доказательство — прогон в живой
- * ролевой. Поэтому правила такие:
- *
- *  - меняем ОДНУ вещь за раз и каждую проверяем отдельно, иначе при регрессии
- *    непонятно, что откатывать (в прошлый раз в одном батче уехало полтора
- *    десятка правок, и на разбор ушло три круга);
- *  - формулировки собираем из MONTHS и прочих таблиц, чтобы промпт не
- *    разъезжался с парсером, но текст вокруг них не трогаем;
- *  - «улучшения», которые нельзя проверить, не делаем вовсе.
+ * ролевой. Поэтому меняем ОДНУ вещь за раз и каждую проверяем отдельно.
  * ============================================================ */
 
-/* Заглавие канала, общий режим работы и все правила, которые действуют на
-   каждый блок ниже. Абзац про HTML-комментарий проверен в живой ролевой
-   и переписыванию не подлежит: без него RP-пресеты «не выходи из роли» блок
-   подавляют. */
+/* Заглавие канала и все правила, которые действуют на каждую тему ниже.
+   Абзац про HTML-комментарий проверен в живой ролевой и переписыванию
+   не подлежит: без него RP-пресеты «не выходи из роли» маркеры подавляют. */
 const BLOCK_HEADER = [
     "<norse_calendar>",
     "[SYSTEM CHANNEL — NORNIR. This configures a UI panel and stands outside the fiction. Characters cannot perceive it, and nothing written here happens in the scene.]",
     "",
-    "Alongside the roleplay you keep a calendar panel up to date for the reader. It refreshes from a single hidden block that you place after your prose, every single time.",
-    "Wrapped in <!-- and -->, the block is a comment: the chat renders nothing for it, so not one word of it reaches the reader. Treat it as machine-readable output that sits apart from the narrative — do not restate its contents in prose and do not turn it into a visible status header.",
+    "Alongside the roleplay you keep a calendar panel up to date for the reader. It refreshes from a handful of hidden markers that you place after your prose, every single time.",
+    "Wrapped in <!-- and -->, each marker is a comment: the chat renders nothing for it, so not one word reaches the reader. Treat them as machine-readable output that sits apart from the narrative — do not restate their contents in prose and do not turn them into a visible status header.",
+    "",
+    /* Форма маркера названа здесь ОДИН раз. В блоках тем стоит только начинка,
+       после стрелки; обёртка повторяется лишь в примере. */
+    "Every marker has the same shape — one line, one topic, its fields divided by |:",
+    "<!-- NRN TOPIC | field: value | field: value -->",
+    "Each part below is one topic. It first gives the rules for its fields, then shows what it contributes, marked with →. What follows the arrow is the inside of the marker; wrap it as shown above and put it on its own line.",
+    "A part headed «only when …» contributes nothing until its case comes up: no marker at all, not an empty one. A field with nothing to report is simply left out of its marker.",
     "",
     /* Главная строка всей перестройки. Любое число, посчитанное моделью,
        она считает вслух в рассуждениях — и в каждом свайпе по-своему. */
     "Report what the scene shows. Never work anything out: days, dates, counts, terms and the child's age are the panel's own reckoning, and it hands them to you in <norse_time>, <norse_body> and <norse_child>.",
-    /* Прежний абсолютный запрет «never work anything out» накрывал и те поля,
-       которые без домысла не заполнить вовсе. Разводим их явно, иначе правило
-       либо ослабнет целиком, либо сломает половину полей. */
-    "Three lines are yours to judge rather than observe — thought, desire and advice — and one is yours to reason from law, not from arithmetic: child_rank. Everything else is reporting.",
+    /* Прежний абсолютный запрет накрывал и те поля, которые без домысла
+       не заполнить вовсе. Разводим их явно. */
+    "Three fields are yours to judge rather than observe — thought, desire and advice — and one is yours to reason from law, not from arithmetic: rank. Everything else is reporting.",
     "",
-    /* Рамки — общим правилом, потом у каждого поля своей мерой. Без общего
-       правила «три-пять слов» у одного поля читается как его особенность,
-       а не как то, чего ждут от всех. */
-    "Every line is a note, not prose. Each part below gives its own budget in words — hold to it. A line that runs long stops being a note and starts competing with the story it was meant to summarise.",
-    "Write every value in Russian, as plain words and punctuation: no HTML, no angle brackets, no markup of any kind. The field names stay as they are written here.",
-    "",
-    /* Раскладка: определение поля и строка вывода стоят вплотную, стрелка их
-       и связывает. Абзац объясняет саму раскладку — без него «→» читается как
-       часть значения и уезжает в блок. */
-    "The block is gathered part by part. Each part below first says what it wants, then shows the line it contributes, marked with →. The arrow is not part of the line; read the parts in order and you have the block.",
-    "A part headed «while …» or «only when …» contributes nothing until its case comes up: no line at all, not an empty one.",
+    "[HOW TO WRITE THE VALUES — every field, every topic]",
+    "Language: Russian. Plain words and punctuation, no HTML, no angle brackets, no markup. Topic names and field names stay exactly as written here, in Latin letters.",
+    "Length: every field gives its own budget in words. Hold to it. These are notes, not prose — a line that runs long stops summarising the scene and starts competing with it.",
+    /* Сеттинг общим правилом: иначе анахронизм ловится только в advice, где
+       он назван прямо, а лезет он всюду — «стресс» в нрав, «часы» в сон. */
+    "Age and tongue: everything here belongs to the eleventh century and to these people. Name what someone of that age would name — weather by what it does to a body, clothes by cloth and cut, ailments by what is felt rather than by what causes them. No word that had to wait for a later age: no clock hours or minutes, no nerves, no stress, no hormones, no infection, no depression, no vitamins. If a thing has no word in that world, say it in what they had.",
+    "Voice: flat and plain, the way a person notices a thing about themselves without remarking on it. No metaphors, no literary turns, no drama. The prose above is where the writing happens; these are the notes underneath it.",
     "",
 ];
 
@@ -288,48 +277,53 @@ const BLOCK_HEADER = [
    а не как ещё одно требование трекера. Здесь остаётся одна строка. */
 const BLOCK_TIME = [
     "[TIME — every reply]",
-    "eykt — which of the eight the scene stands in. One word, the name only.",
-    "→ eykt: <the eykt this scene stands in>",
+    "eykt — which of the eight the scene stands in. One word, the name only. The date is not yours: the panel keeps it and moves it along.",
+    "→ NRN TIME | eykt: <the eykt this scene stands in>",
     "",
 ];
 
-/* Погода перед локацией: в блоке они стоят так же, и порядок чтения совпадает
-   с порядком сборки. */
 const BLOCK_PLACE = [
     "[PLACE — every reply]",
-    "weather — what the sky and the air are doing. Two to six words. What a person standing outside would notice; not a forecast, not a mood.",
-    "→ weather: <the sky and the air>",
-    "",
-    "location — where the scene stands, as precisely as the prose allows. Two to six words. A place, not an account of what happens in it.",
-    "→ location: <where the scene stands>",
+    "weather — what the sky and the air are doing. Two to six words. What a person standing outside would feel and see: wind, wet, cold, light. Not a forecast, not a mood, not a description of the landscape.",
+    "location — where the scene stands, as precisely as the prose allows. Two to six words. Name the place, and the part of it if the prose gave one: «Длинный дом, у очага», «Побережье фьорда, старая пристань». Not what happens there, not who is there.",
+    "→ NRN PLACE | weather: <the sky and the air> | location: <where the scene stands>",
     "",
 ];
 
-const BLOCK_PEOPLE = [
-    "[PEOPLE — every reply]",
-    "mood — {{char}}'s mood right now. One to four words. The feeling itself; the reason for it belongs in the prose.",
-    "→ mood: <{{char}}'s mood>",
+const BLOCK_DRESS = [
+    "[DRESS — every reply]",
+    "Cloth and cut, nothing else. Two to six words each. Name the garments as they are worn right now, and carry over what the scene did not change. Not how they sit, not how they suit anyone, not what they cost, not what they say about the wearer. Stripped bare is also an answer: «ничего», «нагая».",
+    "user — what {{user}} is wearing.",
+    "char — what {{char}} is wearing.",
+    "→ NRN DRESS | user: <{{user}}'s clothing> | char: <{{char}}'s clothing>",
     "",
-    "user_attire — what {{user}} is wearing, as the scene last showed it. Two to six words. The garments and no more: not how they sit, not how they suit her.",
-    "→ user_attire: <{{user}}'s clothing>",
+];
+
+const BLOCK_MIND = [
+    "[MIND — every reply]",
+    "mood — {{char}}'s mood right now. One to four words, the feeling itself. The reason for it belongs in the prose, not here.",
+    "thought — one thing {{char}} thinks about {{user}} and does not say aloud. One sentence, in {{char}}'s own voice. One thought, not a train of them; something withheld, not a summary of the scene.",
+    "→ NRN MIND | mood: <{{char}}'s mood> | thought: <the unspoken thought>",
     "",
-    "char_attire — the same for {{char}}. Two to six words.",
-    "→ char_attire: <{{char}}'s clothing>",
+];
+
+/* Состояние тела пишет модель, а не таблица: «продрог у брода» она видит
+   в сцене, а расширение — нет. Три-пять слов, иначе выйдет второй thought. */
+const BLOCK_FLESH = [
+    "[FLESH — every reply]",
+    "How the two of them fare in the body, right now, from what the scene showed: tired, cold, aching, hungry, hale, hurt. Three to five words each. What the body is doing — mood and thought already carry what the mind makes of it. If the scene did nothing to them, say plainly that nothing ails them.",
+    "char — {{char}}'s body.",
+    "user — {{user}}'s body.",
+    "→ NRN FLESH | char: <{{char}}'s body, 3-5 words> | user: <{{user}}'s body, 3-5 words>",
     "",
-    "thought — one thing {{char}} thinks about {{user}} and does not say aloud. One sentence. One thought, not a train of them.",
-    "→ thought: <the unspoken thought>",
-    "",
-    /* Состояние тела пишет модель, а не таблица: «продрог у брода» она видит
-       в сцене, а расширение — нет. Три-пять слов, иначе выйдет второй thought. */
-    "char_state — how {{char}}'s body fares right now: tired, cold, aching, hale. Three to five words. What the body is doing, not what the mind makes of it — mood and thought already carry that.",
-    "→ char_state: <{{char}}'s body, 3-5 words>",
-    "",
-    "user_state — the same for {{user}}, from what the scene shows. Three to five words.",
-    "→ user_state: <{{user}}'s body, 3-5 words>",
-    "",
-    /* Совет — единственное поле, где легко проскочить анахронизм. */
-    "advice — what a wise woman of this age would tell {{user}} right now. One short sentence. Look both at what she is doing in the scene and at how her body fares: chopping wood while heavy with child earns a word about resting. Speak in the remedies of the age — отвар, покой, тёплое питьё, не подымать тяжёлого, натопить баню. Nothing from later ages: no medicines, no doctors, no measured hours of sleep.",
-    "→ advice: <a word of counsel fit for the age>",
+];
+
+/* Совет — поле, где анахронизм проскакивает легче всего, поэтому век назван
+   в нём отдельно, помимо общего правила в шапке. */
+const BLOCK_ADVICE = [
+    "[COUNSEL — every reply]",
+    "advice — what a wise woman of this age would tell {{user}} right now. One short sentence, spoken to her. Look both at what she is doing in the scene and at how her body fares: chopping wood while heavy with child earns a word about resting. Speak in the remedies of the age — отвар, покой, тёплое питьё, не подымать тяжёлого, натопить баню, сходить к знающей. Nothing from later ages: no medicines, no physicians, no measured hours of sleep, no counting of days.",
+    "→ NRN COUNSEL | advice: <a word of counsel fit for the age>",
     "",
 ];
 
@@ -339,30 +333,30 @@ const BLOCK_PEOPLE = [
  * Всё прочее в этой линии либо считает панель, либо приносит событие. Тягу же
  * не вывести ни из чего: она не про лоно, а про саму героиню. Лоно панель
  * считает по дню цикла и отдаёт вниз приметой `heat`; хочет ли женщина —
- * дело сцены. Носящая, хворая, в горе, в ссоре или просто уставшая хочет не
- * по календарю, и хотеть она может кого угодно.
+ * дело сцены.
  *
  * Отсюда две оговорки в тексте. Первая — «сколько, а не к кому»: направление
- * желания панель не показывает и показывать не будет, это дело прозы.
- * Вторая — «в любом состоянии»: без неё поле пропадало бы ровно тогда, когда
- * панель показывает беременность, а женщины носят и хотят одновременно.
+ * желания панель не показывает и показывать не будет, это дело прозы, и
+ * героиня может хотеть кого угодно. Вторая — «в любом состоянии»: без неё поле
+ * пропадало бы ровно тогда, когда панель показывает беременность, а женщины
+ * носят и хотят одновременно.
  */
-const BLOCK_FYSN = [
-    "[FÝSN — every reply]",
-    "desire — how much {{user}} wants closeness right now. One to three words: «не до того», «тянет к нему», «сама не своя», «холодна», «тело просит».",
+const BLOCK_FREYJA = [
+    "[FREYJA — every reply]",
+    "desire — how much {{user}} wants closeness right now. One to three words: «не до того», «тянет к нему», «сама не своя», «холодна», «тело просит», «стыдно от себя самой».",
     "Judge it from the scene and from her body together. <norse_body> tells you what her womb is doing, and that tilts her — it does not decide her. Weariness, grief, fear, a quarrel or a child under her heart all weigh more than the reckoning does.",
-    "Say how much she wants, never toward whom: the panel shows the measure, and the prose shows the rest.",
-    "This line is there in every state — bleeding, carrying, newly delivered, or an ordinary day.",
-    "→ desire: <how much she wants, 1-3 words>",
+    "Say how much she wants, never toward whom: the panel shows the measure, the prose shows the rest.",
+    "This field is there in every state — bleeding, carrying, newly delivered, or an ordinary day.",
+    "→ NRN FREYJA | desire: <how much she wants, 1-3 words>",
     "",
 ];
 
-/* Пропуск времени — свой блок, а не второе поле в [TIME]: поле условное,
+/* Пропуск времени — своя тема, а не второе поле в TIME: поле условное,
    а стояло среди обязательных, и заполнялось в обычный ход. */
 const BLOCK_SKIP = [
-    "[SKIPS — only when the story jumps ahead]",
-    "passed — how much time went by, as a plain amount: «2 дня», «три месяца», «полгода». Never a date, never a clock time. On an ordinary turn there is no such line.",
-    "→ passed: <the length of the skip>",
+    "[SKIP — only when the story jumps ahead]",
+    "passed — how much time went by, as a plain amount: «2 дня», «три месяца», «полгода», «две луны». Never a date, never a clock time. On an ordinary turn there is no such marker.",
+    "→ NRN SKIP | passed: <the length of the skip>",
     "",
 ];
 
@@ -377,13 +371,13 @@ const BLOCK_SKIP = [
  */
 
 /*
- * Блок тела — событие, а не состояние.
+ * События тела — событие, а не состояние.
  *
  * Полный статус каждый ход («фертильность, либидо, самочувствие») модели
  * неоткуда взять, и она его сочиняет: в соседних свайпах на один и тот же день
  * выходило «Высокая», «Норма» и «low». Событие же она видит в сцене.
  *
- * Сюжетные оговорки — про то, кто и когда узнаёт о дитяти, — отсюда уехали
+ * Сюжетные оговорки — про то, кто и когда узнаёт о дитяти, — живут
  * в <norse_body>. Они правила сцены, а не определения поля, и внутри тега
  * трекера читались как ещё одно поле для заполнения.
  */
@@ -392,9 +386,9 @@ const BLOCK_BODY = [
     "body — what happened, in these words exactly:",
     "  кровь пришла · кровь кончилась · кровь не в срок",
     "  семя пролилось · семя не пролилось",
-    /* «дитя бьётся» и «дитя затихло» здесь появились не для красоты: без них
-       счётчик тишины было не от чего вести, и вся тревога о дитяти оставалась
-       кодом, до которого нельзя добраться. */
+    /* «дитя бьётся» и «дитя затихло» здесь не для красоты: без них счётчик
+       тишины было не от чего вести, и вся тревога о дитяти оставалась кодом,
+       до которого нельзя добраться. */
     "  дитя шевельнулось · дитя бьётся · дитя затихло",
     "  схватки начались · родила · выкидыш",
     "  дитя у груди · отняли от груди · поняла, что тяжела · понесла",
@@ -406,63 +400,53 @@ const BLOCK_BODY = [
     /* Вехи первых двух лет. Возраст и нужды дитяти панель считает сама. */
     "  зубок прорезался · дитя пошло · дитя заговорило",
     "  дитя занемогло · дитя поправилось · дитя померло",
-    "Take the words from the list and no others: this part is a set of signals, not a description. What it felt like belongs in the prose.",
-    "Two things in one scene: separate with \"; \". Nothing happened — no line, and that is the ordinary turn. The panel counts the days itself.",
-    "→ body: <words from the list above>",
+    "Take the words from the list and no others: this topic is a set of signals, not a description. What it felt like belongs in the prose. Two things in one scene: separate them with \"; \".",
+    "Nothing happened — no marker, and that is the ordinary turn. The panel counts the days itself.",
+    "→ NRN BODY | body: <words from the list above>",
     "",
 ];
 
 /*
- * Близость — своя часть со своей условной шапкой, а не поле внутри [BODY].
+ * Близость — своя тема со своей условной шапкой, а не поле среди тела.
  *
- * Стояла она полем среди определений тела, и значение в шаблоне было
- * проставлено готовым: «→ sex: да». Во всём промпте это была единственная
- * строка с ответом вместо <плейсхолдера> — и модель его списывала: «да»
- * приезжало каждый ход, в том числе в сценах, где близости не было и быть
- * не могло, а панель послушно кидала на зачатие.
+ * Была она полем среди определений тела, и значение в шаблоне стояло готовым:
+ * «sex: да». Во всём промпте это была единственная строка с ответом вместо
+ * <плейсхолдера> — и модель его списывала: «да» приезжало каждый ход,
+ * в том числе в сценах, где близости не было и быть не могло, а панель
+ * послушно кидала на зачатие.
  */
-const BLOCK_SEX = [
-    "[COUPLING — only when the scene actually held coupling]",
-    "No coupling in this scene — no line at all, and that is the ordinary turn. Take this part from what the prose showed, never from the shape of the block.",
-    "sex — да, and no other value: the line exists because there was coupling, so writing it at all is the answer.",
-    "→ sex: да",
-    "",
+const BLOCK_BED = [
+    "[BED — only when the scene actually held coupling]",
+    "No coupling in this scene — no marker at all, and that is the ordinary turn. Take this topic from what the prose showed, never from the shape of the marker.",
+    "sex — да, and no other value: the marker exists because there was coupling, so writing it at all is the answer.",
     "internal — whether the seed was spilled inside. One word. Never without sex.",
-    "→ internal: <да / нет / неизвестно>",
+    "→ NRN BED | sex: да | internal: <да / нет / неизвестно>",
     "",
 ];
 
 /*
- * Блоки, которые появляются только к месту.
+ * Темы, которые появляются только к месту.
  *
  * Готовность к родам нужна на последней части ношения, правовой слой — когда
  * о дитяти уже знают, имя — пока дитя не наречено. Спрашивать их с первого дня
- * игры значило бы держать в блоке восемь пустых строк каждый ход.
+ * игры значило бы держать в ответе четыре пустых маркера каждый ход.
  */
 const BLOCK_BIRTH = [
-    "[BIRTH WATCH — every reply while the birth is near]",
-    "Answer in names and numbers, not in sentences. Two to five words each, no description, no reasoning.",
+    "[BIRTH — every reply while the birth is near]",
+    "Names and numbers, not sentences. Two to five words each, no description, no reasoning.",
     "midwife — who will take the child, and how far off: «Арнхейд, полдня пути». Никого поблизости — «нет».",
-    "→ midwife: <name and distance>",
-    "",
     "women — how many grown women are in the house: «три», «одна», «нет».",
-    "→ women: <how many>",
-    "",
     "charms — what wards she has on her: «молот Тора у горла», «бьяргруны не вырезаны».",
-    "→ charms: <the wards, or нет>",
-    "",
     "gear — water, swaddling, fire: «вода и пелёнки готовы», «пелёнок нет».",
-    "→ gear: <what is ready, what is not>",
+    "→ NRN BIRTH | midwife: <name and distance> | women: <how many> | charms: <the wards, or нет> | gear: <what is ready, what is not>",
     "",
 ];
 
-const BLOCK_LEGAL = [
-    "[THE CHILD'S STANDING — every reply while the child is known]",
-    "faderni — whether the father has acknowledged the child. One word only.",
-    "→ faderni: <признано / не признано / оспорено>",
-    "",
-    "child_rank — what the child will be born as, by the law of this age: скирборинн (born in wedlock), фриллуборинн (of a concubine), тюборинн (of a bondwoman, and a bondman himself), хорнунг (of a free woman out of wedlock). One word only.",
-    "→ child_rank: <one of those four>",
+const BLOCK_KIN = [
+    "[KIN — every reply while the child is known]",
+    "faderni — whether the father has acknowledged the child. One word: признано / не признано / оспорено.",
+    "rank — what the child will be born as, by the law of this age. One word of the four: скирборинн (born in wedlock), фриллуборинн (of a concubine), тюборинн (of a bondwoman, and a bondman himself), хорнунг (of a free woman out of wedlock).",
+    "→ NRN KIN | faderni: <one word> | rank: <one of those four>",
     "",
 ];
 
@@ -471,66 +455,64 @@ const BLOCK_LEGAL = [
  * кончается, когда дитя отняли от груди, а безымянным оно может остаться
  * и дольше — и тогда спросить имя было бы уже негде.
  */
-const BLOCK_NAMING = [
-    "[NAMING — every reply while the child has no name yet]",
-    "child_name — the name given at the water-sprinkling. Twins: both names, separated by \"; \".",
-    "→ child_name: <the name, or не наречён>",
+const BLOCK_CHILD = [
+    "[CHILD — every reply while the child has no name yet]",
+    "name — the name given at the water-sprinkling, or «не наречён» while none has been given. Twins: both names, separated by \"; \".",
+    "→ NRN CHILD | name: <the name, or не наречён>",
     "",
 ];
 
-/*
- * Сборка блока — без третьей копии списка полей.
+/**
+ * Приметы — единственный блок, который собирается по сегодняшнему дню.
  *
- * Раньше здесь стоял полный шаблон с плейсхолдерами, и список полей лежал
- * в промпте ТРИЖДЫ. Хуже цены было противоречие: шапка говорит, что строки
- * условного блока нет вовсе, пока не настал её случай, а шаблон показывал
- * passed, body, sex и internal ровным списком — то есть ровно наоборот.
+ * Какие виды сегодня звучат, решает счёт: `termSigns` и `cycleSigns` отбирают
+ * их по части срока и дню цикла. Поэтому у модели спрашиваются ровно те, что
+ * поспели, — и спрашиваются поимённо, со своей мерой у каждого.
  *
- * Синтаксис блока назван здесь ОДИН раз и повторяется только в примере.
- * Чем чаще он мелькает, тем охотнее думалка его выписывает.
+ * Так решается то, из-за чего всё и затевалось. Раньше слова к приметам брались
+ * из пула по шесть штук на вид: через две недели игры пул был весь виден, и
+ * панель твердила одно и то же. Хуже того, слова не имели отношения к сцене —
+ * героиня всю ночь мёрзла в лодке, а панель писала «спит крепко, встаёт
+ * до света», потому что по дню цикла положено.
+ *
+ * Пул при этом никуда не делся: сцена промолчала — панель берёт своё слово.
+ * Пустой панели не бывает.
  */
-const BLOCK_ASSEMBLY = [
-    "[THE BLOCK — the last thing in every reply, after all the prose]",
-    "Put the lines you gathered, in the order they were given, into one comment:",
-    "",
-    "<!-- [URD:",
-    "… the lines you gathered, one per line …",
-    "] -->",
-    "",
-];
+function signsBlock(view) {
+    const kinds = (view?.signs ?? [])
+        .map((sign) => sign.kind)
+        .filter((kind, i, all) => SCENE_SIGN_KINDS[kind] && all.indexOf(kind) === i);
+    if (!kinds.length) return [];
 
-/* Строки примера, которые появляются только вместе со своим блоком. */
-const EXAMPLE_BIRTH_LINES = [
-    "midwife: Арнхейд, полдня пути",
-    "women: три",
-    "charms: молот Тора у горла",
-    "gear: вода и пелёнки готовы, пелёнок мало",
-];
-const EXAMPLE_LEGAL_LINES = [
-    "faderni: признано",
-    "child_rank: скирборинн",
-];
-const EXAMPLE_NAMING_LINES = [
-    "child_name: Хельга",
-];
+    const named = kinds.map((kind) => SCENE_SIGN_KINDS[kind].ru).join(", ");
+    return [
+        "[SIGNS — every reply]",
+        `Today her body speaks through these and no others: ${named}. They are hers to feel, not to explain — she need not know why any of them is happening.`,
+        "Give each one from THIS scene, in three to six words: what the body is doing, plainly. Not what she thinks of it, not what caused it, not what it means. If this scene gave a reason — a cold night, a hard road, a fright — let the words show it.",
+        "",
+        ...kinds.map((kind) => `${kind} — ${SCENE_SIGN_KINDS[kind].about}.`),
+        "",
+        `→ NRN SIGNS | ${kinds.map((kind) => `${kind}: <…>`).join(" | ")}`,
+        "",
+        "A field you leave out keeps the panel's own word for it, and that is no failure — leave out what this scene had nothing to say about. Never add a field that is not in the list above: what her body says today is the panel's reckoning, not yours.",
+        "",
+    ];
+}
 
-/* Обязательная часть — она же весь обычный ход. */
-const EXAMPLE_BASE_LINES = [
-    "eykt: хадеги",
-    "weather: Мокрый снег, порывистый северный ветер",
-    "location: Побережье фьорда, старая пристань",
-    "mood: задумчивый, усталый",
-    "user_attire: Шерстяное платье, меховой плащ",
-    "char_attire: Волчьи шкуры, льняная рубаха",
-    "thought: Она снова смотрит так, будто знает больше.",
-    "char_state: продрог, ломит плечо",
-    "user_state: устала, ноги сбиты",
-    "advice: Отвар из дягиля и покой до утра",
-];
+/* Строки примера, которые появляются только вместе со своей темой. */
+const EXAMPLE_BIRTH = "<!-- NRN BIRTH | midwife: Арнхейд, полдня пути | women: три | charms: молот Тора у горла | gear: вода и пелёнки готовы -->";
+const EXAMPLE_KIN = "<!-- NRN KIN | faderni: признано | rank: скирборинн -->";
+const EXAMPLE_CHILD = "<!-- NRN CHILD | name: Хельга -->";
+const EXAMPLE_FREYJA = "<!-- NRN FREYJA | desire: не до того -->";
 
-/* Тяга стоит в примере там же, где и в блоке, — сразу за советом. */
-const EXAMPLE_FYSN_LINES = [
-    "desire: не до того",
+/* Обязательные — они же весь обычный ход. */
+const EXAMPLE_BASE = [
+    "<!-- NRN TIME | eykt: хадеги -->",
+    "<!-- NRN PLACE | weather: Мокрый снег, порывистый северный ветер | location: Побережье фьорда, старая пристань -->",
+    "<!-- NRN DRESS | user: Шерстяное платье, меховой плащ | char: Волчьи шкуры, льняная рубаха -->",
+    "<!-- NRN MIND | mood: задумчивый, усталый | thought: Она снова смотрит так, будто знает больше. -->",
+    "<!-- NRN FLESH | char: продрог, ломит плечо | user: устала, ноги сбиты -->",
+    "<!-- NRN COUNSEL | advice: Отвар из дягиля и покой до утра -->",
 ];
 
 /**
@@ -540,41 +522,57 @@ const EXAMPLE_FYSN_LINES = [
  * модель сочиняет их в рассуждениях. Поэтому пример заполненный.
  *
  * Собирается по состоянию, и это не украшательство. Пример был константой,
- * а блоки [BIRTH WATCH], [THE CHILD'S STANDING] и [NAMING] помечены «every
- * reply while …». Выходило, что единственный образец в промпте показывал
- * блок БЕЗ полей, которые тут же требовались каждый ход, — а заполненный
- * образец весит больше инструкции.
+ * а темы BIRTH, KIN и CHILD помечены «every reply while …». Выходило, что
+ * единственный образец в промпте показывал ответ БЕЗ маркеров, которые тут же
+ * требовались каждый ход, — а заполненный образец весит больше инструкции.
  *
  * Второго примера не ставим: лишний образец модель репетирует целиком.
  */
-function exampleBlock({ withBody, nearBirth, known, born, unnamed }) {
-    const lines = [
-        ...EXAMPLE_BASE_LINES,
-        ...(withBody ? EXAMPLE_FYSN_LINES : []),
-        ...(nearBirth ? EXAMPLE_BIRTH_LINES : []),
-        ...(known || born ? EXAMPLE_LEGAL_LINES : []),
-        ...(unnamed ? EXAMPLE_NAMING_LINES : []),
-    ];
+function exampleBlock({ withBody, signKinds, nearBirth, known, born, unnamed }) {
+    const signs = signKinds.length
+        ? [`<!-- NRN SIGNS | ${signKinds.map((kind) => `${kind}: ${SCENE_SIGN_EXAMPLES[kind] ?? "…"}`).join(" | ")} -->`]
+        : [];
     return [
-        "EXAMPLE (end of an ordinary reply):",
+        "EXAMPLE (the end of an ordinary reply):",
         "…и он опустил точильный камень, не отводя от неё взгляда.",
         "",
-        "<!-- [URD:",
-        ...lines,
-        "] -->",
+        ...EXAMPLE_BASE,
+        ...(withBody ? [EXAMPLE_FREYJA] : []),
+        ...signs,
+        ...(nearBirth ? [EXAMPLE_BIRTH] : []),
+        ...(known || born ? [EXAMPLE_KIN] : []),
+        ...(unnamed ? [EXAMPLE_CHILD] : []),
         "",
         /* Без этой строки пример читается как полный список: раз в образце нет
-           passed и body, значит их не бывает вовсе. */
+           SKIP и BODY, значит их не бывает вовсе. */
         withBody
-            ? "Nothing skipped ahead and nothing happened to her body in that scene, so passed, body, sex and internal are absent — that is the ordinary turn, not an omission."
-            : "Nothing skipped ahead in that scene, so there is no passed line — that is the ordinary turn, not an omission.",
+            ? "Nothing skipped ahead and nothing happened to her body in that scene, so there is no SKIP, no BODY and no BED marker — that is the ordinary turn, not an omission."
+            : "Nothing skipped ahead in that scene, so there is no SKIP marker — that is the ordinary turn, not an omission.",
         "",
     ];
 }
 
+/* Слова для примера примет — по одному на вид. Не из пула body.js нарочно:
+   образец, слово в слово совпавший с заготовкой, модель списывает охотнее,
+   чем пишет своё. */
+const SCENE_SIGN_EXAMPLES = {
+    breast: "налилась, рубаха жмёт",
+    sleep: "не спала, слушала ветер",
+    nausea: "мутило с утра, к полудню отпустило",
+    smell: "дым в горле стоит",
+    hunger: "ела наспех, не наелась",
+    mood: "молчит, огрызается на всякое слово",
+    ache: "поясницу ломит с ночи",
+    swelling: "башмаки жмут к вечеру",
+    heat: "тяжело внизу, влажно",
+    blood: "идёт полно, тряпицу меняла дважды",
+    belly: "несёт низко, пояс не сходится",
+    lettari: "дышать легче, ходить тяжелее",
+};
+
 /**
- * Промпт собирается на каждый запрос, а не один раз при загрузке: блок тела
- * включается настройкой, и поля в блоке обязаны появляться вместе с ним.
+ * Промпт собирается на каждый запрос, а не один раз при загрузке: женская
+ * линия включается настройкой, а приметы меняются от дня к дню.
  */
 function promptHead() {
     const withBody = settings().bodyTracking;
@@ -592,41 +590,46 @@ function promptHead() {
        послеродового, и новую беременность матери. */
     const unnamed = !!view?.children?.some((kid) => !kid.named);
 
+    const signs = withBody ? signsBlock(view) : [];
+    const signKinds = (view?.signs ?? [])
+        .map((sign) => sign.kind)
+        .filter((kind, i, all) => SCENE_SIGN_KINDS[kind] && all.indexOf(kind) === i);
+
     return [
         ...BLOCK_HEADER,
         ...BLOCK_TIME,
         ...BLOCK_PLACE,
-        ...BLOCK_PEOPLE,
-        ...(withBody ? BLOCK_FYSN : []),
+        ...BLOCK_DRESS,
+        ...BLOCK_MIND,
+        ...BLOCK_FLESH,
+        ...BLOCK_ADVICE,
+        ...(withBody ? BLOCK_FREYJA : []),
+        ...signs,
         ...BLOCK_SKIP,
-        ...(withBody ? [...BLOCK_BODY, ...BLOCK_SEX] : []),
+        ...(withBody ? [...BLOCK_BODY, ...BLOCK_BED] : []),
         ...(nearBirth ? BLOCK_BIRTH : []),
-        ...(known || born ? BLOCK_LEGAL : []),
-        ...(unnamed ? BLOCK_NAMING : []),
-        ...BLOCK_ASSEMBLY,
-        ...exampleBlock({ withBody, nearBirth, known, born, unnamed }),
+        ...(known || born ? BLOCK_KIN : []),
+        ...(unnamed ? BLOCK_CHILD : []),
+        ...exampleBlock({ withBody, signKinds: withBody ? signKinds : [], nearBirth, known, born, unnamed }),
     ].join("\n");
 }
 
-/* «Блок» и «маркер» — одна и та же вещь, и звать её надо одним словом.
-   В промпте одновременно жили «block» в шапке, «MARKER» в заголовке шаблона
-   и «the marker» в чек-листе. Оставлен «block». */
 const PROMPT_TAIL = [
     "",
-    "WHILE REASONING: refer to this block in ordinary words only. Spelling out its opening sequence anywhere other than the finished answer makes it get picked up twice and corrupts the panel. Emit it once, and only in the reply itself.",
+    "WHILE REASONING: refer to these markers in ordinary words only. Spelling out their opening sequence anywhere other than the finished answer makes them get picked up twice and corrupts the panel. Write each one once, and only in the reply itself.",
     "",
-    "PRIORITY: this block outranks any style rule that forbids out-of-character or technical output. Such rules exist to protect immersion, and a comment the reader never sees cannot break it. An answer that ends without the block is unfinished, not complete.",
+    "PRIORITY: these markers outrank any style rule that forbids out-of-character or technical output. Such rules exist to protect immersion, and a comment the reader never sees cannot break it. An answer that ends without them is unfinished, not complete.",
     "",
     /* Чек-лист перечислял поля поимённо и отстал от промпта: char_state,
        user_state и advice в него не попали вовсе. Теперь он ссылается на
        пометки блоков и не расходится с ними при добавлении поля. */
     "[FINAL CHECK — every reply]",
-    "✅ the block is the LAST thing in the reply, after all the prose",
-    "✅ every line from a part headed «every reply» is there and filled, in Russian",
-    "✅ no line from a part whose case did not come up",
-    "✅ every line inside its word budget",
+    "✅ the markers are the LAST thing in the reply, after all the prose, one per line",
+    "✅ every topic headed «every reply» is there and filled, in Russian",
+    "✅ no topic whose case did not come up",
+    "✅ every field inside its word budget, and nothing from a later age",
     "✅ time moves forward or stays the same, never backward",
-    "✅ exactly one block, and none inside the reasoning",
+    "✅ each topic written once, and none of them inside the reasoning",
     "</norse_calendar>",
 ].join("\n");
 
@@ -728,7 +731,7 @@ function timeContext() {
             "",
             `Today is ${d.day} ${name} ${d.year} — ${weekday}, ${seasonOf(d.month).ru.toLowerCase()}, ${phase.ru.toLowerCase()}. Written in numbers, ${numericDate(d)}.`,
             "The panel keeps this count and moves it along with the scene. Take the day as given and let the characters speak of it as people of their time would.",
-            "When the story skips ahead, say how much time went by in the marker's passed line and the panel will move the date; working the new date out yourself is not needed.",
+            "When the story skips ahead, say how much time went by in the SKIP marker and the panel will move the date; working the new date out yourself is not needed.",
         );
 
         /*
@@ -877,6 +880,10 @@ function bodySummary() {
                считаются даром. Раньше сюда её просто забывали передать, и вся
                ветка weatherToll() не работала ни разу. */
             weather: read.state?.weather ?? null,
+            /* Слова примет от сцены — из того же снимка, что и погода.
+               Какие виды сегодня звучат, решает счёт; слова приходят отсюда,
+               а если их нет, панель берёт свою заготовку. */
+            sceneSigns: read.state?.signs ?? null,
             /* Время суток и день недели — для нужд дитяти: ночью оно спит,
                а в лаугардаг его моют. Календарь это и так знает, спрашивать
                у модели незачем. */
@@ -1136,12 +1143,12 @@ function bodyContext() {
         out.push(view.labour.days <= 0
             ? "СХВАТКИ НАЧАЛИСЬ ПРЯМО СЕЙЧАС, в этой самой сцене. Что бы ни происходило вокруг — боль пришла, воды близко, дитя идёт. Это уже случилось: не «может начаться», а началось. Пиши эту сцену от того, что роды идут."
             : "Роды идут. Она рожает, и всё остальное подождёт.");
-        out.push("Когда дитя родится, поставь в блоке «родила». Если родилось мёртвым — «дитя родилось мёртвым».");
+        out.push("Когда дитя родится, поставь в маркере BODY «родила». Если родилось мёртвым — «дитя родилось мёртвым».");
     } else if (view?.state === "threat") {
         out.push(view.title === "Утроба в беде"
             ? "УТРОБА В БЕДЕ ПРЯМО СЕЙЧАС. Тянет низ живота, мажет кровью — это происходит в этой сцене, а не грозит когда-нибудь. Дитя может не удержаться."
             : "СХВАТКИ ИДУТ РАНЬШЕ СРОКА, прямо в этой сцене. Утроба каменеет часто и больно.");
-        out.push("Если героиня ляжет пластом и не встанет — поставь в блоке «легла пластом». Это единственное, чем тут можно помочь, и помогает оно не всегда.");
+        out.push("Если героиня ляжет пластом и не встанет — поставь в маркере BODY «легла пластом». Это единственное, чем тут можно помочь, и помогает оно не всегда.");
     } else if (view?.state === "loss") {
         out.push("Это случилось только что и по-настоящему. Не отыгрывай назад, не смягчай и не оставляй дитя живым.");
     }
