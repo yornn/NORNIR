@@ -403,6 +403,50 @@ check("у léttari своя строка",
 check("приставки в тексте не осталось",
     termSigns(9).some((x) => /^Léttari/i.test(x.text)), false);
 
+console.log("\n=== Слова примет от сцены ===");
+
+/*
+ * Панель решает, о чём сегодня говорит тело; сцена подбирает к этому слова.
+ *
+ * Прежде слова брались из пула по шесть штук на вид: через две недели игры пул
+ * был весь виден, и панель твердила одно и то же — причём мимо сцены. Героиня
+ * всю ночь мёрзла в лодке, а панель писала «спит крепко, встаёт до света»,
+ * потому что по дню цикла положено.
+ */
+const signBody = { lastBleed: { year: 1015, month: 9, day: 5 } };
+const signDay = { year: 1015, month: 9, day: 7 };
+
+const fromTable = bodyView(signBody, signDay, {});
+const fromScene = bodyView(signBody, signDay, {
+    sceneSigns: {
+        breast: "соски саднит от рубахи",
+        sleep: "не спала, слушала ветер",
+        /* Вида нет в сегодняшнем наборе — слова должны отвалиться. */
+        nausea: "мутило с утра",
+    },
+});
+
+const textOf = (view, kind) => view.signs.find((x) => x.kind === kind)?.text;
+
+check("слова сцены встают вместо табличных",
+    textOf(fromScene, "breast"), "соски саднит от рубахи");
+check("и помечены как пришедшие из сцены",
+    fromScene.signs.find((x) => x.kind === "breast").fromScene, true);
+check("вид, о котором сцена смолчала, держит слово таблицы",
+    textOf(fromScene, "blood"), textOf(fromTable, "blood"));
+/* Счёт решает, каким приметам быть. Иначе героиня жаловалась бы на дурноту
+   в те дни, когда дурноты нет, и весь счёт стал бы украшением. */
+check("примета не своего дня выбрасывается",
+    fromScene.signs.some((x) => x.kind === "nausea"), false);
+check("состав примет от слов сцены не меняется",
+    fromScene.signs.map((x) => x.kind), fromTable.signs.map((x) => x.kind));
+check("без слов сцены вид остаётся прежним",
+    fromTable.signs.every((x) => !x.fromScene), true);
+/* Пустой панели не бывает: пул остаётся запасным на все виды сразу. */
+check("пустой словарь ничего не ломает",
+    bodyView(signBody, signDay, { sceneSigns: {} }).signs.map((x) => x.text),
+    fromTable.signs.map((x) => x.text));
+
 /*
  * Слова меняются, состав — нет.
  *
