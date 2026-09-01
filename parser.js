@@ -568,21 +568,136 @@ export const URD_MARKER_RE = /<!--\s*\[URD:([\s\S]*?)\]\s*-->/i;
 /* Оборванная генерация: маркер начался, но закрыться не успел. */
 const URD_MARKER_OPEN_RE = /<!--\s*\[URD:([\s\S]{10,4000})$/i;
 
-/** Обе формы маркера — для вырезания из текста сообщения. */
+/*
+ * ── Нынешний формат: по маркеру на тему ─────────────────────────────────────
+ *
+ *   <!-- NRN PLACE | weather: Мокрый снег | location: старая пристань -->
+ *
+ * Одна строка на тему, поля через «|», внутри поля обычное «имя: значение».
+ * Форма одна на все темы: выучил раз — применил везде.
+ *
+ * Почему не один общий блок, как было. В общем списке из двадцати строк
+ * условное поле выглядит ровно так же, как обязательное, и это стоило нам
+ * двух классов ошибок разом: редкие обязательные (advice, char_state)
+ * выпадали, а условные (midwife, faderni) заполнялись в обычный ход. Теперь
+ * у условной темы нет строки — нет и маркера, и само его отсутствие
+ * и есть ответ. Это сигнал куда сильнее пропущенной строки в списке.
+ *
+ * Второе: у каждой темы своя мера и свой тон, и сказать их можно только рядом
+ * с самой темой. В общем блоке правило «три-пять слов» читалось особенностью
+ * одного поля, а не мерой, которую держат все.
+ *
+ * Цена признаётся честно: синтаксиса в ответе стало больше, а чем чаще он
+ * мелькает, тем охотнее думающая модель выписывает его в рассуждениях. Если
+ * маркеры начнут появляться в думалке — смотреть сюда первым делом.
+ *
+ * Наследие. Старые чаты полны блоков `<!-- [URD: … ] -->`, и разбор их
+ * по-прежнему понимает: снимок состояния лежит в сообщении, но пересобрать
+ * его при правке текста надо из чего-то. Новый формат читается первым,
+ * старый — если нового нет.
+ */
+const NRN_TOPIC_RE = /<!--\s*NRN\s+([A-Z][A-Z0-9_]*)\s*\|([\s\S]*?)-->/gi;
+
+/* Оборванный маркер темы: генерацию срезало до `-->`. Берём до конца текста. */
+const NRN_TOPIC_OPEN_RE = /<!--\s*NRN\s+([A-Z][A-Z0-9_]*)\s*\|([\s\S]{0,2000})$/i;
+
+/*
+ * Темы и их поля.
+ *
+ * Внутри темы имена короткие — `user` вместо `user_attire`: тема уже сказала,
+ * о чём речь, и повторять её в имени поля значит платить за это в каждом
+ * ответе. Наружу поля уезжают под своими прежними именами, поэтому ни панель,
+ * ни движок тела о темах не знают вовсе.
+ */
+const NRN_TOPICS = {
+    TIME:   { eykt: "eykt" },
+    SKIP:   { passed: "passed" },
+    PLACE:  { weather: "weather", location: "location" },
+    DRESS:  { user: "user_attire", char: "char_attire" },
+    MIND:   { mood: "mood", thought: "thought" },
+    FLESH:  { char: "char_state", user: "user_state" },
+    /* COUNSEL — нынешнее имя темы; ADVICE держим как псевдоним: тема
+       переименовывалась, а чаты с прежним именем остались. */
+    COUNSEL: { advice: "advice" },
+    ADVICE: { advice: "advice" },
+    FREYJA: { desire: "desire" },
+    /* Приметы: имя поля — вид приметы, и он же ключ к знаку в панели. */
+    SIGNS:  { breast: "sign_breast", sleep: "sign_sleep", nausea: "sign_nausea",
+              smell: "sign_smell", hunger: "sign_hunger",
+              /* Внутри своей темы «нрав» зовётся так же, как её вид, — mood.
+                 С настроением {{char}} он не спорит: разбор идёт по темам,
+                 и одно и то же имя в MIND и в SIGNS ведёт в разные поля.
+                 temper — псевдоним на случай, если модель возьмёт его сама. */
+              mood: "sign_mood", temper: "sign_mood",
+              ache: "sign_ache", swelling: "sign_swelling", heat: "sign_heat",
+              blood: "sign_blood", belly: "sign_belly", lettari: "sign_lettari" },
+    BODY:   { body: "body" },
+    BED:    { sex: "sex", internal: "internal" },
+    BIRTH:  { midwife: "midwife", women: "women", charms: "charms", gear: "gear" },
+    KIN:    { faderni: "faderni", rank: "child_rank" },
+    CHILD:  { name: "child_name" },
+};
+
+/** Поле внутри маркера темы: «имя: значение», разделитель между полями — «|». */
+const NRN_FIELD_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([\s\S]+?)\s*$/;
+
+/**
+ * Собирает поля из всех маркеров тем в один плоский словарь.
+ *
+ * Плоский — намеренно: дальше он попадает в ту же раскладку полей, что и
+ * старый общий блок, и вся разница между форматами кончается здесь.
+ *
+ * Тема, которой нет в таблице, пропускается молча. Соседние трекеры пишут
+ * в чат свои комментарии, и падать на чужом маркере расширение не должно.
+ */
+function collectNrnFields(text) {
+    const s = String(text ?? "");
+    const fields = {};
+    let found = false;
+
+    const takeTopic = (topic, body) => {
+        const map = NRN_TOPICS[topic.toUpperCase()];
+        if (!map) return;
+        found = true;
+        for (const chunk of body.split("|")) {
+            const kv = chunk.match(NRN_FIELD_RE);
+            if (!kv) continue;
+            const name = map[kv[1].toLowerCase()];
+            if (name) fields[name] = kv[2].trim();
+        }
+    };
+
+    NRN_TOPIC_RE.lastIndex = 0;
+    let m;
+    while ((m = NRN_TOPIC_RE.exec(s)) !== null) takeTopic(m[1], m[2]);
+
+    /* Оборванный хвост разбираем только если закрытых маркеров не нашлось
+       вовсе: иначе последний закрытый маркер разобрался бы дважды. */
+    if (!found) {
+        const open = s.match(NRN_TOPIC_OPEN_RE);
+        if (open) takeTopic(open[1], open[2]);
+    }
+
+    return found ? fields : null;
+}
+
+/** Все формы маркера — для вырезания из текста сообщения. */
 const URD_STRIP_RES = [
+    /<!--\s*NRN\s+[A-Z][A-Z0-9_]*\s*\|[\s\S]*?-->/gi,
+    /<!--\s*NRN\s+[A-Z][A-Z0-9_]*\s*\|[\s\S]*$/i,
     /<!--\s*\[URD:[\s\S]*?\]\s*-->/gi,
     /<!--\s*\[URD:[\s\S]*$/i,
 ];
 
-/** Внутренности маркера, либо null. */
+/** Внутренности старого общего маркера, либо null. */
 function extractMarker(text) {
     const s = String(text ?? "");
     return (s.match(URD_MARKER_RE) ?? s.match(URD_MARKER_OPEN_RE))?.[1] ?? null;
 }
 
-/** Есть ли в тексте маркер календаря. */
+/** Есть ли в тексте наш маркер — в любой из двух форм. */
 export function hasUrd(text) {
-    return extractMarker(text) !== null;
+    return collectNrnFields(text) !== null || extractMarker(text) !== null;
 }
 
 /**
@@ -609,6 +724,10 @@ function emptyResult() {
         midwife: null, women: null, charms: null, gear: null,
         faderni: null, childRank: null, childName: null,
         sex: null, internal: null,
+        /* Приметы от сцены: вид → слова. Панель решает, какие виды сегодня
+           звучат, сцена подбирает к ним слова. Пустой объект, а не null:
+           отсутствие примет — обычный ход, а не отказ разбора. */
+        signs: {},
     };
 }
 
@@ -839,7 +958,10 @@ export function hasTime(r) {
 export function hasDetails(r) {
     if (!r) return false;
     return !!(r.weather || r.location || r.userAttire || r.charMood || r.charAttire || r.thought
-        || r.charState || r.userState || r.advice || r.desire);
+        || r.charState || r.userState || r.advice || r.desire
+        /* Одни приметы — тоже сцена: ответ, где уцелел только маркер SIGNS,
+           терять незачем. */
+        || Object.keys(r.signs ?? {}).length > 0);
 }
 
 const FIELD_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*$/;
@@ -878,10 +1000,36 @@ function parseFields(inner) {
  * @returns {object|null} Результат разбора или null, если маркера нет либо он пуст
  */
 export function parseUrd(rawText) {
+    /*
+     * Новый формат читается первым, старый — если нового нет.
+     *
+     * Смешивать их в одном сообщении нельзя, и это не ограничение, а решение:
+     * при правке текста руками в чате легко остаться с обоими, и тогда
+     * непонятно, какой из них главнее. Побеждает нынешний.
+     */
+    const nrn = collectNrnFields(rawText);
+    if (nrn) return fieldsToResult(nrn, "");
+
     const inner = extractMarker(rawText);
     if (inner === null) return null;
 
     const { fields, cleanInner } = parseFields(inner);
+    return fieldsToResult(fields, cleanInner);
+}
+
+/**
+ * Раскладка полей по результату — одна на оба формата.
+ *
+ * Здесь кончается вся разница между «маркер на тему» и старым общим блоком:
+ * выше они превращаются в один плоский словарь, ниже начинается движок,
+ * который о маркерах не знает ничего.
+ *
+ * @param {object} fields Плоский словарь `имя поля → строка`
+ * @param {string} cleanInner Тело старого блока без плейсхолдеров — запасная
+ *   площадка для поиска даты. У нового формата даты нет вовсе, и сюда
+ *   приезжает пустая строка.
+ */
+function fieldsToResult(fields, cleanInner) {
     const result = emptyResult();
 
     /* --- дата --- */
@@ -956,6 +1104,19 @@ export function parseUrd(rawText) {
     result.body = parseBodyEvents(clean(fields.body));
     result.sex = parseYesNo(clean(fields.sex));
     result.internal = parseYesNo(clean(fields.internal));
+
+    /*
+     * Приметы от сцены. Ключ — вид приметы, тот же, которым панель зовёт знак.
+     *
+     * Какие виды сегодня звучат, по-прежнему решает счёт: сцена не вправе
+     * завести примету, которой не время, и лишние ключи движок тела просто
+     * не найдёт, куда приложить. За сценой остаются слова.
+     */
+    for (const [name, value] of Object.entries(fields)) {
+        if (!name.startsWith("sign_")) continue;
+        const text = clean(value);
+        if (text) result.signs[name.slice(5).replace(/_/g, "-")] = text;
+    }
 
     return isEmptyResult(result) ? null : result;
 }

@@ -541,6 +541,101 @@ check("фазы Луны покрывают цикл без дыр",
 check("последняя фаза Луны замыкает цикл", MOON_PHASES.at(-1).to, 29.53);
 
 /* ============================================================
+ * 4b. МАРКЕРЫ ПО ТЕМАМ
+ *
+ * Нынешний формат: одна строка на тему, поля через «|». Старый общий блок
+ * `[URD: … ]` разбирается по-прежнему — в живых чатах его полно, и терять
+ * на нём историю нельзя.
+ * ============================================================ */
+
+console.log("\n=== Маркеры по темам ===");
+
+const NRN_FULL = [
+    "Проза сцены.",
+    "",
+    "<!-- NRN TIME | eykt: хадеги -->",
+    "<!-- NRN PLACE | weather: Мокрый снег, северный ветер | location: Побережье фьорда -->",
+    "<!-- NRN DRESS | user: Шерстяное платье | char: Волчьи шкуры -->",
+    "<!-- NRN MIND | mood: задумчивый | thought: Она знает больше, чем говорит. -->",
+    "<!-- NRN FLESH | char: продрог, ломит плечо | user: устала, ноги сбиты -->",
+    "<!-- NRN COUNSEL | advice: Отвар и покой до утра -->",
+    "<!-- NRN FREYJA | desire: не до того -->",
+    "<!-- NRN SIGNS | breast: соски саднит | sleep: не спала, слушала ветер -->",
+    "<!-- NRN BODY | body: кровь пришла -->",
+    "<!-- NRN BED | sex: да | internal: нет -->",
+    "<!-- NRN SKIP | passed: три дня -->",
+    "<!-- NRN BIRTH | midwife: Арнхейд, полдня пути | women: три -->",
+    "<!-- NRN KIN | faderni: признано | rank: скирборинн -->",
+    "<!-- NRN CHILD | name: Хельга -->",
+].join("\n");
+
+const full = parseUrd(NRN_FULL);
+
+check("эйкта берётся из своей темы", full.hour, 13);
+check("погода и место — из PLACE", [full.weather, full.location],
+    ["Мокрый снег, северный ветер", "Побережье фьорда"]);
+/* Внутри темы имена короткие: тема уже сказала, о чём речь. Наружу поля
+   уезжают под прежними именами, и движок о темах не знает вовсе. */
+check("одежда: user/char → userAttire/charAttire", [full.userAttire, full.charAttire],
+    ["Шерстяное платье", "Волчьи шкуры"]);
+check("тело: char/user → charState/userState", [full.charState, full.userState],
+    ["продрог, ломит плечо", "устала, ноги сбиты"]);
+check("настроение и мысль — из MIND", [full.charMood, full.thought],
+    ["задумчивый", "Она знает больше, чем говорит."]);
+check("совет — из COUNSEL", full.advice, "Отвар и покой до утра");
+check("тяга — из FREYJA", full.desire, "не до того");
+check("событие тела разобрано", full.body, ["bleedStart"]);
+check("близость разобрана", [full.sex, full.internal], [true, false]);
+check("таймскип разобран", full.passed, 3);
+check("дозор родов разобран", [full.midwife, full.women], ["Арнхейд, полдня пути", "три"]);
+check("род: rank → childRank", [full.faderni, full.childRank], ["признано", "скирборинн"]);
+check("дитя: name → childName", full.childName, "Хельга");
+check("приметы приезжают словарём по видам", full.signs,
+    { breast: "соски саднит", sleep: "не спала, слушала ветер" });
+
+/* Проза не должна нести на себе ни одного маркера. */
+check("вся проза остаётся чистой", stripUrd(NRN_FULL), "Проза сцены.");
+
+/* Тема без маркера — обычный ход, а не отказ разбора. Ровно ради этого
+   формат и переделывался: отсутствие маркера само по себе есть ответ. */
+const ordinary = parseUrd("<!-- NRN TIME | eykt: моргун -->\n<!-- NRN FREYJA | desire: тянет к нему -->");
+check("темы, которых нет, остаются пустыми",
+    [ordinary.sex, ordinary.passed, ordinary.midwife, ordinary.body], [null, null, null, null]);
+check("а те, что есть, разобраны", [ordinary.hour, ordinary.desire], [7, "тянет к нему"]);
+
+/* «Нрав» внутри SIGNS зовётся mood — так же, как настроение {{char}} в MIND.
+   Разбор идёт по темам, поэтому одно имя ведёт в два разных поля. */
+const bothMoods = parseUrd("<!-- NRN MIND | mood: весел -->\n<!-- NRN SIGNS | mood: молчит, огрызается -->");
+check("mood в MIND — настроение", bothMoods.charMood, "весел");
+check("mood в SIGNS — нрав", bothMoods.signs.mood, "молчит, огрызается");
+check("temper — псевдоним нрава",
+    parseUrd("<!-- NRN SIGNS | temper: тиха -->").signs.mood, "тиха");
+
+/* Оборванная генерация: маркер начался, но `-->` не успел. */
+const torn = parseUrd("Проза.\n\n<!-- NRN PLACE | weather: Морось | location: брод");
+check("оборванный маркер разбирается", [torn.weather, torn.location], ["Морось", "брод"]);
+check("и вырезается из прозы", stripUrd("Проза.\n\n<!-- NRN PLACE | weather: Морось"), "Проза.");
+
+/* Соседние трекеры пишут в чат свои комментарии. Падать на них нельзя,
+   и вырезать их — тоже: они не наши. */
+const alien = "Проза.\n\n<!-- SomeTracker: x=1 -->\n<!-- NRN TIME | eykt: отта -->";
+check("чужой маркер не мешает разбору", parseUrd(alien).hour, 4);
+check("и остаётся в тексте нетронутым",
+    stripUrd(alien), "Проза.\n\n<!-- SomeTracker: x=1 -->");
+check("незнакомая тема пропускается молча",
+    parseUrd("<!-- NRN WEATHERWAX | mood: злой -->"), null);
+
+/* Наследие: старые чаты полны общих блоков, и они обязаны читаться. */
+const legacy = parseUrd("<!-- [URD:\neykt: наттмал\nweather: Ясно, морозно\nadvice: Покой\n] -->");
+check("старый общий блок разбирается", [legacy.hour, legacy.weather, legacy.advice],
+    [22, "Ясно, морозно", "Покой"]);
+check("и вырезается из прозы",
+    stripUrd("Текст.\n\n<!-- [URD:\neykt: наттмал\n] -->"), "Текст.");
+check("hasUrd видит обе формы",
+    [hasUrd("<!-- NRN TIME | eykt: отта -->"), hasUrd("<!-- [URD:\neykt: отта\n] -->"), hasUrd("просто текст")],
+    [true, true, false]);
+
+/* ============================================================
  * 5. SUMMARY
  * ============================================================ */
 
