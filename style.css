@@ -4995,6 +4995,24 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-strain"]::before       { content: "тягота"; }
 #nrn-widget[data-skin="thread"] .nrn-icon[data-icon="sign-weather-toll"]::before { content: "погода"; }
 
+/*
+ * Тяга. Ярлык у неё не из знака, а свой: слово Fýsn кликабельно и по щелчку
+ * становится «тягой», а `::before` щёлкнуть нельзя. Поэтому здесь повторена
+ * раскладка ярлыка-из-знака — тот же столбец в 74px и тот же шрифт, — чтобы
+ * строка встала в ряд с приметами, а не выбилась из него.
+ */
+#nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact-label {
+    flex: none;
+    width: 74px;
+    margin: 0;
+    font-family: "Cormorant Unicase", serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--nrn-th-label);
+}
+
 /* Строка под нитью без своей подписи — «дитя с кошку · ждать к середине
    гои». Что это за строка, решает её знак: срок дитяти, кровь не в срок
    или последнее, чем ещё можно помочь. */

@@ -126,11 +126,20 @@ check("до открытия лоно закрыто",
 
 console.log("\n=== Слова ===");
 
+/*
+ * Числа счёта в строку для модели не идут.
+ *
+ * Стояло «день 3 из 28»: женщине XI века такое число взять неоткуда, а модель,
+ * увидев его, принимается считать вслух. Фазу называет статус, и этого хватает.
+ * Панель числа по-прежнему знает — они в `count`, и он проверен выше.
+ */
 check("в дни крови",
     cyclePhrase(cycleSummary({ lastBleed: bleed }, { year: 1015, month: 9, day: 7 }, 28)),
-    "Тело {{user}}: день 3 из 28. Кровь идёт. Тело холодеет и очищается. Дитя сейчас не возьмётся. Силы покидают утробу.");
+    "Тело {{user}}: Кровь идёт. Тело холодеет и очищается. Дитя сейчас не возьмётся. Силы покидают утробу.");
 check("после крови",
-    cyclePhrase(cycleSummary({ lastBleed: bleed }, { year: 1015, month: 9, day: 12 }, 28)).startsWith("Тело {{user}}: день 8 из 28. Тело сохнет."), true);
+    cyclePhrase(cycleSummary({ lastBleed: bleed }, { year: 1015, month: 9, day: 12 }, 28)).startsWith("Тело {{user}}: Тело сохнет."), true);
+check("и ни одного числа счёта",
+    /день \d+ из \d+/.test(cyclePhrase(cycleSummary({ lastBleed: bleed }, { year: 1015, month: 9, day: 12 }, 28))), false);
 check("без крови в истории", String(cyclePhrase(cycleSummary({}, bleed, 28))), "null");
 
 console.log("\n=== Перенос по чату ===");
@@ -380,13 +389,19 @@ console.log("\n=== Приметы по сроку ===");
 check("на первой части примет нет", termSigns(1).length, 0);
 check("к шестой части их пятеро", termSigns(6).length, 5);
 check("к девятой — все восемь", termSigns(9).length, 8);
+/* Ищем по виду, а не по тексту: слово «Léttari» из самих строк убрано —
+   в «Доме и нитях» ярлык строки рисует CSS по виду приметы, и приставка
+   выходила вторым ярлыком подряд. Вид и есть имя приметы. */
 check("léttari появляется на девятой",
-    termSigns(9).some((x) => x.text.startsWith("Léttari")), true);
-check("и не раньше", termSigns(8).some((x) => x.text.startsWith("Léttari")), false);
+    termSigns(9).some((x) => x.kind === "lettari"), true);
+check("и не раньше", termSigns(8).some((x) => x.kind === "lettari"), false);
 /* Вид приметы — ключ к знаку в icons/sign-*.svg, без него панель рисует
    заглушку и все приметы выглядят одинаково. */
-check("у léttari свой вид",
-    termSigns(9).find((x) => x.text.startsWith("Léttari")).kind, "lettari");
+check("у léttari своя строка",
+    termSigns(9).filter((x) => x.kind === "lettari").length, 1);
+/* И ни одна строка больше не называет свой вид сама. */
+check("приставки в тексте не осталось",
+    termSigns(9).some((x) => /^Léttari/i.test(x.text)), false);
 
 /*
  * Слова меняются, состав — нет.

@@ -381,12 +381,16 @@ const TERM_SIGNS = [
             "Спать может только на боку, и то худо",
         ],
     },
+    /* Слово «Léttari» из самих строк убрано: в «Доме и нитях» ярлык строки
+       рисует CSS по виду приметы (`sign-lettari` → «léttari»), и приставка
+       выходила вторым разом — «LÉTTARI · Léttari: дитя опустилось». Вид
+       приметы и есть её имя; называть его ещё и внутри текста незачем. */
     {
         id: "lettari", kind: "lettari", from: 9, to: 9,
         texts: [
-            "Léttari: дитя опустилось, дышать легче, ходить тяжелее",
-            "Léttari: живот сполз низко, под грудью стало вольно",
-            "Léttari: дитя встало в кости, давит книзу",
+            "Дитя опустилось, дышать легче, ходить тяжелее",
+            "Живот сполз низко, под грудью стало вольно",
+            "Дитя встало в кости, давит книзу",
         ],
     },
     {
@@ -1667,16 +1671,27 @@ export function sexOf(pregnancy) {
  * разбирала вслух, что такое vaxandi. Больше так не делаем — в промпт уходят
  * статус и пояснение, названия фаз остаются украшением панели.
  */
+/*
+ * Числа счёта отсюда убраны, и это правило раскрытия, а не экономия.
+ *
+ * Стояло «день 3 из 28» и «ношение 5 из 9». Взять такое женщине XI века
+ * неоткуда — ни счёта дней, ни срока в неделях у неё нет, — а модель, увидев
+ * число, принимается им считать: складывать, переводить, спорить с собой
+ * вслух. Слова говорят то же самое и ничего не просят посчитать: фаза названа
+ * в статусе, срок — в стадии и в «ждать к середине гои», размер — в «дитя
+ * с кошку». Панель числа по-прежнему знает и по-прежнему показывает; наружу,
+ * к модели, они не идут.
+ */
 export function cyclePhrase(summary, status = summary?.status, hint = summary?.hint) {
     if (!summary) return null;
-    return `Тело {{user}}: день ${summary.day} из ${summary.length}. ${status} ${hint}`;
+    return `Тело {{user}}: ${status} ${hint}`;
 }
 
 /** Строка про беременность для промпта — тоже обычными словами. */
 export function pregnancyPhrase(summary) {
     if (!summary) return null;
     const bits = [`Тело {{user}}: ${summary.stage.knownStatus ?? summary.stage.status}`];
-    bits.push(`Ношение ${summary.part} из ${TERM_PARTS}, дитя ${summary.size}.`);
+    bits.push(`Дитя ${summary.size}.`);
     if (summary.due) bits.push(`Ждать ${summary.due}.`);
     if (summary.guess) bits.push(`Толкуют: ${summary.guess.text} — но верно ли, ведают норны.`);
     bits.push(`${summary.sign}.`);
@@ -1958,8 +1973,11 @@ export function bodyView(body, today, opts = {}) {
             ].filter(Boolean),
             kicks: kickWatch(body.pregnancy, today, pregnancy.quickened),
             advice: inLabour ? MIDWIFE.hridir : pregnancy.midwife,
+            /* И здесь без числа: сколько частей выношено, знает панель, а
+               рожающей женщине это не говорит ничего. Раньше срока или в срок —
+               скажет стадия, и скажет словами. */
             phrase: inLabour
-                ? `Тело {{user}}: схватки начались, дитя идёт. Ношение ${Math.min(pregnancy.part, TERM_PARTS)} из ${TERM_PARTS}.`
+                ? `Тело {{user}}: схватки начались, дитя идёт. ${pregnancy.stage.status}`
                 : pregnancyPhrase(pregnancy) + (oddLine ? ` ${oddLine}.` : ""),
             children,
             draught,

@@ -605,7 +605,7 @@ function emptyResult() {
         year: null, month: null, day: null, hour: null, minute: null,
         weather: null, location: null, userAttire: null,
         charMood: null, charAttire: null, thought: null, passed: null, body: null,
-        charState: null, userState: null, advice: null,
+        charState: null, userState: null, advice: null, desire: null,
         midwife: null, women: null, charms: null, gear: null,
         faderni: null, childRank: null, childName: null,
         sex: null, internal: null,
@@ -839,7 +839,7 @@ export function hasTime(r) {
 export function hasDetails(r) {
     if (!r) return false;
     return !!(r.weather || r.location || r.userAttire || r.charMood || r.charAttire || r.thought
-        || r.charState || r.userState || r.advice);
+        || r.charState || r.userState || r.advice || r.desire);
 }
 
 const FIELD_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*$/;
@@ -939,6 +939,10 @@ export function parseUrd(rawText) {
     result.charState = clean(fields.char_state);
     result.userState = clean(fields.user_state);
     result.advice = clean(fields.advice);
+    /* Тяга (fýsn) — своё желание героини, а не состояние лона. Лоно считает
+       панель по дню цикла, тягу решает сцена: беременная, хворая, в горе или
+       в ссоре женщина хочет иначе, чем велит счёт дней. */
+    result.desire = clean(fields.desire);
     /* Готовность к родам и правовой слой. Спрашиваются не всегда, а только
        когда к месту, — поля просто отсутствуют в остальное время. */
     result.midwife = clean(fields.midwife);
