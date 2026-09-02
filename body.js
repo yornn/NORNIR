@@ -225,11 +225,21 @@ export const PREGNANCY_STAGES = [
     },
 ];
 
-/** Размер дитяти по части срока — по хозяйству, без заморских фруктов. */
+/*
+ * Размер по части срока — рукой, как и мерили в этом веке.
+ *
+ * Прежде мерили живностью: с куропаточье яйцо, с ягнёнка, с кошку. Это не
+ * средневековье, это нынешние приложения для беременных, только с животными
+ * вместо фруктов, — и звучит соответственно.
+ *
+ * Рука же была настоящей мерой и остаётся понятной без пояснений: ноготь,
+ * палец, ладонь, пядь (от большого пальца до мизинца, ≈18 см), локоть
+ * (≈47 см — рост новорождённого). Ряд идёт от зерна к локтю ровно, одним
+ * регистром, и слово «дитя» в нём не нужно: в панели над ним стоит «размер».
+ */
 const FETUS_SIZE = [
-    "с зерно ячменя", "с лесной орех", "с яйцо куропатки", "с куриное яйцо",
-    "с гусиное яйцо", "с кулак", "с лебединое яйцо", "с новорождённого ягнёнка",
-    "с кошку",
+    "с ячменное зерно", "с ноготь", "в палец", "в два пальца", "с ладонь",
+    "в пядь", "в полторы пяди", "в две пяди", "в локоть",
 ];
 
 /**
@@ -1691,7 +1701,7 @@ export function cyclePhrase(summary, status = summary?.status, hint = summary?.h
 export function pregnancyPhrase(summary) {
     if (!summary) return null;
     const bits = [`Тело {{user}}: ${summary.stage.knownStatus ?? summary.stage.status}`];
-    bits.push(`Дитя ${summary.size}.`);
+    bits.push(`Дитя ростом ${summary.size}.`);
     if (summary.due) bits.push(`Ждать ${summary.due}.`);
     if (summary.guess) bits.push(`Толкуют: ${summary.guess.text} — но верно ли, ведают норны.`);
     bits.push(`${summary.sign}.`);
@@ -1745,18 +1755,18 @@ export function daysSinceBleeding(lastBleed, today) {
  * `cycleSigns` отбирают их по части срока и дню цикла. За сценой только слова.
  */
 export const SCENE_SIGN_KINDS = {
-    breast:   { ru: "грудь",   about: "тяжесть, боль, соски, молозиво" },
-    sleep:    { ru: "сон",     about: "как спала, как встала, клонит ли днём" },
-    nausea:   { ru: "дурнота", about: "мутит, рвёт, что держит желудок" },
-    smell:    { ru: "запахи",  about: "чего не выносит, что чует раньше других" },
-    hunger:   { ru: "голод",   about: "на что тянет, ест ли, наедается ли" },
-    mood:     { ru: "нрав",    about: "тяжела или легка на нрав, зла, слезлива, спора в работе" },
-    ache:     { ru: "ломота",  about: "низ живота, поясница, ноги, кости" },
-    swelling: { ru: "отёки",   about: "ноги, руки, лицо, тесна ли обувь" },
-    heat:     { ru: "лоно",    about: "влага, жар, тяжесть внизу — тело, не желание" },
-    blood:    { ru: "кровь",   about: "обильна ли, какова, часто ли менять тряпицу" },
-    belly:    { ru: "живот",   about: "как несёт, как сидит пояс, куда сполз" },
-    lettari:  { ru: "léttari", about: "дитя опустилось: дышать легче, ходить тяжелее" },
+    breast:   { ru: "грудь",   about: "weight, soreness, the nipples, first milk" },
+    sleep:    { ru: "сон",     about: "how she slept, how she rose, whether the day drags her under" },
+    nausea:   { ru: "дурнота", about: "sickness, what comes back up, what stays down" },
+    smell:    { ru: "запахи",  about: "what she cannot stand, what she catches before anyone else" },
+    hunger:   { ru: "голод",   about: "what she craves, whether she eats, whether it is enough" },
+    mood:     { ru: "нрав",    about: "heavy or light in temper, sharp, tearful, quick at work" },
+    ache:     { ru: "ломота",  about: "the low belly, the back, the legs, the bones" },
+    swelling: { ru: "отёки",   about: "feet, hands, face, whether the shoes still fit" },
+    heat:     { ru: "лоно",    about: "wet, heat, weight low down — the body, not the wanting" },
+    blood:    { ru: "кровь",   about: "how heavy, what it looks like, how often she must change the cloth" },
+    belly:    { ru: "живот",   about: "how she carries it, where the belt sits, how far it has dropped" },
+    lettari:  { ru: "léttari", about: "the child has dropped: easier to breathe, harder to walk" },
 };
 
 /**
@@ -2014,11 +2024,23 @@ function bodyViewInner(body, today, opts = {}) {
                     ? "Дитя идёт недоношенным. Выживет ли — как норны положат."
                     : "Роды идут. Воду греют, повитуху зовут, одной оставаться нельзя.")
                 : (pregnancy.stage.knownHint ?? pregnancy.stage.hint),
-            /* Ждать начинают от шевеления: до него повитухе считать нечего. */
-            extra: pregnancy.due
-                ? `Дитя ${pregnancy.size} · ждать ${pregnancy.due}`
-                : `Дитя ${pregnancy.size}`,
-            extraIcon: "body-due",
+            /*
+             * Срок и размер — двумя полями, а не одной склеенной строкой.
+             *
+             * Стояло «Дитя с кошку · ждать к середине гормануда» одной строкой
+             * с одним знаком. Это две разные вещи: одна о времени, другая
+             * о теле, и в панели они теперь стоят своими строками в столбце
+             * ношения. Слово «дитя» ушло: над строкой и так написано, о чём она.
+             *
+             * Ждать начинают от шевеления: до него повитухе считать нечего,
+             * поэтому `due` может и не быть, а `size` есть всегда.
+             */
+            size: pregnancy.size,
+            due: pregnancy.due ?? null,
+            /* `extra` остаётся под кровь не в срок — как и в прочих состояниях,
+               чтобы одно поле не значило в разных местах разное. */
+            extra: oddLine,
+            extraIcon: "sign-odd-blood",
             /* Отец, если назван. Молчание тут значимо: в этом сеттинге
                отцовство не биология, а признание, и «не назван» — статус.
                Отдаём его отдельно от гадания: это разные вещи, и в панели
