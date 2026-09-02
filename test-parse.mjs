@@ -564,7 +564,7 @@ const NRN_FULL = [
     "<!-- NRN BODY | body: кровь пришла -->",
     "<!-- NRN BED | sex: да | internal: нет -->",
     "<!-- NRN SKIP | passed: три дня -->",
-    "<!-- NRN BIRTH | midwife: Арнхейд, полдня пути | women: три -->",
+    "<!-- NRN BIRTH | midwife: Арнхейд, полдня пути -->",
     "<!-- NRN KIN | faderni: признано | rank: скирборинн -->",
     "<!-- NRN CHILD | name: Хельга -->",
 ].join("\n");
@@ -586,8 +586,26 @@ check("совет — из COUNSEL", full.advice, "Отвар и покой до
 check("тяга — из FREYJA", full.desire, "не до того");
 check("событие тела разобрано", full.body, ["bleedStart"]);
 check("близость разобрана", [full.sex, full.internal], [true, false]);
+/* Промпт просит yes / no / unknown — по-английски, как и всё остальное в нём.
+   Разбор принимает оба языка: старые чаты полны русского «да». */
+check("да и yes значат одно",
+    [parseUrd("<!-- NRN BED | sex: yes | internal: no -->").sex,
+     parseUrd("<!-- NRN BED | sex: yes | internal: no -->").internal,
+     parseUrd("<!-- NRN BED | sex: да | internal: нет -->").sex,
+     parseUrd("<!-- NRN BED | sex: да | internal: нет -->").internal],
+    [true, false, true, false]);
+check("unknown и неизвестно — обе пустота, а не «нет»",
+    [parseUrd("<!-- NRN BED | sex: yes | internal: unknown -->").internal,
+     parseUrd("<!-- NRN BED | sex: да | internal: неизвестно -->").internal],
+    [null, null]);
 check("таймскип разобран", full.passed, 3);
-check("дозор родов разобран", [full.midwife, full.women], ["Арнхейд, полдня пути", "три"]);
+check("дозор родов разобран", full.midwife, "Арнхейд, полдня пути");
+/* Женщин в доме, обереги и наготове убраны отовсюду: в панели они занимали
+   половину листа, а говорили мало. Поля, которых нет в таблице тем,
+   пропускаются молча — как и всякая незнакомая тема. */
+check("убранные поля не разбираются",
+    Object.keys(parseUrd("<!-- NRN BIRTH | midwife: нет | women: три | charms: молот | gear: пелёнки -->"))
+        .filter((k) => ["women", "charms", "gear"].includes(k)), []);
 check("род: rank → childRank", [full.faderni, full.childRank], ["признано", "скирборинн"]);
 check("дитя: name → childName", full.childName, "Хельга");
 check("приметы приезжают словарём по видам", full.signs,

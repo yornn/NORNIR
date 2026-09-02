@@ -285,16 +285,27 @@ const BLOCK_TIME = [
 const BLOCK_PLACE = [
     "[PLACE — every reply]",
     "weather — what the sky and the air are doing. Two to six words. What a person standing outside would feel and see: wind, wet, cold, light. Not a forecast, not a mood, not a description of the landscape.",
-    "location — where the scene stands, as precisely as the prose allows. Two to six words. Name the place, and the part of it if the prose gave one: «Длинный дом, у очага», «Побережье фьорда, старая пристань». Not what happens there, not who is there.",
+    "location — where the scene stands, as precisely as the prose allows. Two to six words. Name the place, and the part of it the prose gave. Not what happens there, not who is there.",
     "→ NRN PLACE | weather: <the sky and the air> | location: <where the scene stands>",
     "",
 ];
 
+/*
+ * Одежда — самый короткий блок в промпте, и намеренно.
+ *
+ * Здесь у нас нет своего знания, и учить модели нечему: во что одеты, она
+ * только что написала сама. Хуже того, у пользователя стоит расширение
+ * гардероба, которое диктует одежду своим блоком, — и наши рамки заставляли
+ * модель переписывать чужие данные под нашу мерку. Два расширения тянули одну
+ * строку в разные стороны.
+ *
+ * Осталось то, чего без вопроса не узнать: во что одеты СЕЙЧАС.
+ */
 const BLOCK_DRESS = [
     "[DRESS — every reply]",
-    "Cloth and cut, nothing else. Two to six words each. Name the garments as they are worn right now, and carry over what the scene did not change. Not how they sit, not how they suit anyone, not what they cost, not what they say about the wearer. Stripped bare is also an answer: «ничего», «нагая».",
-    "user — what {{user}} is wearing.",
-    "char — what {{char}} is wearing.",
+    "What each of them is wearing at this point in the scene.",
+    "user — {{user}}'s clothing.",
+    "char — {{char}}'s clothing.",
     "→ NRN DRESS | user: <{{user}}'s clothing> | char: <{{char}}'s clothing>",
     "",
 ];
@@ -322,7 +333,7 @@ const BLOCK_FLESH = [
    в нём отдельно, помимо общего правила в шапке. */
 const BLOCK_ADVICE = [
     "[COUNSEL — every reply]",
-    "advice — what a wise woman of this age would tell {{user}} right now. One short sentence, spoken to her. Look both at what she is doing in the scene and at how her body fares: chopping wood while heavy with child earns a word about resting. Speak in the remedies of the age — отвар, покой, тёплое питьё, не подымать тяжёлого, натопить баню, сходить к знающей. Nothing from later ages: no medicines, no physicians, no measured hours of sleep, no counting of days.",
+    "advice — what a wise woman of this age would tell {{user}} right now. One short sentence, spoken to her. Look both at what she is doing in the scene and at how her body fares: chopping wood while heavy with child earns a word about resting. Her remedies are the ones this age had — brewed herbs, rest, warmth, food, the bath-house, staying off heavy work, sending for someone who knows. Nothing from later ages: no medicines, no physicians, no measured hours of sleep, no counting of days.",
     "→ NRN COUNSEL | advice: <a word of counsel fit for the age>",
     "",
 ];
@@ -343,9 +354,12 @@ const BLOCK_ADVICE = [
  */
 const BLOCK_FREYJA = [
     "[FREYJA — every reply]",
-    "desire — how much {{user}} wants closeness right now. One to three words: «не до того», «тянет к нему», «сама не своя», «холодна», «тело просит», «стыдно от себя самой».",
+    "desire — how much {{user}} wants closeness right now. One to three words, your own.",
     "Judge it from the scene and from her body together. <norse_body> tells you what her womb is doing, and that tilts her — it does not decide her. Weariness, grief, fear, a quarrel or a child under her heart all weigh more than the reckoning does.",
-    "Say how much she wants, never toward whom: the panel shows the measure, the prose shows the rest.",
+    /* «Сколько, а не к кому» — не стыдливость, а разделение работ: направление
+       желания панель не показывает и показывать не будет, это дело прозы.
+       Заодно снимается предположение, кого героиня хочет: оно не наше. */
+    "Say how much she wants, never toward whom or of what kind: the panel shows the measure, the prose shows the rest.",
     "This field is there in every state — bleeding, carrying, newly delivered, or an ordinary day.",
     "→ NRN FREYJA | desire: <how much she wants, 1-3 words>",
     "",
@@ -418,9 +432,9 @@ const BLOCK_BODY = [
 const BLOCK_BED = [
     "[BED — only when the scene actually held coupling]",
     "No coupling in this scene — no marker at all, and that is the ordinary turn. Take this topic from what the prose showed, never from the shape of the marker.",
-    "sex — да, and no other value: the marker exists because there was coupling, so writing it at all is the answer.",
+    "sex — yes, and no other value: the marker exists because there was coupling, so writing it at all is the answer.",
     "internal — whether the seed was spilled inside. One word. Never without sex.",
-    "→ NRN BED | sex: да | internal: <да / нет / неизвестно>",
+    "→ NRN BED | sex: yes | internal: <yes / no / unknown>",
     "",
 ];
 
@@ -431,14 +445,21 @@ const BLOCK_BED = [
  * о дитяти уже знают, имя — пока дитя не наречено. Спрашивать их с первого дня
  * игры значило бы держать в ответе четыре пустых маркера каждый ход.
  */
+/*
+ * От дозора родов осталось одно поле.
+ *
+ * Женщин в доме, обереги и наготове убраны: они занимали в панели половину
+ * листа, а говорили мало, и ни во что, кроме самих себя, не шли.
+ *
+ * Имени в правиле больше нет, и это не мелочь. Стояло «Арнхейд, полдня пути»
+ * — в правиле и ещё раз в примере, — и модель раз за разом присылала Арнхейд
+ * в чат, где такой женщины не было вовсе. Образец с именем читается как ответ,
+ * а не как форма.
+ */
 const BLOCK_BIRTH = [
     "[BIRTH — every reply while the birth is near]",
-    "Names and numbers, not sentences. Two to five words each, no description, no reasoning.",
-    "midwife — who will take the child, and how far off: «Арнхейд, полдня пути». Никого поблизости — «нет».",
-    "women — how many grown women are in the house: «три», «одна», «нет».",
-    "charms — what wards she has on her: «молот Тора у горла», «бьяргруны не вырезаны».",
-    "gear — water, swaddling, fire: «вода и пелёнки готовы», «пелёнок нет».",
-    "→ NRN BIRTH | midwife: <name and distance> | women: <how many> | charms: <the wards, or нет> | gear: <what is ready, what is not>",
+    "midwife — who will take the child when the time comes, and how far off they are. A name and a distance, two to five words. Take the name from the story: someone who is actually in it. Nobody within reach is an answer of its own.",
+    "→ NRN BIRTH | midwife: <name and distance>",
     "",
 ];
 
@@ -484,7 +505,10 @@ function signsBlock(view) {
         .filter((kind, i, all) => SCENE_SIGN_KINDS[kind] && all.indexOf(kind) === i);
     if (!kinds.length) return [];
 
-    const named = kinds.map((kind) => SCENE_SIGN_KINDS[kind].ru).join(", ");
+    /* Виды называем один раз — именами полей. Прежде строка перечисляла их
+       по-русски («кровь, ломота, грудь»), а ниже те же виды шли по-английски
+       именами полей: один и тот же список дважды, разными словами. */
+    const named = kinds.join(", ");
     return [
         "[SIGNS — every reply]",
         `Today her body speaks through these and no others: ${named}. They are hers to feel, not to explain — she need not know why any of them is happening.`,
@@ -499,8 +523,27 @@ function signsBlock(view) {
     ];
 }
 
-/* Строки примера, которые появляются только вместе со своей темой. */
-const EXAMPLE_BIRTH = "<!-- NRN BIRTH | midwife: Арнхейд, полдня пути | women: три | charms: молот Тора у горла | gear: вода и пелёнки готовы -->";
+/*
+ * Заполненный пример.
+ *
+ * Он единственный на весь промпт, и он остаётся: схема с <плейсхолдерами>
+ * показывает форму, но ни одного значения, и тогда модель сочиняет их
+ * в рассуждениях. Один раз пример уже выкидывали — и вернули.
+ *
+ * Зато примеры ИЗ ПРАВИЛ убраны все до единого. Разница между ними такая:
+ * образец в конце показывает, как выглядит заполненный ответ целиком, а
+ * образец внутри правила читается как ответ на само правило — и списывается.
+ * Стоило это Арнхейд, которая приезжала в каждый чат, где о ней слыхом
+ * не слыхивали.
+ *
+ * Регистр общий: всё со строчной, кроме имён. Иначе панель показывает вперемешку
+ * «Мокрый снег» и «продрог» — заглавная буква приезжает не из смысла, а из того,
+ * с чего начиналась строка примера.
+ *
+ * Повитуха в примере названа «нет» нарочно: это настоящее значение, оно
+ * показывает форму — и не подсовывает имени, которое можно списать.
+ */
+const EXAMPLE_BIRTH = "<!-- NRN BIRTH | midwife: нет -->";
 const EXAMPLE_KIN = "<!-- NRN KIN | faderni: признано | rank: скирборинн -->";
 const EXAMPLE_CHILD = "<!-- NRN CHILD | name: Хельга -->";
 const EXAMPLE_FREYJA = "<!-- NRN FREYJA | desire: не до того -->";
@@ -508,11 +551,11 @@ const EXAMPLE_FREYJA = "<!-- NRN FREYJA | desire: не до того -->";
 /* Обязательные — они же весь обычный ход. */
 const EXAMPLE_BASE = [
     "<!-- NRN TIME | eykt: хадеги -->",
-    "<!-- NRN PLACE | weather: Мокрый снег, порывистый северный ветер | location: Побережье фьорда, старая пристань -->",
-    "<!-- NRN DRESS | user: Шерстяное платье, меховой плащ | char: Волчьи шкуры, льняная рубаха -->",
-    "<!-- NRN MIND | mood: задумчивый, усталый | thought: Она снова смотрит так, будто знает больше. -->",
+    "<!-- NRN PLACE | weather: мокрый снег, порывистый северный ветер | location: побережье фьорда, старая пристань -->",
+    "<!-- NRN DRESS | user: шерстяное платье, меховой плащ | char: волчьи шкуры, льняная рубаха -->",
+    "<!-- NRN MIND | mood: задумчивый, усталый | thought: она снова смотрит так, будто знает больше -->",
     "<!-- NRN FLESH | char: продрог, ломит плечо | user: устала, ноги сбиты -->",
-    "<!-- NRN COUNSEL | advice: Отвар из дягиля и покой до утра -->",
+    "<!-- NRN COUNSEL | advice: отвар из дягиля и покой до утра -->",
 ];
 
 /**
@@ -1311,7 +1354,7 @@ const EMPTY_STATE = {
     weather: null, location: null, userAttire: null,
     charMood: null, charAttire: null, thought: null,
     charState: null, userState: null, advice: null,
-    midwife: null, women: null, charms: null, gear: null,
+    midwife: null,
     faderni: null, childRank: null, childName: null,
     /* Что случилось с телом в этой сцене — список опознанных событий.
        Раньше поля тут не было, и строка «что было» держалась бы от прошлой
@@ -1675,12 +1718,20 @@ const KIN_FIELDS = [
     ["watch-name", "Имя", "childName"],
 ];
 
-/** Дом — кто рядом и что наготове к родам. */
+/*
+ * Ношение — что со сроком и кто примет дитя.
+ *
+ * Раньше здесь стоял «Дом»: повитуха, женщин в доме, обереги, наготове.
+ * Три последних убраны — они занимали половину листа, а говорили мало.
+ * На их место встали срок и размер: прежде они висели одной склеенной
+ * строкой над столбцами, хотя по смыслу это те же короткие «подпись:
+ * значение», что и всё в этом столбце.
+ *
+ * Срок и размер приходят из вида, а повитуха — из сцены, поэтому строки
+ * собираются не одним списком, а по месту: см. renderCycle().
+ */
 const HOUSE_FIELDS = [
     ["watch-midwife", "Льосмодир", "midwife"],
-    ["watch-women", "Женщин в доме", "women"],
-    ["watch-charms", "Обереги", "charms"],
-    ["watch-gear", "Наготове", "gear"],
 ];
 
 /** Кучка фактов под своим заголовком. Пустую не рисуем вовсе. */
@@ -2127,12 +2178,18 @@ function renderCycle() {
         kin.push(factRow(iconName, label, state[key],
             key === "childRank" ? childRankHint(state[key]) : null));
     }
-    const hasKin = fillGroup("#nrn-cycle-kin", "Род", kin);
+    const hasKin = fillGroup("#nrn-cycle-kin", "Дом и род", kin);
 
-    const house = HOUSE_FIELDS
+    /* Ношение: сперва счёт (срок и размер — их знает панель), потом дом
+       (повитуха — её знает сцена или Tímatal). Порядок от общего к частному:
+       когда ждать, каково дитя, кто примет. */
+    const carry = [];
+    if (s.due) carry.push(factRow("body-due", "Срок", s.due));
+    if (s.size) carry.push(factRow("body-size", "Размер", s.size));
+    carry.push(...HOUSE_FIELDS
         .filter(([, , key]) => state[key])
-        .map(([iconName, label, key]) => factRow(iconName, label, state[key]));
-    const hasHouse = fillGroup("#nrn-cycle-house", "Дом", house);
+        .map(([iconName, label, key]) => factRow(iconName, label, state[key])));
+    const hasHouse = fillGroup("#nrn-cycle-house", "Ношение", carry);
 
     /* Приметы — по строке на примету, каждая со своим знаком. Вид приметы
        считает bodyView(): что грудь, что дурнота, что кровь — знать это
