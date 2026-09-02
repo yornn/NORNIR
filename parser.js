@@ -633,7 +633,7 @@ const NRN_TOPICS = {
               blood: "sign_blood", belly: "sign_belly", lettari: "sign_lettari" },
     BODY:   { body: "body" },
     BED:    { sex: "sex", internal: "internal" },
-    BIRTH:  { midwife: "midwife", women: "women", charms: "charms", gear: "gear" },
+    BIRTH:  { midwife: "midwife" },
     KIN:    { faderni: "faderni", rank: "child_rank" },
     CHILD:  { name: "child_name" },
 };
@@ -721,7 +721,7 @@ function emptyResult() {
         weather: null, location: null, userAttire: null,
         charMood: null, charAttire: null, thought: null, passed: null, body: null,
         charState: null, userState: null, advice: null, desire: null,
-        midwife: null, women: null, charms: null, gear: null,
+        midwife: null,
         faderni: null, childRank: null, childName: null,
         sex: null, internal: null,
         /* Приметы от сцены: вид → слова. Панель решает, какие виды сегодня
@@ -925,7 +925,7 @@ export function hasEvents(r) {
  * Поля, которые модель сообщает один раз, а действуют они дальше:
  * имя дитяти, признание отцовства, готовность к родам.
  */
-export const TOLD_FIELDS = ["midwife", "women", "charms", "gear", "faderni", "childRank", "childName"];
+export const TOLD_FIELDS = ["midwife", "faderni", "childRank", "childName"];
 
 /** Есть ли в маркере хоть одно такое поле. */
 export function hasTold(r) {
@@ -1094,9 +1094,6 @@ function fieldsToResult(fields, cleanInner) {
     /* Готовность к родам и правовой слой. Спрашиваются не всегда, а только
        когда к месту, — поля просто отсутствуют в остальное время. */
     result.midwife = clean(fields.midwife);
-    result.women = clean(fields.women);
-    result.charms = clean(fields.charms);
-    result.gear = clean(fields.gear);
     result.faderni = clean(fields.faderni);
     result.childRank = clean(fields.child_rank);
     result.childName = clean(fields.child_name);

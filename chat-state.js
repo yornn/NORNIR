@@ -861,7 +861,7 @@ function tryConceive(body, today, internal, ctx) {
  * ============================================================ */
 
 /** Готовность к родам: после родов она уже ни к чему. */
-const BIRTH_WATCH_FIELDS = ["midwife", "women", "charms", "gear"];
+const BIRTH_WATCH_FIELDS = ["midwife"];
 
 /**
  * Подхватывает названное в этом сообщении и решает, что пережило события.
