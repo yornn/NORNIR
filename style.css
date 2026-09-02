@@ -5017,6 +5017,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
    гои». Что это за строка, решает её знак: срок дитяти, кровь не в срок
    или последнее, чем ещё можно помочь. */
 #nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-due"]::before  { content: "срок"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-size"]::before { content: "размер"; }
 #nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-rest"]::before { content: "можно"; }
 
 #nrn-widget[data-skin="thread"] .nrn-fact-value {
@@ -5033,8 +5034,20 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 /* --- род и дом: два столбца --- */
 
+/*
+ * !important здесь обязателен, и это не перестраховка.
+ *
+ * Столбцы прячутся правилом `display: none !important`, когда открыта не та
+ * створка. Показывает их обратно jQuery .show() — а он, увидев, что после
+ * снятия инлайнового стиля элемент всё ещё скрыт таблицей, жёстко ставит
+ * инлайновый `display: block`. Инлайновый блок бьёт наш flex из файла, и
+ * «Дом и род» с «Ношением» встают друг под друга при любой ширине.
+ *
+ * Именно это и выглядело как «столбцы разъехались на широком экране»: порог
+ * @container ни при чём, он до этой строки просто не доходил.
+ */
 #nrn-widget[data-skin="thread"] #nrn-cycle-cols {
-    display: flex;
+    display: flex !important;
     gap: 26px;
     margin-top: 16px;
 }
