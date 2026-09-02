@@ -5018,6 +5018,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
    или последнее, чем ещё можно помочь. */
 #nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-due"]::before  { content: "срок"; }
 #nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-size"]::before { content: "размер"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="child-arms"]::before { content: "на руках"; }
+#nrn-widget[data-skin="thread"] .nrn-icon[data-icon="child-look"]::before { content: "обличьем"; }
 #nrn-widget[data-skin="thread"] .nrn-icon[data-icon="body-rest"]::before { content: "можно"; }
 
 #nrn-widget[data-skin="thread"] .nrn-fact-value {

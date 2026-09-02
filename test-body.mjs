@@ -407,6 +407,37 @@ check("у léttari своя строка",
 check("приставки в тексте не осталось",
     termSigns(9).some((x) => /^Léttari/i.test(x.text)), false);
 
+console.log("\n=== Дитя: слова сцены поверх таблицы ===");
+
+/*
+ * Нужду считала таблица — от возраста, эйкты и дня недели — и тасовала
+ * одни и те же слова по кругу, ровно как это было с приметами тела. Сцена
+ * видит больше: дитя может кричать не от голода, а оттого, что в доме чужие.
+ */
+const kidBody = {
+    lastBleed: { year: 1015, month: 1, day: 1 },
+    children: [{ born: { year: 1015, month: 2, day: 1 } }],
+};
+const kidDay = { year: 1015, month: 4, day: 1 };
+
+const kidPlain = bodyView(kidBody, kidDay, {})?.children?.[0];
+const kidScene = bodyView(kidBody, kidDay, {
+    sceneChild: { arms: "у матери на руках", look: "отцовы брови", need: "кричит на чужих" },
+})?.children?.[0];
+
+check("нужда берётся из сцены", kidScene.need, "кричит на чужих");
+check("а без сцены — из таблицы", typeof kidPlain.need, "string");
+check("на руках и обличье — только из сцены",
+    [kidScene.arms, kidScene.look, kidPlain.arms, kidPlain.look],
+    ["у матери на руках", "отцовы брови", null, null]);
+/* Возраст и стадию по-прежнему считает панель: сцена их не назначает. */
+check("возраст и стадию сцена не трогает",
+    [kidScene.age, kidScene.stage.id], [kidPlain.age, kidPlain.stage.id]);
+/* Сцена смолчала — таблица на месте, пустой плашки не бывает. */
+check("пустые слова сцены ничего не ломают",
+    bodyView(kidBody, kidDay, { sceneChild: { arms: null, look: null, need: null } })
+        ?.children?.[0].need, kidPlain.need);
+
 console.log("\n=== Слова примет от сцены ===");
 
 /*

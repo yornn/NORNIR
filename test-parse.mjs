@@ -19,6 +19,9 @@
 
 import {
     parseUrd,
+    parseBodyEvents,
+    parsePassed,
+    TOLD_FIELDS,
     hasUrd,
     stripUrd,
     isPlaceholder,
@@ -652,6 +655,78 @@ check("и вырезается из прозы",
 check("hasUrd видит обе формы",
     [hasUrd("<!-- NRN TIME | eykt: отта -->"), hasUrd("<!-- [URD:\neykt: отта\n] -->"), hasUrd("просто текст")],
     [true, true, false]);
+
+console.log("\n=== События тела по-английски ===");
+
+/*
+ * Промпт просит английские слова: опознавательный токен модель повторяет
+ * точнее на языке, на котором к ней обращаются. Русские написания остаются —
+ * старые чаты полны «кровь пришла», и читаться они обязаны дальше.
+ */
+const ev = (text) => parseBodyEvents(text);
+
+check("англ. и рус. дают одно событие",
+    [ev("bleeding began"), ev("кровь пришла")], [["bleedStart"], ["bleedStart"]]);
+check("оба языка в одном маркере",
+    ev("bleeding ended; понесла"), ["bleedEnd", "conceived"]);
+
+/* Две ловушки, которых в русском списке не было. */
+check("«child fell sick» не зажигает хворь матери", ev("child fell sick"), ["childSick"]);
+check("а «fell sick» — зажигает", ev("fell sick"), ["sott"]);
+/* Мертворождение — тоже роды, и русское «дитя родилось мёртвым» всегда
+   зажигало оба события разом. Английское обязано вести себя так же. */
+check("«child born dead» — и роды, и мертворождение",
+    ev("child born dead"), ["birth", "stillborn"]);
+check("как и по-русски", ev("дитя родилось мёртвым"), ["birth", "stillborn"]);
+
+check("все английские слова из промпта разбираются",
+    [
+        "bleeding began", "bleeding ended", "bleeding out of season",
+        "seed spilled", "seed withheld",
+        "child stirred", "child kicking", "child gone quiet",
+        "labour began", "gave birth", "miscarried",
+        "child at the breast", "weaned", "knew herself with child", "conceived",
+        "went hungry", "fell sick", "travelled hard", "sick with worry",
+        "lifted heavy", "strained herself", "took a fall", "was beaten", "took to bed",
+        "child born dead",
+        "first tooth", "child walked", "child spoke",
+        "child fell sick", "child recovered", "child died",
+    ].filter((w) => !ev(w)), []);
+
+/*
+ * Таймскип был последним полем, где у модели просили русское. Английские
+ * единицы проверяются тем же порядком, от крупной к мелкой: правило
+ * возвращает первое совпадение, и «year» обязан идти раньше «day».
+ */
+check("английский таймскип",
+    ["three days", "two weeks", "2 months", "three moons", "one year", "half a year"].map(parsePassed),
+    [3, 14, 60, 90, 364, 180]);
+check("и русский на месте",
+    ["три дня", "пара дней", "полгода"].map(parsePassed), [3, 2, 180]);
+check("половинка считается на обоих",
+    ["two and a half months", "два с половиной месяца"].map(parsePassed), [75, 75]);
+/* Единицу не узнали — молчим: ошибочный скачок уводит календарь на месяцы,
+   а пропущенный правится в Tímatal. */
+check("незнакомая единица — молчание", parsePassed("a fortnight"), null);
+
+console.log("\n=== Дитя из сцены ===");
+
+/*
+ * У темы CHILD было одно поле, имя, — оттого плашка дитяти после родов
+ * и выглядела пустой: возраст и нужду считала таблица, а живого ребёнка
+ * в панели не было вовсе.
+ */
+const kid = parseUrd("<!-- NRN CHILD | arms: у матери на руках | look: отцовы брови | need: тычется, грудь ищет | name: Хельга -->");
+check("на руках, обличьем, нужда и имя",
+    [kid.childArms, kid.childLook, kid.childNeed, kid.childName],
+    ["у матери на руках", "отцовы брови", "тычется, грудь ищет", "Хельга"]);
+/* Обличье говорится однажды и живёт дальше: лицо не меняется от хода к ходу. */
+check("обличье — из сказанного однажды", TOLD_FIELDS.includes("childLook"), true);
+check("а на руках и нужда — нет",
+    TOLD_FIELDS.some((f) => f === "childArms" || f === "childNeed"), false);
+/* Одни поля дитяти — тоже сцена: такой ответ терять незачем. */
+check("одно дитя без прочего не пустой разбор",
+    parseUrd("<!-- NRN CHILD | need: спит у огня -->")?.childNeed, "спит у огня");
 
 /* ============================================================
  * 5. SUMMARY
