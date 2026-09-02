@@ -670,6 +670,39 @@ function cyclePicker(cycle) {
     });
 
     /*
+     * Повитуха — единственное имя, которое задаёт автор, а не сцена.
+     *
+     * Модель раз за разом присылала одно и то же имя: оно стояло в промпте
+     * образцом, и образец списывался. Но дело не только в образце. Кто примет
+     * дитя — уговор ролевой, а не наблюдение: у героини может быть своя
+     * служанка, которая с ней с первой главы, и угадать это неоткуда.
+     *
+     * Пусто — спрашиваем сцену, как раньше. Заполнено — у модели это поле
+     * не спрашивается вовсе, а имя уезжает ей справкой: за кем пошлют, когда
+     * придёт время.
+     */
+    box.append(h("div", "nrn-t-picker-sub", t`Midwife`));
+    box.append(h("div", "nrn-t-picker-echo",
+        t`Who will take the child when the time comes. Leave it empty and the scene decides; name someone and they will be sent for.`));
+
+    const midwifeRow = h("div", "nrn-t-picker-row");
+    const midwifeEl = h("input", "nrn-t-picker-text");
+    midwifeEl.type = "text";
+    midwifeEl.placeholder = t`Name, and how far off`;
+    if (cycle.midwife) midwifeEl.value = cycle.midwife;
+
+    const setMidwife = h("button", "nrn-t-picker-apply", t`Remember`);
+    setMidwife.type = "button";
+    midwifeRow.append(midwifeEl, setMidwife);
+    box.append(midwifeRow);
+
+    setMidwife.addEventListener("click", () => {
+        if (cycle.onSetMidwife(midwifeEl.value)) {
+            flash(setMidwife, midwifeEl.value.trim() ? t`Remembered` : t`Forgotten`);
+        }
+    });
+
+    /*
      * Женское питьё — отвар, возвращающий кровь.
      *
      * Доступно всегда, и это не недосмотр. Кнопка, загорающаяся только у
