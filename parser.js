@@ -634,7 +634,14 @@ const NRN_TOPICS = {
               /* Молоко — вид послеродового набора. Без этой строки поле
                  выбрасывалось бы молча: takeTopic() берёт только то, что
                  в карте, а пул примет живёт в body.js и о карте не знает. */
-              milk: "sign_milk" },
+              milk: "sign_milk", lochia: "sign_lochia",
+              /* Виды, которые движок порождает сам — из событий, погоды
+                 и счётчиков. Завести их сцена не может: applySceneSigns()
+                 выбрасывает вид не из сегодняшнего набора. А сказать о них
+                 своими словами — может, и в этом вся разница. */
+              hridir: "sign_false_hridir", kicks: "sign_kicks_night",
+              strain: "sign_strain", weather: "sign_weather_toll",
+              oddblood: "sign_odd_blood" },
     BODY:   { body: "body" },
     BED:    { sex: "sex", internal: "internal" },
     BIRTH:  { midwife: "midwife" },

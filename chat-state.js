@@ -42,6 +42,7 @@ import {
     CYCLE_DEFAULT,
     NURSING_CHANCE,
     STRAINS,
+    bloodBack,
     TERM_DAYS,
     THREAT_DAYS,
     cycleSummary,
@@ -458,6 +459,16 @@ function applyBodyEvents(body, events, today, ctx = {}) {
                     lastBleed: { ...today },
                     ...(next.children ? { children: next.children } : {}),
                     ...(next.herb ? { herb: next.herb } : {}),
+                    /*
+                     * Кормление кровь не отменяет.
+                     *
+                     * Стояло так, что вернувшиеся тидир сносили кормление
+                     * целиком, и молоко пропадало в тот же день. В жизни это
+                     * две разные вещи: у кормящей кровь может вернуться, а
+                     * молоко идти ещё год. Круг возвращает кровь, кормление
+                     * кончает «отняли от груди» — и больше ничто.
+                     */
+                    ...(next.nursing ? { nursing: next.nursing } : {}),
                 };
                 break;
             case "bleedEnd":
@@ -668,7 +679,22 @@ function applyBodyEvents(body, events, today, ctx = {}) {
                 next.lastBleed = { ...today };
                 break;
             case "nursingStart":
-                if (!next.pregnancy) next.nursing = { since: { ...today } };
+                /*
+                 * Кормление открывается один раз и с этого дня не двигается.
+                 *
+                 * Стояло без `!next.nursing`, и якорь прыгал на сегодня при
+                 * КАЖДОМ «дитя у груди». А пишет его модель постоянно: дитя
+                 * берёт грудь в каждой второй сцене. Отсюда всё послеродовое
+                 * и разъезжалось — счёт от родов сбрасывался в ноль, стадия
+                 * возвращалась к «лежит после родов» через год после родов,
+                 * приметы откатывались к лохиям, а бросок на зачатие снова
+                 * запирался, потому что до поворота ему ещё год.
+                 *
+                 * Роды кормление и так открывают. Это событие нужно лишь там,
+                 * где родов в чате не было: ролевая началась с готовым дитятей
+                 * либо запись поставлена руками.
+                 */
+                if (!next.pregnancy && !next.nursing) next.nursing = { since: { ...today } };
                 break;
             case "nursingEnd":
                 delete next.nursing;
@@ -910,7 +936,18 @@ function tryConceive(body, today, internal, ctx) {
     if (next.nursing?.since) {
         const days = serialOf(today.year, today.month, today.day)
             - serialOf(next.nursing.since.year, next.nursing.since.month, next.nursing.since.day);
-        if (postpartumStage(days).id !== "vending") return next;
+        /*
+         * Открывают утробу две вещи, и любой из них довольно.
+         *
+         * Первая — вернувшаяся кровь: круг пошёл заново, и спорить с этим
+         * календарём было бы странно. Раньше её тут не было вовсе, потому
+         * что кровь сносила кормление целиком и до этой ветки не доходила.
+         *
+         * Вторая — срок, как и была: если сцена о крови не сказала, тело
+         * всё равно поворачивает само, и держать бросок закрытым до конца
+         * чата значило бы вернуть ту самую дыру.
+         */
+        if (!bloodBack(next) && postpartumStage(days).id !== "vending") return next;
         nursingToll = NURSING_CHANCE;
     }
 

@@ -19,6 +19,8 @@ import {
     cycleDay,
     cyclePhrase,
     cycleSigns,
+    postpartumSigns,
+    bloodBack,
     disruptionShift,
     termSigns,
     weatherToll,
@@ -390,9 +392,9 @@ const nursingAt = (days, opts = {}) => bodyView(
 check("у кормящей приметы есть", (nursingAt(60).signs ?? []).length > 0, true);
 /* Окна — в днях от родов. Лохии кончаются, молоко остаётся. */
 check("лохии идут первые дни",
-    (nursingAt(4).signs ?? []).some((s) => s.kind === "blood"), true);
+    (nursingAt(4).signs ?? []).some((s) => s.kind === "lochia"), true);
 check("а к шестидесятому дню их нет",
-    (nursingAt(60).signs ?? []).some((s) => s.kind === "blood"), false);
+    (nursingAt(60).signs ?? []).some((s) => s.kind === "lochia"), false);
 check("молоко приходит на третий-четвёртый",
     (nursingAt(4).signs ?? []).some((s) => s.kind === "milk"), true);
 check("и держится всё кормление",
@@ -596,9 +598,27 @@ console.log("\n=== Приметы по сроку ===");
 
 /* Считаются от части срока и погоды: модели их не спрашивают, потому что
    она их не наблюдает, а сочиняет. В промпте они стоят ноль токенов. */
-check("на первой части примет нет", termSigns(1).length, 0);
-check("к шестой части их пятеро", termSigns(6).length, 5);
-check("к девятой — все восемь", termSigns(9).length, 8);
+/* Пустых состояний больше нет: грудь, сон и нрав звучат в любом положении.
+   Прежде первая часть срока не давала ни строки, а пятый день круга — одну
+   на всю панель. Числа ниже сторожат не сами себя, а именно это. */
+check("на первой части уже три приметы", termSigns(1).length, 3);
+check("к шестой части их семеро", termSigns(6).length, 7);
+check("к девятой — десять", termSigns(9).length, 10);
+
+/* Три вида, которым положено звучать всегда: они есть у женщины в любом
+   положении и ничего не выдают под скрытым слоем — тело их чувствует,
+   не зная причины. Сторож проходит все три пула по всем окнам. */
+const EVER_PRESENT = ["breast", "sleep", "mood"];
+const bare = [];
+const seeAlways = (list, where) => {
+    const kinds = new Set(list.map((x) => x.kind));
+    const miss = EVER_PRESENT.filter((k) => !kinds.has(k));
+    if (miss.length) bare.push(`${where}: ${miss.join("/")}`);
+};
+for (let part = 1; part <= TERM_PARTS; part++) seeAlways(termSigns(part, "s"), `срок ${part}`);
+for (let day = 1; day <= 40; day++) seeAlways(cycleSigns(day, 40, "s"), `цикл ${day}`);
+for (let day = 0; day <= 720; day++) seeAlways(postpartumSigns(day, "s"), `роды+${day}`);
+check("грудь, сон и нрав звучат всегда", bare.slice(0, 3).join(", ") || "нет", "нет");
 /* Ищем по виду, а не по тексту: слово «Léttari» из самих строк убрано —
    в «Доме и нитях» ярлык строки рисует CSS по виду приметы, и приставка
    выходила вторым ярлыком подряд. Вид и есть имя приметы. */
@@ -825,7 +845,11 @@ const nursed = bodyView(
     { year: 1015, month: 9, day: 4 },
 );
 check("панель показывает стадию", nursed.title, "Liggja á sæng");
-check("и сколько дней от родов", nursed.count, "3 дня от родов");
+/* Правый слот — вторая половина заголовка, а не счётчик. Стояло «3 дня
+   от родов», и то же самое повторялось строкой ниже. */
+check("а справа — ось цикла словами", nursed.count, "очищение идёт");
+check("и строка под ним не повторяет заголовок",
+    nursed.status.startsWith("Первые дни на постели"), true);
 
 console.log("\n=== Ручная установка ===");
 
@@ -1736,6 +1760,68 @@ const deathShare = (() => {
     return dead / 500;
 })();
 check("и то не всякий раз", deathShare > 0.05 && deathShare < 0.2, true);
+
+console.log("\n=== Виды примет не двоятся ===");
+
+/*
+ * Два ряда одного вида в один день — это две строки с одним ярлыком подряд.
+ *
+ * Так и стояло: молозиво было заведено с `kind: "breast"`, и на девятой части
+ * панель показывала «грудь» дважды — тяжесть от breast-late и молозиво.
+ * Сторож проходит все три пула разом, потому что окна в них задаются
+ * по-разному и пересечься может любое.
+ */
+const kindDupes = [];
+const seeKinds = (list, where) => {
+    const kinds = list.map((s) => s.kind);
+    if (new Set(kinds).size !== kinds.length) kindDupes.push(where);
+};
+for (let part = 1; part <= TERM_PARTS; part++) seeKinds(termSigns(part, "s"), `срок ${part}`);
+for (let day = 1; day <= 40; day++) seeKinds(cycleSigns(day, 40, "s"), `цикл ${day}`);
+for (let day = 0; day <= 720; day++) seeKinds(postpartumSigns(day, "s"), `роды+${day}`);
+check("вид не встаёт двумя строками", kindDupes.join(", ") || "нет", "нет");
+
+/* Кормление открывается один раз. «Дитя у груди» модель пишет постоянно,
+   и без охраны якорь прыгал на сегодня — счёт от родов сбрасывался в ноль. */
+const nursingChat = [
+    mk("хадеги", "date: 1 сольмануд 1015", "родила"),
+    mk("хадеги", "date: 20 сольмануд 1015", "дитя у груди"),
+];
+syncWholeChat(nursingChat);
+const anchored = findBodyState(nursingChat, null, {
+    manualBody: pregnancyAnchor({ year: 1015, month: 8, day: 1 }, { part: 9, known: true }),
+});
+/*
+ * Кровь возвращает круг, но не отнимает дитя от груди.
+ *
+ * Стояло так, что вернувшиеся тидир сносили кормление целиком: молоко
+ * пропадало в тот же день. В жизни это две разные вещи, и в панели теперь
+ * тоже — ось цикла и ось дитяти живут врозь.
+ */
+const bloodBackChat = [
+    mk("хадеги", "date: 1 сольмануд 1015", "родила"),
+    mk("хадеги", "date: 1 твимануд 1015", "кровь пришла"),
+];
+syncWholeChat(bloodBackChat);
+const afterReturn = findBodyState(bloodBackChat, null, {
+    manualBody: pregnancyAnchor({ year: 1015, month: 8, day: 1 }, { part: 9, known: true }),
+});
+check("кровь не отнимает дитя от груди", !!afterReturn.nursing, true);
+check("и якорь кормления на месте",
+    JSON.stringify(afterReturn.nursing?.since), JSON.stringify({ year: 1015, month: 9, day: 1 }));
+check("а круг она возвращает", bloodBack(afterReturn), true);
+
+const backView = bodyView(afterReturn, { year: 1015, month: 11, day: 1 });
+check("ось дитяти держится", backView.title, "Á brjósti");
+check("ось цикла говорит о возврате", backView.count, "круг вернулся");
+check("молоко идёт своим чередом",
+    (backView.signs ?? []).some((x) => x.kind === "milk"), true);
+/* Кровь, которая идёт, — уже тидир: звать её лохиями было бы враньём. */
+check("лохий при вернувшемся круге нет",
+    (backView.signs ?? []).some((x) => x.kind === "lochia"), false);
+
+check("«дитя у груди» не сбивает счёт от родов",
+    JSON.stringify(anchored.nursing?.since), JSON.stringify({ year: 1015, month: 9, day: 1 }));
 
 console.log("\n" + "─".repeat(60));
 console.log(`Пройдено: ${ok}   Провалено: ${bad}`);

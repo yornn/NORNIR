@@ -91,7 +91,7 @@ import {
     syncWholeChat,
 } from "./chat-state.js";
 
-import { CYCLE_DEFAULT, DIVINATION_ACCURACY, SCENE_SIGN_KINDS, bodyTruth, bodyView, pregnancyTerm } from "./body.js";
+import { CYCLE_DEFAULT, DIVINATION_ACCURACY, SCENE_SIGN_KINDS, bodyTruth, bodyView, pregnancyTerm, signField } from "./body.js";
 
 import { DEFAULT_TIERS, HOLIDAY_TIERS, holidayView, markWeek } from "./holidays.js";
 
@@ -689,9 +689,9 @@ function signsBlock(view) {
         `Today her body speaks through these and no others: ${named}. They are hers to feel, not to explain — she need not know why any of them is happening.`,
         "Give each one from THIS scene, in three to six words: what the body is doing, plainly. Not what she thinks of it, not what caused it, not what it means. If this scene gave a reason — a cold night, a hard road, a fright — let the words show it.",
         "",
-        ...kinds.map((kind) => `${kind} — ${SCENE_SIGN_KINDS[kind].about}.`),
+        ...kinds.map((kind) => `${signField(kind)} — ${SCENE_SIGN_KINDS[kind].about}.`),
         "",
-        `→ NRN SIGNS | ${kinds.map((kind) => `${kind}: <…>`).join(" | ")}`,
+        `→ NRN SIGNS | ${kinds.map((kind) => `${signField(kind)}: <…>`).join(" | ")}`,
         "",
         "A field you leave out keeps the panel's own word for it, and that is no failure — leave out what this scene had nothing to say about. Never add a field that is not in the list above: what her body says today is the panel's reckoning, not yours.",
         "",
@@ -752,7 +752,7 @@ const EXAMPLE_BASE = [
  */
 function exampleBlock({ withBody, signKinds, nearBirth, known, born, carrying, hasKids, unnamed }) {
     const signs = signKinds.length
-        ? [`<!-- NRN SIGNS | ${signKinds.map((kind) => `${kind}: ${SCENE_SIGN_EXAMPLES[kind] ?? "…"}`).join(" | ")} -->`]
+        ? [`<!-- NRN SIGNS | ${signKinds.map((kind) => `${signField(kind)}: ${SCENE_SIGN_EXAMPLES[kind] ?? "…"}`).join(" | ")} -->`]
         : [];
     return [
         "EXAMPLE (the end of an ordinary reply):",
@@ -792,6 +792,12 @@ const SCENE_SIGN_EXAMPLES = {
     belly: "несёт низко, пояс не сходится",
     lettari: "дышать легче, ходить тяжелее",
     milk: "на чужой плач отозвалось, потекло",
+    lochia: "к вечеру опять пошла, тряпицу меняла",
+    "false-hridir": "живот каменел трижды, отпустило",
+    "kicks-night": "било под ребро всю ночь",
+    strain: "поясница не держит, за ведром нагнуться беда",
+    "weather-toll": "в духоте отекли щиколотки",
+    "odd-blood": "мазнуло бурым, к утру перестало",
 };
 
 /**
