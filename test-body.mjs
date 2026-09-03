@@ -238,6 +238,19 @@ check("вне окна шанс ниже",
 check("наружу шанс ещё ниже",
     Number(findBodyState(lie(14, "нет"), null, { chatId: "t" })?.lastRoll?.chance.toFixed(4)), 0.05);
 
+/*
+ * Сомнение защитой не считается, и это решение, а не побочный эффект.
+ *
+ * «Семя не пролилось» — намеренное действие, чей-то поступок в сцене, и
+ * только он идёт в оглядку. «Неизвестно» и пустое поле — умолчание, а оно
+ * в этом веке означает «внутрь». Оба случая обязаны давать полный шанс,
+ * тот же, что и прямое «да»; цена названа модели вслух в BLOCK_BED.
+ */
+check("сомнение считается за внутрь",
+    findBodyState(lie(14, "неизвестно"), null, { chatId: "t" })?.lastRoll?.chance, 0.25);
+check("и молчание тоже",
+    findBodyState(lie(14, ""), null, { chatId: "t" })?.lastRoll?.chance, 0.25);
+
 /* Бросок обязан быть одинаковым при каждом пересчёте — иначе беременность
    появлялась бы и исчезала на каждой перерисовке панели. */
 const rollA = findBodyState(lie(14), null, { chatId: "t" })?.lastRoll?.value;
@@ -267,7 +280,23 @@ check("и растёт до локтя", at(265).size, "в локоть");
 check("последняя часть — подошедшая к падению", at(250).stage.id, "falli");
 check("девять частей — это 270 дней", TERM_DAYS, 270);
 check("частей ровно девять", TERM_PARTS, 9);
-check("гадание не пляшет между вызовами", at(140).guess.text, at(140).guess.text);
+/*
+ * Гадание — оглашение, а не решение.
+ *
+ * Пол решён в день зачатия и лежит в записи, гадать заново нечего. Раньше
+ * панель писала «Толкуют: сын» от одного шевеления — при том что никто не
+ * толковал: героиня ни к кому не ходила. Теперь примета живота идёт от
+ * шевеления, как и шла, а приговор — только после похода к гадающему.
+ */
+check("гадание не пляшет между вызовами", at(140).reading.text, at(140).reading.text);
+check("до похода приговора нет", String(at(140).guess), "null");
+check("а примета живота уже есть", typeof at(140).reading.omen, "string");
+
+const divinedDay = addDays(conceived.year, conceived.month, conceived.day, 140);
+const verdict = pregnancySummary({ conceived, quickened: null, divined: divinedDay }, divinedDay);
+check("после похода приговор назван", typeof verdict.guess?.text, "string");
+check("и он тот же, что лежал в примете", verdict.guess.text, at(140).reading.text);
+check("поход пола не меняет", verdict.guess.truth, at(140).reading.truth);
 check("у дитяти есть настоящий пол", ["m", "f"].includes(trueSexOf(conceived)), true);
 
 console.log("\n=== Роды и кормление ===");
@@ -293,6 +322,183 @@ const weaned = findBodyState(born, null, bornOpts);
 check("отняли от груди — кормление кончилось", String(weaned.nursing), "undefined");
 check("и цикл пошёл заново с первого дня",
     cycleSummary(weaned, { year: 1016, month: 10, day: 20 }, 28).day, 1);
+
+/*
+ * Заготовки, отданные сцене: размер дитяти, примета срока, рост рождённого.
+ *
+ * Все три считались по таблицам и потому повторялись из беременности
+ * в беременность: девять слов на девять частей, ряд по три на часть,
+ * подсказка стадии на сто восемьдесят дней. Приём тот же, что и у нужды
+ * дитяти: панель решает, что сейчас идёт, сцена подбирает слова, молчит
+ * сцена — остаётся заготовка.
+ */
+const carryBody = {
+    lastBleed: { year: 1015, month: 9, day: 1 },
+    pregnancy: {
+        conceived: { year: 1015, month: 9, day: 14 },
+        quickened: { year: 1015, month: 12, day: 20 },
+        knownSince: { year: 1015, month: 12, day: 20 },
+    },
+};
+const carryDay = { year: 1016, month: 1, day: 1 };
+const fromPool = bodyView(carryBody, carryDay, {});
+const fromWomb = bodyView(carryBody, carryDay, {
+    sceneWomb: { size: "с материн кулак", sign: "пояс переставлен, дышит чаще" },
+});
+
+check("размер берётся из сцены", fromWomb.size, "с материн кулак");
+check("а без неё — из ряда по части срока", fromPool.size, "в два пальца");
+check("примета срока тоже из сцены",
+    fromWomb.phrase.includes("Пояс переставлен, дышит чаще"), true);
+/* Слова сцены приходят строчными по всему промпту, а примета встаёт
+   предложением: заглавную ставит панель, иначе точка и строчная подряд. */
+check("и ей ставится заглавная",
+    fromWomb.phrase.includes(". пояс"), false);
+check("молчание сцены заготовку не роняет",
+    bodyView(carryBody, carryDay, { sceneWomb: {} }).size, fromPool.size);
+/* Счёт сцене не отдан: часть срока и стадию по-прежнему считает панель. */
+check("часть срока сцена не двигает",
+    fromWomb.count, fromPool.count);
+check("и стадию тоже", fromWomb.stage.id, fromPool.stage.id);
+
+/* Рост рождённого — та же схема, поверх подсказки стадии. */
+const growDay = { year: 1015, month: 9, day: 1 };
+const growBody = { lastBleed: growDay, nursing: { since: growDay }, children: [{ born: growDay, sex: "f", order: 0 }] };
+const growPool = bodyView(growBody, growDay, {}).children[0];
+const growScene = bodyView(growBody, growDay, { sceneChild: { growing: "держит голову, тянется к косе" } }).children[0];
+check("рост дитяти берётся из сцены", growScene.stage.hint, "держит голову, тянется к косе");
+check("а без неё — подсказка стадии", growPool.stage.hint.startsWith("Первые девять дней"), true);
+/* `id` обязан уцелеть: по нему собирается блок промпта и решается,
+   спрашивать ли об отнятии от груди. */
+check("стадия при этом та же", growScene.stage.id, growPool.stage.id);
+
+/*
+ * Приметы послеродового.
+ *
+ * Ветка `body.nursing` возвращала объект без поля `signs` вовсе — единственная
+ * такая из всех. Следствие доставалось не панели, а промпту: `signsBlock()`
+ * получал пустой набор и выбрасывал тему SIGNS целиком, и с тридцать шестого
+ * дня по сто семьдесят девятый модель знала о теле героини две неизменные
+ * строки. Сто сорок четыре дня одним и тем же текстом.
+ */
+const bornDay = { year: 1015, month: 9, day: 1 };
+const nursingAt = (days, opts = {}) => bodyView(
+    { lastBleed: bornDay, nursing: { since: bornDay } },
+    serialToDate(serialOf(bornDay.year, bornDay.month, bornDay.day) + days),
+    opts);
+
+check("у кормящей приметы есть", (nursingAt(60).signs ?? []).length > 0, true);
+/* Окна — в днях от родов. Лохии кончаются, молоко остаётся. */
+check("лохии идут первые дни",
+    (nursingAt(4).signs ?? []).some((s) => s.kind === "blood"), true);
+check("а к шестидесятому дню их нет",
+    (nursingAt(60).signs ?? []).some((s) => s.kind === "blood"), false);
+check("молоко приходит на третий-четвёртый",
+    (nursingAt(4).signs ?? []).some((s) => s.kind === "milk"), true);
+check("и держится всё кормление",
+    (nursingAt(150).signs ?? []).some((s) => s.kind === "milk"), true);
+check("недосып — всё время",
+    (nursingAt(0).signs ?? []).some((s) => s.kind === "sleep")
+    && (nursingAt(200).signs ?? []).some((s) => s.kind === "sleep"), true);
+
+/* Сид держит слова сутки и не перекидывает их от свайпа. */
+check("слова держатся сутки",
+    (nursingAt(60).signs ?? []).map((s) => s.text).join("|"),
+    (nursingAt(60).signs ?? []).map((s) => s.text).join("|"));
+check("а назавтра меняются",
+    (nursingAt(60).signs ?? []).map((s) => s.text).join("|") !== (nursingAt(61).signs ?? []).map((s) => s.text).join("|"),
+    true);
+
+/* Слова сцены перебивают пул — тем же путём, что и в прочих состояниях:
+   bodyView() оборачивает ветку в applySceneSigns(), и ей теперь есть что
+   применять. Ради этого третий пул и заведён вместо своей темы в промпте. */
+const nursedScene = nursingAt(60, { sceneSigns: { milk: "подтекло на крик у порога" } });
+check("слова сцены встают и после родов",
+    (nursedScene.signs ?? []).find((s) => s.kind === "milk")?.text, "подтекло на крик у порога");
+check("и помечены как пришедшие из сцены",
+    (nursedScene.signs ?? []).find((s) => s.kind === "milk")?.fromScene, true);
+check("состав примет от слов сцены не меняется",
+    (nursedScene.signs ?? []).map((s) => s.kind).join(","),
+    (nursingAt(60).signs ?? []).map((s) => s.kind).join(","));
+/* Вид не из сегодняшнего набора выбрасывается — тот же закон, что и везде. */
+check("примета не своего дня выбрасывается и тут",
+    (nursingAt(60, { sceneSigns: { belly: "несёт низко" } }).signs ?? []).some((s) => s.kind === "belly"),
+    false);
+
+/* Поход к гадающему из сцены: слово «гадала» помечает день, и с него панель
+   вправе назвать пол. Охрана как у прочих событий ношения — без дитяти
+   метить нечего. */
+const divinedChat = (body) => {
+    const chat = [
+        mk("хадеги", "date: 1 сольмануд 1015"),
+        mk("хадеги", "date: 20 сольмануд 1015", body),
+    ];
+    syncWholeChat(chat);
+    return findBodyState(chat, null, {
+        manualBody: pregnancyAnchor({ year: 1015, month: 9, day: 1 }, { part: 6, known: true }),
+    });
+};
+const sought = divinedChat("гадала");
+check("«гадала» помечает день похода", !!sought.pregnancy?.divined, true);
+check("до похода панель о поле молчит",
+    String(pregnancySummary(divinedChat("").pregnancy, { year: 1015, month: 9, day: 20 })?.guess), "null");
+check("после похода — называет",
+    typeof pregnancySummary(sought.pregnancy, { year: 1015, month: 9, day: 20 })?.guess?.text, "string");
+/* Ношение при этом не задето: гадание только оглашает. */
+check("а само ношение не тронуто",
+    JSON.stringify(sought.pregnancy.conceived),
+    JSON.stringify(divinedChat("").pregnancy.conceived));
+
+/*
+ * Кормление кончается и само, по сроку.
+ *
+ * Снятие было только событийным — «отняли от груди» либо сброс по крови, —
+ * а «отняли от груди» никто не просит. В ролевой, где дитя растёт, а модель
+ * до этого слова не додумалась, героиня оставалась бесплодной до конца чата:
+ * бросок даже не делался. Панель при этом на повороте обещала обратное.
+ *
+ * Якорь крови уводим на восемь кругов назад — так оно у кормящей и есть,
+ * тидир с родов не приходили, — а падает он всё равно на четырнадцатый день:
+ * 13 + 28×8 по модулю 28. Открытое лоно нужно, чтобы шанс читался числом.
+ */
+const nursedBed = (fromBirth) => {
+    const day = { year: 1015, month: 9, day: 20 };
+    const at = serialOf(day.year, day.month, day.day);
+    const chat = [
+        mk("хадеги", "date: 19 сольмануд 1015"),
+        {
+            is_user: false, gen_finished: "n-" + (seq++), extra: {},
+            mes: ["проза", "", "<!-- [URD:", "eykt: хадеги",
+                "date: 20 сольмануд 1015", "sex: да", "internal: да",
+                "weather: снег", "location: дом", "mood: ок",
+                "user_attire: а", "char_attire: б", "thought: в", "] -->"].join("\n"),
+        },
+    ];
+    syncWholeChat(chat);
+    return readChat(chat, null, {
+        chatId: "t",
+        manualBody: {
+            at: serialToDate(at - fromBirth),
+            body: {
+                lastBleed: serialToDate(at - 13 - CYCLE_DEFAULT * 8),
+                nursing: { since: serialToDate(at - fromBirth) },
+            },
+        },
+    }).body;
+};
+
+const atBreast = nursedBed(100);
+check("у груди броска нет", String(atBreast.lastRoll), "undefined");
+check("и кормление не тронуто", !!atBreast.nursing, true);
+/* Близость помнится и без броска — иначе объявленное сценой зачатие
+   отсчиталось бы от дня догадки, а не от той ночи. */
+check("но близость всё равно записана", atBreast.lastSeed?.day, 20);
+
+const turning = nursedBed(200);
+check("на повороте бросок состоится", typeof turning.lastRoll?.value, "number");
+/* Тот же четырнадцатый день без кормления даёт 0.25 — см. «шанс взят по фазе». */
+check("но вполовину слабее", turning.lastRoll?.chance, 0.125);
+check("кормление при этом остаётся", !!turning.nursing, true);
 
 console.log("\n=== Объявление из сцены ===");
 
@@ -574,9 +780,11 @@ check("на малом сроке погода ещё нипочём", String(we
 /* Приметы о поле были перепутаны: у сына стоял «высокий и острый» живот —
    по одному признаку из каждого набора сразу. Низкий и острый сулит сына,
    высокий и круглый — дочь, и смешивать их нельзя. */
+/* Смотрим `reading`, а не `guess`: приговор теперь ждёт похода к гадающему,
+   а сама примета живота считается от шевеления, как и считалась. */
 const omen = pregnancySummary(
     { conceived: { year: 1015, month: 9, day: 14 }, quickened: true },
-    { year: 1016, month: 1, day: 1 }, 1).guess;
+    { year: 1016, month: 1, day: 1 }, 1).reading;
 check("приметы о поле не противоречат друг другу",
     omen.told === "m" ? !omen.text.includes("высокий") : !omen.text.includes("низкий"), true);
 
@@ -704,7 +912,7 @@ const PROMPT_WORDS = [
     "семя пролилось", "семя не пролилось",
     "дитя шевельнулось", "дитя бьётся", "дитя затихло",
     "схватки начались", "родила", "выкидыш",
-    "дитя у груди", "отняли от груди", "поняла, что тяжела", "понесла",
+    "дитя у груди", "отняли от груди", "поняла, что тяжела", "понесла", "гадала",
     "голодала", "хворала", "была в дороге", "извелась",
     "зубок прорезался", "дитя пошло", "дитя заговорило",
     "дитя занемогло", "дитя поправилось", "дитя померло",
@@ -720,6 +928,30 @@ const handledEvents = new Set([...engineSrc.matchAll(/case\s+"(\w+)":/g)].map((m
 const orphans = [...new Set(PROMPT_WORDS.flatMap((w) => parseBodyEvents(w) ?? []))]
     .filter((id) => !handledEvents.has(id));
 check("у каждого события есть обработчик", orphans.join(", ") || "нет", "нет");
+
+/*
+ * Эталон сброса против того, что панель правда читает.
+ *
+ * `EMPTY_STATE` — это то, чем refresh() затирает кэш отрисовки перед тем, как
+ * положить сверху свежий снимок. Поля, которого в эталоне нет, затирать нечем:
+ * в чате без единого снимка оно так и останется на экране от прошлой истории.
+ * Ровно так пропала «тяга» — строка рисовалась по `state.desire`, а в эталоне
+ * этого поля не было.
+ *
+ * Читаем исходник, а не импортируем: index.js — расширение SillyTavern,
+ * из-под node оно не поднимется. Тем же приёмом выше проверяются обработчики
+ * событий, и по той же причине.
+ */
+const panelSrc = readFileSync(new URL("./index.js", import.meta.url), "utf8");
+const standard = new Set(
+    [...(panelSrc.match(/const EMPTY_STATE = \{([\s\S]*?)\n\};/)?.[1] ?? "")
+        .matchAll(/(\w+)\s*:/g)].map((m) => m[1]));
+/* `state.js` ловится из имени файла «chat-state.js» — это не поле. Прочих
+   исключений у сторожа нет намеренно: список поблажек он бы и охранял. */
+const readFromCache = [...new Set(
+    [...panelSrc.matchAll(/(?<![\w.])state\.([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1]))]
+    .filter((key) => key !== "js" && !standard.has(key));
+check("панель не читает поля мимо эталона сброса", readFromCache.join(", ") || "нет", "нет");
 
 /* Чат из сообщений с явной датой: якорь на каждом, поэтому день ровно тот,
    что написан, и счёт не зависит от догадок по эйкте. */
@@ -740,6 +972,24 @@ check("и панель говорит то же", bodyView(ended, dayAt(3), {}).
 const odd = findBodyState(chatOf([[1, "кровь пришла"], [10, "кровь не в срок"]]), null, {});
 check("«кровь не в срок» не двигает счёт цикла", cycleDay(odd.lastBleed, dayAt(10), 28), 10);
 check("но показывается отдельно", bodyView(odd, dayAt(10), {}).extra, "Кровь не в срок, помимо тидир");
+
+/*
+ * «Кровь пришла» при ношении дитя не сносит.
+ *
+ * Сброс в applyBodyEvents пересобирал состояние с нуля и `pregnancy` через
+ * себя не переносил: беременность исчезала молча — ни потери, ни строки
+ * в панели, просто обычный цикл, день первый. А подводит к этому слову сам
+ * промпт: при угрозе он сообщает модели, что мажет кровью, и верное из трёх
+ * кровяных слов она выбирает на слух.
+ */
+const bearing = pregnancyAnchor(dayAt(20), { part: 5, known: true });
+const held = findBodyState(chatOf([[20, "кровь пришла"]]), null, { manualBody: bearing });
+check("«кровь пришла» не сносит ношение", !!held.pregnancy, true);
+check("якорь цикла она при этом не двигает",
+    JSON.stringify(held.lastBleed), JSON.stringify(bearing.body.lastBleed));
+check("а сама ложится кровью не в срок", !!held.oddBleed, true);
+check("и панель о ней говорит вслух",
+    bodyView(held, dayAt(20), {}).extra, "Кровь не в срок — дурной знак при дитяти");
 
 console.log("\n=== Схватки и стадия наружу ===");
 

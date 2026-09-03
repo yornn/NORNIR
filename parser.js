@@ -630,16 +630,23 @@ const NRN_TOPICS = {
                  temper — псевдоним на случай, если модель возьмёт его сама. */
               mood: "sign_mood", temper: "sign_mood",
               ache: "sign_ache", swelling: "sign_swelling", heat: "sign_heat",
-              blood: "sign_blood", belly: "sign_belly", lettari: "sign_lettari" },
+              blood: "sign_blood", belly: "sign_belly", lettari: "sign_lettari",
+              /* Молоко — вид послеродового набора. Без этой строки поле
+                 выбрасывалось бы молча: takeTopic() берёт только то, что
+                 в карте, а пул примет живёт в body.js и о карте не знает. */
+              milk: "sign_milk" },
     BODY:   { body: "body" },
     BED:    { sex: "sex", internal: "internal" },
     BIRTH:  { midwife: "midwife" },
     KIN:    { faderni: "faderni", rank: "child_rank" },
+    /* Утроба: с чем сравнить дитя и что видно по матери. И то и другое
+       у панели есть своей заготовкой — сцена только подбирает слова. */
+    WOMB:   { size: "womb_size", sign: "womb_sign" },
     /* Дитя: имя говорится однажды, остальное — каждый ход из сцены.
        До этого у темы было одно поле, и после родов панель показывала только
        возраст и нужду из таблицы: живого дитяти в ней не было вовсе. */
     CHILD:  { name: "child_name", arms: "child_arms", look: "child_look",
-              need: "child_need" },
+              need: "child_need", growing: "child_growing" },
 };
 
 /** Поле внутри маркера темы: «имя: значение», разделитель между полями — «|». */
@@ -727,7 +734,8 @@ function emptyResult() {
         charState: null, userState: null, advice: null, desire: null,
         midwife: null,
         faderni: null, childRank: null, childName: null,
-        childArms: null, childLook: null, childNeed: null,
+        childArms: null, childLook: null, childNeed: null, childGrowing: null,
+        wombSize: null, wombSign: null,
         sex: null, internal: null,
         /* Приметы от сцены: вид → слова. Панель решает, какие виды сегодня
            звучат, сцена подбирает к ним слова. Пустой объект, а не null:
@@ -791,6 +799,13 @@ const BODY_EVENTS = [
     ["bleedEnd", /кровь\s+(?:кончилась|прекратилась|ушла)|месячные\s+кончились|bleeding\s+ended/i],
     ["oddBleeding", /кровь\s+не\s+в\s+срок|bleeding\s+out\s+of\s+season/i],
     ["quickened", /дитя\s+шевельнулось|шевеление|child\s+stirred/i],
+    /* Поход к гадающему. Пол лежит в записи с дня зачатия — гадание его не
+       решает, а оглашает, и до похода панель о нём молчит.
+
+       Слова нарочно не привязаны к одной традиции: вёльва, сейд, бабка,
+       знахарка — в этом мире ходят к тому, кто есть под рукой. Поэтому
+       в промпте стоит «sought a reading», а не имя обряда. */
+    ["divined", /гадал[аи]|ворожил[аи]|спрашивала\s+в[её]льву|sought\s+a\s+reading/i],
     ["labour", /схватки\s+начались|labour\s+began|labor\s+began/i],
     ["birth", /родила|дитя\s+родилось|gave\s+birth|child\s+born/i],
     ["lost", /выкидыш|дитя\s+не\s+выжило|miscarried/i],
@@ -998,7 +1013,11 @@ export function hasDetails(r) {
     if (!r) return false;
     return !!(r.weather || r.location || r.userAttire || r.charMood || r.charAttire || r.thought
         || r.charState || r.userState || r.advice || r.desire
-        || r.childArms || r.childNeed
+        || r.childArms || r.childNeed || r.childGrowing
+        /* Слова сцены к заготовкам панели — такая же сцена, как и прочее.
+           Без этих трёх ответ, где уцелел один маркер WOMB или CHILD с одним
+           ростом, разбор счёл бы пустым и выбросил целиком. */
+        || r.wombSize || r.wombSign
         /* Одни приметы — тоже сцена: ответ, где уцелел только маркер SIGNS,
            терять незачем. */
         || Object.keys(r.signs ?? {}).length > 0);
@@ -1142,6 +1161,12 @@ function fieldsToResult(fields, cleanInner) {
     result.childArms = clean(fields.child_arms);
     result.childLook = clean(fields.child_look);
     result.childNeed = clean(fields.child_need);
+    /* Слова сцены поверх заготовок панели: размер дитяти, что видно по
+       матери, как растёт рождённое. Панель без них не пустеет — у каждого
+       есть свой ряд в body.js, и он остаётся запасным. */
+    result.wombSize = clean(fields.womb_size);
+    result.wombSign = clean(fields.womb_sign);
+    result.childGrowing = clean(fields.child_growing);
     result.passed = parsePassed(clean(fields.passed));
     result.body = parseBodyEvents(clean(fields.body));
     result.sex = parseYesNo(clean(fields.sex));
