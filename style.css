@@ -2134,8 +2134,16 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     margin-right: 5px;
 }
 
+/* Шапка дитяти: имя, стадия роста, возраст — одной строкой. */
+.nrn-child-head {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin-bottom: 2px;
+}
+
 /* Имя дитяти — той же скандинавской латиницей, что и названия фаз. */
-.nrn-child .nrn-hintable {
+.nrn-child-name {
     font-family: "Norse", Georgia, serif;
     font-weight: 700;
     font-size: 15px;
@@ -2144,13 +2152,23 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     color: var(--nrn-accent);
 }
 
+.nrn-child-stage,
+.nrn-child-age {
+    font-size: 12px;
+    color: var(--nrn-text-dim);
+}
+
+/* Возраст — у правого края: имя и стадия говорят о том же, он об ином. */
+.nrn-child-age { margin-left: auto; }
+
 /* Нужда — то, ради чего плашка и заведена: читается с одного взгляда. */
 .nrn-child-need .nrn-fact-value {
     font-style: italic;
     color: var(--nrn-text-soft);
 }
 
-/* Веха — новость на три дня, потом уходит. */
+/* Как растёт и веха — тише нужды: описание и новость, а не забота. */
+.nrn-child-grow .nrn-fact-value,
 .nrn-child-mark .nrn-fact-value {
     font-size: 13px;
     color: var(--nrn-text-dim);
@@ -4175,8 +4193,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-attire,
 #nrn-widget[data-skin="thread"] .nrn-fact-value,
 #nrn-widget[data-skin="thread"] .nrn-leaf-empty,
-#nrn-widget[data-skin="thread"] .nrn-child-need,
-#nrn-widget[data-skin="thread"] .nrn-child-mark,
 #nrn-widget[data-skin="thread"] #nrn-draught-text {
     font-family: "Alegreya", serif !important;
 }
@@ -4186,6 +4202,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-cell,
 #nrn-widget[data-skin="thread"] .nrn-fig-name,
 #nrn-widget[data-skin="thread"] .nrn-kids-name,
+#nrn-widget[data-skin="thread"] .nrn-child-name,
 #nrn-widget[data-skin="thread"] .nrn-cycle-head::before {
     font-family: "Norse", Georgia, serif !important;
 }
@@ -4743,7 +4760,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 #nrn-widget[data-skin="thread"] .nrn-fig-on .nrn-fig-name { color: var(--nrn-th-name); }
 
-/* Створка детей: имя мельче, рядом счёт — «двое во дворе». */
+/* Створка детей: имя мельче, чем у героини и {{char}}, — раздел, а не лицо. */
 #nrn-widget[data-skin="thread"] .nrn-kids-head { padding: 9px 20px 9px 34px; }
 
 #nrn-widget[data-skin="thread"] .nrn-kids-name {
@@ -4756,14 +4773,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 #nrn-widget[data-skin="thread"] .nrn-fig-on .nrn-kids-name { color: var(--nrn-th-name); }
-
-#nrn-widget[data-skin="thread"] .nrn-kids-count {
-    flex: none;
-    font-size: 11px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--nrn-th-label);
-}
 
 /* ------------------------------------------------------------
  * 19.6. Створка героини: тело, одежда, нить Фрейи
@@ -5209,53 +5218,102 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-children {
     display: flex;
     flex-direction: column;
-    gap: 9px;
-    padding: 0 26px 14px 34px;
+    /* Между детьми — вдвое больше, чем между строками одного дитяти:
+       иначе двойня читается одним сплошным списком. */
+    gap: 20px;
+    padding: 4px 26px 14px 34px;
     scrollbar-width: none;
 }
 
 #nrn-widget[data-skin="thread"] .nrn-child {
-    display: grid;
-    grid-template-columns: auto auto 1fr;
-    align-items: baseline;
-    gap: 2px 10px;
+    display: block;
     padding: 0;
     border: 0;
 }
 
-#nrn-widget[data-skin="thread"] .nrn-child > .nrn-hintable {
-    font-size: 19px;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: var(--nrn-th-tag);
+/*
+ * Шапка дитяти — по образцу строки «тело» на листе героини: слово крупно,
+ * ярлыки мелко, черта под всей строкой.
+ *
+ * Имя набрано Norse и втрое крупнее подписей — на него смотрят первым.
+ * Стадия роста стоит сразу за именем, возраст отжат к правому краю: одно
+ * говорит, каков ребёнок, другое — сколько ему.
+ */
+#nrn-widget[data-skin="thread"] .nrn-child-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--nrn-th-line3);
 }
 
-/* Возраст — соседним столбцом, не отдельной строкой. */
-#nrn-widget[data-skin="thread"] .nrn-child > span:not(.nrn-hintable):not(.nrn-icon) {
-    font-size: 12px;
-    letter-spacing: 1.5px;
+#nrn-widget[data-skin="thread"] .nrn-child-name {
+    flex: none;
+    font-size: 23px;
+    letter-spacing: 1.3px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-th-name);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-child-stage {
+    flex: none;
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-th-label2);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-child-age {
+    flex: none;
+    margin-left: auto;
+    padding-left: 10px;
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    line-height: 1;
     text-transform: uppercase;
     color: var(--nrn-th-label);
 }
 
-/* Нужда — по правому краю той же строки: на неё смотрят первой. */
-#nrn-widget[data-skin="thread"] .nrn-child-need {
-    grid-column: 3;
-    justify-self: end;
+/* Строки дитяти — тот же столбец подписей, что и на листе героини. */
+#nrn-widget[data-skin="thread"] .nrn-child .nrn-fact {
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+    margin-top: 7px;
     font-size: 17px;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--nrn-th-accent2);
-}
-
-/* Веха — своей строкой во всю ширину, под именем. */
-#nrn-widget[data-skin="thread"] .nrn-child-mark {
-    grid-column: 1 / -1;
-    font-size: 16px;
-    line-height: 1.4;
+    line-height: 1.42;
     letter-spacing: 0;
     text-transform: none;
     text-wrap: pretty;
+    color: var(--nrn-th-muted);
+}
+
+#nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label {
+    flex: none;
+    width: 74px;
+    margin: 0;
+    font-family: "Cormorant Unicase", serif;
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--nrn-th-label);
+}
+
+/* Нужда — то, ради чего створка и заведена: тёплым цветом, как «что было». */
+#nrn-widget[data-skin="thread"] .nrn-child-need .nrn-fact-value {
+    color: var(--nrn-th-accent2);
+}
+
+/* Как растёт — прозой и тише прочего: это описание, а не новость. */
+#nrn-widget[data-skin="thread"] .nrn-child-grow .nrn-fact-value {
+    color: var(--nrn-th-dim);
+}
+
+/* Веха — новость на три дня, потом уходит. */
+#nrn-widget[data-skin="thread"] .nrn-child-mark .nrn-fact-value {
     color: var(--nrn-th-dim2);
 }
 
@@ -5750,10 +5808,11 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
         margin-top: 14px;
     }
 
-    #nrn-widget[data-skin="thread"] .nrn-child > .nrn-hintable { font-size: 16px; }
-    #nrn-widget[data-skin="thread"] .nrn-child > span:not(.nrn-hintable):not(.nrn-icon) { font-size: 11px; }
-    #nrn-widget[data-skin="thread"] .nrn-child-need { font-size: 15px; }
-    #nrn-widget[data-skin="thread"] .nrn-child-mark { font-size: 14px; }
+    #nrn-widget[data-skin="thread"] .nrn-child-name { font-size: 19px; }
+    #nrn-widget[data-skin="thread"] .nrn-child-stage,
+    #nrn-widget[data-skin="thread"] .nrn-child-age { font-size: 10px; letter-spacing: 1.4px; }
+    #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact { gap: 10px; font-size: 15px; }
+    #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label { width: 68px; }
 
     /*
      * Подножие без ярлыков.

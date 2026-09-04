@@ -2580,31 +2580,43 @@ function renderDraught() {
     row.show();
 }
 
-/* Сколько детей во дворе — словом, как сказали бы в доме. Дальше семерых
-   счёт не идёт словами: там уже просто число. */
-const KIDS_COUNT_WORDS = ["", "один", "двое", "трое", "четверо", "пятеро", "шестеро", "семеро"];
-
 function renderChildren() {
     const box = el("#nrn-children").empty();
     const head = el("#nrn-kids-head");
     const kids = bodySummary()?.children;
     if (!kids?.length) { box.hide(); head.hide(); return; }
 
-    el("#nrn-kids-count").text(`${KIDS_COUNT_WORDS[kids.length] ?? kids.length} во дворе`);
     head.show();
 
     for (const kid of kids) {
         const line = $("<div>", { "class": "nrn-child" });
-        line.append(
+        /*
+         * Шапка дитяти: имя, стадия роста, возраст.
+         *
+         * Имя щёлкать больше нельзя, и стадия за ним не прячется. Раньше
+         * «Ползунок» показывался только по нажатию на имя — то есть не
+         * показывался вовсе: щёлкать по имени ребёнка никому не приходит
+         * в голову. Теперь оба слова стоят рядом с именем и читаются
+         * сразу: стадия слева, возраст справа, как заголовок створки.
+         */
+        line.append($("<div>", { "class": "nrn-child-head" }).append(
             icon("child", "nrn-child-icon"),
-            hintSpan(`child-${kid.title}`, kid.title, kid.stage.ru),
-            plainSpan(` · ${kid.age}`),
-        );
+            $("<span>", { "class": "nrn-child-name", text: kid.title }),
+            $("<span>", { "class": "nrn-child-stage", text: kid.stage.ru }),
+            $("<span>", { "class": "nrn-child-age", text: kid.age }),
+        ));
+
+        /* Дальше — строки «подпись: слово», ровно как на листе героини:
+           узкий столбец подписи слева, слово во всю оставшуюся ширину.
+           Нужда первой: ради неё плашка и заведена. */
         if (kid.need) {
-            const need = factRow("child-need", null, kid.need).addClass("nrn-child-need");
+            const need = factRow("child-need", "Нужно", kid.need).addClass("nrn-child-need");
             if (kid.alarm) need.addClass("nrn-alarm");
             line.append(need);
         }
+        /* Как растёт — слова стадии, а если сцена сказала своё, то её.
+           Строка длинная, и потому идёт следом за нуждой, а не в шапке. */
+        if (kid.stage.hint) line.append(factRow("child-grow", "Растёт", kid.stage.hint).addClass("nrn-child-grow"));
         /* На руках и на кого похоже — из сцены, и потому под нуждой:
            нужда о том, что сейчас, а эти две — о том, как оно есть. */
         if (kid.arms) line.append(factRow("child-arms", "На руках", kid.arms));
@@ -2624,7 +2636,7 @@ function renderChildren() {
             line.append(factRow("watch-rank", "По закону", kid.rank, childRankHint(kid.rank)));
         }
         for (const mark of kid.marks) {
-            line.append(factRow("child-mark", null, mark).addClass("nrn-child-mark"));
+            line.append(factRow("child-mark", "Веха", mark).addClass("nrn-child-mark"));
         }
         box.append(line);
     }
@@ -3306,7 +3318,6 @@ function buildWidget() {
                     "data-tab": "kids",
                 }).append(
                     $("<span>", { "class": "nrn-kids-name", text: "Дети" }),
-                    $("<span>", { id: "nrn-kids-count", "class": "nrn-kids-count" }),
                 ),
                 $("<div>", { id: "nrn-children", "class": "nrn-children" }),
             ),
