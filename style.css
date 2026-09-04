@@ -2762,11 +2762,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-page-user    { order: 1; }
 #nrn-widget[data-skin="thread"] .nrn-rule:not(.nrn-rule-kids) { order: 2; }
 #nrn-widget[data-skin="thread"] #nrn-cycle        { order: 3; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-cols   { order: 4; }
-#nrn-widget[data-skin="thread"] #nrn-cycle-signs  { order: 5; }
-#nrn-widget[data-skin="thread"] #nrn-draught      { order: 6; }
-#nrn-widget[data-skin="thread"] #nrn-freyja-empty { order: 7; }
-#nrn-widget[data-skin="thread"] #nrn-page-char    { order: 8; }
+/* 4 — весть о теле, о ней сказано в 19.9 вместе со всем прочим. */
+#nrn-widget[data-skin="thread"] #nrn-cycle-cols   { order: 5; }
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs  { order: 6; }
+#nrn-widget[data-skin="thread"] #nrn-draught      { order: 7; }
+#nrn-widget[data-skin="thread"] #nrn-freyja-empty { order: 8; }
+#nrn-widget[data-skin="thread"] #nrn-page-char    { order: 9; }
 
 /*
  * Ничего в странице не сплющивается.
@@ -2780,6 +2781,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-page-char,
 #nrn-widget[data-skin="thread"] .nrn-rule,
 #nrn-widget[data-skin="thread"] #nrn-cycle,
+#nrn-widget[data-skin="thread"] #nrn-happened,
 #nrn-widget[data-skin="thread"] #nrn-cycle-signs,
 #nrn-widget[data-skin="thread"] #nrn-cycle-cols,
 #nrn-widget[data-skin="thread"] #nrn-draught,
@@ -2798,6 +2800,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) > #nrn-page-user,
 #nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) .nrn-rule:not(.nrn-rule-kids),
 #nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-cycle,
+#nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-happened,
 #nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-cycle-signs,
 #nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-cycle-cols,
 #nrn-widget[data-skin="thread"] #nrn-page:not([data-tab="user"]) #nrn-draught,
@@ -2935,6 +2938,22 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     text-transform: none;
     text-wrap: pretty;
     color: var(--nrn-th-body);
+}
+
+/*
+ * Ярлык одежды — тем же словом, что и у тела.
+ *
+ * Строка приходит голой фразой — «в шерстяном платье, платок на плечах», —
+ * и без слова над ней читалась как продолжение предыдущей. Знак поля сказал
+ * бы то же самое, но знаков в этой раскладке нет: вместо картинки слово.
+ */
+#nrn-widget[data-skin="thread"] .nrn-attire::before {
+    content: "одежда";
+    flex: none;
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    line-height: 1;
+    color: var(--nrn-th-label);
 }
 
 #nrn-widget[data-skin="thread"] .nrn-rule:not(.nrn-rule-kids) { margin-top: 18px; }
@@ -3398,65 +3417,124 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     color: var(--nrn-th-dim2);
 }
 
-/* ------------------------------------------------------------
- * 19.9. Подножие книги: что было и слово повитухи
+/*
+ * ВЕХИ — одна метка на все.
  *
- * Стоит под всеми тремя створками и не скачет при переключении. Строка
- * «что было» — событие тела из этого хода; в обычный ход события нет, и
- * строки тогда нет вовсе, как и сказано в промпте.
- * ------------------------------------------------------------ */
+ * Вех у дитяти бывает три, и панель пишет каждой свою строку с подписью
+ * «Веха:». Три одинаковые подписи подряд читались как три разных поля.
+ * Здесь подпись остаётся у первой, у остальных её место пустует — и три
+ * вехи выстраиваются списком под одним словом.
+ *
+ * Слово при этом становится множественным: `:has()` смотрит, есть ли за
+ * этой строкой ещё одна такая же. Текст подписи приходит из разметки, и
+ * подменить его можно только так — кеглем в ноль и своим `::before`.
+ */
+#nrn-widget[data-skin="thread"] .nrn-child-mark + .nrn-child-mark { margin-top: 2px; }
 
-#nrn-widget[data-skin="thread"] .nrn-foot {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    /* auto сверху держит подножие у нижнего края и тогда, когда тянуться
-       в книге нечему: все три створки закрыты или открыты дети. Иначе оно
-       поднималось вслед за заголовками и скакало при переключении. */
-    margin: auto 0 0;
-    padding: 11px 22px 13px;
-    border-top: 1px solid var(--nrn-th-line);
-    background: var(--nrn-th-bg2);
+#nrn-widget[data-skin="thread"] .nrn-child-mark ~ .nrn-child-mark .nrn-fact-label {
+    visibility: hidden;
 }
 
+#nrn-widget[data-skin="thread"] .nrn-child-mark:has(~ .nrn-child-mark) .nrn-fact-label {
+    font-size: 0;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-child-mark:has(~ .nrn-child-mark) .nrn-fact-label::before {
+    content: "вехи";
+    font-size: 10px;
+}
+
+/* ------------------------------------------------------------
+ * 19.9. Весть о теле и слово норны
+ *
+ * Две строки, и они о разном.
+ *
+ * ВЕСТЬ (atburðr) — что случилось с телом на этом ходу. Стоит она на листе
+ * нити, сразу под заголовком: это событие тела, и место ему рядом с телом,
+ * а не под всей книгой. В обычный ход события нет, и строки тогда нет
+ * вовсе, как и сказано в промпте.
+ *
+ * СЛОВО НОРНЫ — совет повитухи, и он в подножии: он о ходе целиком, а не
+ * об одной створке. Заголовок стоит над словом и посередине, само слово
+ * тоже посередине: это единственное место в панели, где говорят не о
+ * сцене, а читателю.
+ * ------------------------------------------------------------ */
+
+/*
+ * Весть — на подложке, а не в рамке.
+ *
+ * Выделить её надо: это единственная новость хода. Но лишняя черта на
+ * листе, где их и так две, читалась бы третьей перегородкой. Подложка в
+ * полтона забирает строку целиком и не режет лист.
+ *
+ * Красная полоса открытой створки идёт по левому краю страницы внутренней
+ * тенью, а подложка строки рисуется поверх неё и полосу съедала. Поэтому
+ * та же полоса повторена на самой строке — и проходит сквозь подложку
+ * ровно там, где шла бы без неё.
+ */
 #nrn-widget[data-skin="thread"] .nrn-happened {
+    order: 4;
     display: flex;
     align-items: baseline;
-    gap: 10px;
+    gap: 11px;
+    margin-top: 14px;
+    padding: 9px 26px 10px 20px;
+    /* Подложка — тот же цвет, что и полоса открытой створки, только в
+       одну десятую силы: облачный цвет чипа на «как в таверне» отличался
+       от самой створки на один процент прозрачности и не был виден.
+       Первая строка — запасная, для браузеров без color-mix. */
+    background: var(--nrn-th-bgchip);
+    background: color-mix(in srgb, var(--nrn-th-accent) 9%, transparent);
+    box-shadow: inset 3px 0 0 var(--nrn-th-accent);
     font-size: 16px;
     letter-spacing: 1.2px;
     text-transform: uppercase;
+    text-wrap: pretty;
     color: var(--nrn-th-accent2);
 }
 
 #nrn-widget[data-skin="thread"] .nrn-happened::before {
-    content: "что было";
+    content: "atburðr";
     flex: none;
     font-size: 11px;
     letter-spacing: 1.7px;
+    line-height: 1;
     color: var(--nrn-th-label);
 }
 
-#nrn-widget[data-skin="thread"] .nrn-happened::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--nrn-th-line2);
-}
+/* Черта от события до правого края снята: подложка держит строку сама. */
+#nrn-widget[data-skin="thread"] .nrn-happened::after { content: none; }
 
 #nrn-widget[data-skin="thread"] #nrn-happened-text { flex: none; }
 
+#nrn-widget[data-skin="thread"] .nrn-foot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    /* auto сверху держит подножие у нижнего края и тогда, когда тянуться
+       в книге нечему: все три створки закрыты или открыты дети. Иначе оно
+       поднималось вслед за заголовками и скакало при переключении. */
+    margin: auto 0 0;
+    padding: 12px 22px 14px;
+    border-top: 1px solid var(--nrn-th-line);
+    background: var(--nrn-th-bg2);
+    text-align: center;
+}
+
 /*
- * Слово повитухи. Ни таблички, ни рамки: подножие уже отделено чертой
- * сверху. Слева словесный ярлык, между ним и словом — звёздочка знака
- * совета.
+ * Слово норны: заголовок сверху, совет под ним, оба посередине.
+ *
+ * Ни таблички, ни рамки, ни звёздочки: подножие уже отделено чертой
+ * сверху, а знак совета был единственной картинкой там, где всё остальное
+ * сказано словом.
  */
 #nrn-widget[data-skin="thread"] #nrn-advice {
     position: static;
     display: flex;
-    align-items: baseline;
-    justify-content: flex-start;
-    gap: 13px;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
     margin: 0;
     padding: 0;
     border: 0;
@@ -3464,40 +3542,32 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     font-size: 21px;
     letter-spacing: 0.4px;
     line-height: 1.34;
+    text-align: center;
     text-wrap: pretty;
     color: var(--nrn-th-advice);
 }
 
 #nrn-widget[data-skin="thread"] #nrn-advice::before {
-    content: "слово повитухи";
+    content: "ORÐ NORNA";
     position: static;
     flex: none;
     padding: 0;
     background: none;
     opacity: 1;
     font-size: 11px;
-    letter-spacing: 1.7px;
+    letter-spacing: 2.4px;
+    line-height: 1;
     text-transform: uppercase;
-    color: var(--nrn-th-label);
+    color: var(--nrn-th-label2);
 }
 
 #nrn-widget[data-skin="thread"] #nrn-advice::after { content: none; }
 
-#nrn-widget[data-skin="thread"] #nrn-advice .nrn-advice-icon {
-    display: block;
-    flex: none;
-    width: auto;
-    height: auto;
-    background: none;
-    font-size: 10px;
-    line-height: 1;
-    color: var(--nrn-th-accent);
-}
-
-#nrn-widget[data-skin="thread"] #nrn-advice .nrn-advice-icon::before { content: "✦"; }
+#nrn-widget[data-skin="thread"] #nrn-advice .nrn-advice-icon { display: none !important; }
 
 #nrn-widget[data-skin="thread"] #nrn-advice-text {
-    flex: 1;
+    flex: none;
+    max-width: 100%;
     min-width: 0;
     color: inherit;
 }
@@ -3609,11 +3679,11 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
    строчной базовой линии и шапка становится выше на четыре пикселя. */
 #nrn-widget[data-skin="thread"] .nrn-vegvisir-svg { display: block; }
 
-/* Одежда — знак и фраза в строку. */
+/* Одежда — ярлык и фраза в строку, теми же зазорами, что и у тела (19.6). */
 #nrn-widget[data-skin="thread"] .nrn-attire {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: 11px;
 }
 
 /* ------------------------------------------------------------
@@ -3922,20 +3992,16 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label { width: 68px; }
 
     /*
-     * Подножие без ярлыков.
+     * Подножие и весть на телефоне.
      *
-     * «Что было» и «слово повитухи» сняты, осталась сама фраза. На 390
-     * ярлык съедал треть строки, а сказать ему нечего: строк всего две,
-     * стоят они всегда в одном порядке и каждая своим цветом. Черта от
-     * события до края уходит с ним заодно — держать ей больше нечего.
+     * Ярлыки остались: весть уехала на лист, где ей есть место, а у слова
+     * норны ярлык стоит своей строкой над словом и ничего у него не
+     * отнимает. Поля у вести — по полям листа, они здесь свои.
      */
-    #nrn-widget[data-skin="thread"] .nrn-happened::before,
-    #nrn-widget[data-skin="thread"] .nrn-happened::after,
-    #nrn-widget[data-skin="thread"] #nrn-advice::before { content: none; }
+    #nrn-widget[data-skin="thread"] .nrn-happened { padding: 8px 16px 9px; font-size: 14px; }
 
     #nrn-widget[data-skin="thread"] .nrn-foot { gap: 5px; padding: 10px 16px 12px; }
-    #nrn-widget[data-skin="thread"] .nrn-happened { font-size: 14px; }
-    #nrn-widget[data-skin="thread"] #nrn-advice { gap: 10px; font-size: 17px; }
+    #nrn-widget[data-skin="thread"] #nrn-advice { gap: 4px; font-size: 17px; }
 
     /* Воздух между строками времени (19.10a) на телефоне вдвое тише: там
        эти три пикселя стоят целой строки. */

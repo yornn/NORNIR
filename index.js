@@ -3146,7 +3146,17 @@ function buildWidget() {
                                 $("<span>", { id: "nrn-draught-text", "class": "nrn-draught-text" }),
                             ),
                             /*
-                             * Подножие: что случилось с телом и слово норны.
+                             * Весть о теле: что случилось с ним на этом ходу.
+                             *
+                             * Стоит на листе нити, рядом с самим телом. В
+                             * обычный ход события нет, и строки тогда нет
+                             * вовсе — так и сказано в промпте.
+                             */
+                            $("<div>", { id: "nrn-happened", "class": "nrn-happened" }).append(
+                                $("<span>", { id: "nrn-happened-text" }),
+                            ),
+                            /*
+                             * Подножие: слово норны.
                              *
                              * Обёртка лежит внутри листа нити, а на место её
                              * ставит applySkin: в книгу, под все три створки.
@@ -3154,9 +3164,6 @@ function buildWidget() {
                              * именно этого листа, и разметке так понятнее.
                              */
                             $("<div>", { "class": "nrn-foot" }).append(
-                                $("<div>", { id: "nrn-happened", "class": "nrn-happened" }).append(
-                                    $("<span>", { id: "nrn-happened-text" }),
-                                ),
                                 $("<div>", { id: "nrn-advice", "class": "nrn-advice" }).append(
                                     icon("advice", "nrn-advice-icon"),
                                     $("<span>", { id: "nrn-advice-text" }),
@@ -3949,39 +3956,24 @@ function applyTheme(theme) {
 }
 
 /**
- * Раскладка — атрибутом на виджете, и два перевешивания узла.
+ * Раскладка — атрибутом на виджете, и одно перевешивание узла.
  *
  * Всё остальное решает CSS: разметка у раскладок одна, лишнее в каждой
  * спрятано стилями. Поэтому переключение мгновенное и не теряет ни
  * открытой створки, ни прокрутки.
  *
- * Перевешивать приходится там, где узел меняет не вид, а хозяина, — CSS
- * такого не умеет:
- *
- *   1. Подножие принадлежит всей панели: оно стоит под всеми тремя
- *      створками и говорит о ходе, а не о листе. В разметке оно лежит
- *      внутри листа нити, и здесь его переносят в книгу.
- *
- *   2. Весть о теле («что было») в новой раскладке уехала на лист нити:
- *      это событие тела, и место ему рядом с телом. В прежней раскладке
- *      она остаётся в подножии, первой строкой перед словом повитухи.
+ * Подножие — единственное исключение: оно принадлежит всей панели, стоит
+ * под всеми тремя створками и говорит о ходе, а не о листе. В разметке
+ * оно лежит внутри листа нити, и здесь его переносят в книгу. CSS такого
+ * не умеет: узел меняет не вид, а хозяина.
  */
 function applySkin(skin) {
     if (!$widget) return;
-    const name = skin || "thread";
-    $widget.attr("data-skin", name);
+    $widget.attr("data-skin", skin || "thread");
 
     const foot = $widget.find(".nrn-foot");
     const $book = $widget.find("#nrn-book");
     if ($book.length && !foot.parent().is($book)) $book.append(foot);
-
-    const happened = $widget.find("#nrn-happened");
-    if (name === "loom") {
-        const $leaf = $widget.find("#nrn-page-freyja");
-        if ($leaf.length && !happened.parent().is($leaf)) $leaf.append(happened);
-    } else if (foot.length && !happened.parent().is(foot)) {
-        foot.prepend(happened);
-    }
 
     forgetStoredDisplay();
 }

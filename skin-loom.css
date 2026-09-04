@@ -1360,7 +1360,13 @@
     order: 4;
     margin-top: var(--nrn-lm-air);
     padding: 9px 26px 10px 20px;
+    /* Подложка — тот же цвет, что и полоса открытой створки, только в
+       одну десятую силы. Первая строка запасная, для браузеров без
+       color-mix. Полоса повторена на самой строке: подложка рисуется
+       поверх внутренней тени страницы и съедала бы её. */
     background: var(--nrn-lm-bgchip);
+    background: color-mix(in srgb, var(--nrn-lm-accent) 9%, transparent);
+    box-shadow: inset 3px 0 0 var(--nrn-lm-accent);
     color: var(--nrn-lm-accent2);
 }
 
