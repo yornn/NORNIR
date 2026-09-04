@@ -587,11 +587,26 @@ const BLOCK_WOMB = [
     "",
 ];
 
+/*
+ * Род спрашивается, пока дитя в утробе, и только пока.
+ *
+ * Стоял блок при `known || born` — то есть и весь год после родов, — и модель
+ * послушно писала фадерни, ранг и имя каждый ход. Решено это однажды, в час
+ * рождения, и больше не меняется: признают дитя, и по закону рождается дитя.
+ * После родов род застывает в самом дитяти (bornChildren) и показывается
+ * у него же, а у матери исчезает вместе с блоком.
+ *
+ * Имя сюда добавлено нарочно. Прежде его спрашивал только childBlock, у уже
+ * рождённого, — а имя часто выбирают заранее. Названное до родов доедет до
+ * дитяти само: `childName` лежит в TOLD_FIELDS, и nameChildren() приложит
+ * его к новорождённому, не спрашивая второй раз.
+ */
 const BLOCK_KIN = [
-    "[KIN — every reply while the child is known]",
+    "[KIN — every reply while the child is carried and known]",
     "faderni — whether the father has acknowledged the child. One word: признано / не признано / оспорено.",
     "rank — what the child will be born as, by the law of this age. One word of the four: скирборинн (born in wedlock), фриллуборинн (of a concubine), тюборинн (of a bondwoman, and a bondman himself), хорнунг (of a free woman out of wedlock).",
-    "→ NRN KIN | faderni: <one word> | rank: <one of those four>",
+    "name — the name they have settled on for the child, if they have settled on one. Until they have, write exactly «не выбрано». Twins: both names, separated by \"; \".",
+    "→ NRN KIN | faderni: <one word> | rank: <one of those four> | name: <the name, or не выбрано>",
     "",
 ];
 
@@ -719,7 +734,7 @@ function signsBlock(view) {
  * показывает форму — и не подсовывает имени, которое можно списать.
  */
 const EXAMPLE_BIRTH = "<!-- NRN BIRTH | midwife: нет -->";
-const EXAMPLE_KIN = "<!-- NRN KIN | faderni: признано | rank: скирборинн -->";
+const EXAMPLE_KIN = "<!-- NRN KIN | faderni: признано | rank: скирборинн | name: не выбрано -->";
 /* Слова примера намеренно не из рядов body.js: образец, слово в слово
    совпавший с заготовкой, модель списывает охотнее, чем пишет своё. */
 const EXAMPLE_WOMB = "<!-- NRN WOMB | size: с материн кулак | sign: пояс переставлен, дышит чаще -->";
@@ -763,7 +778,7 @@ function exampleBlock({ withBody, signKinds, nearBirth, known, born, carrying, h
         ...signs,
         ...(nearBirth ? [EXAMPLE_BIRTH] : []),
         ...(carrying ? [EXAMPLE_WOMB] : []),
-        ...(known || born ? [EXAMPLE_KIN] : []),
+        ...(known ? [EXAMPLE_KIN] : []),
         ...(hasKids ? [unnamed ? EXAMPLE_CHILD : EXAMPLE_CHILD_NAMED] : []),
         "",
         /* Без этой строки пример читается как полный список: раз в образце нет
@@ -851,7 +866,7 @@ function promptHead() {
         ...(withBody ? [...BLOCK_BODY, ...BLOCK_BED] : []),
         ...(nearBirth ? BLOCK_BIRTH : []),
         ...(carrying ? BLOCK_WOMB : []),
-        ...(known || born ? BLOCK_KIN : []),
+        ...(known ? BLOCK_KIN : []),
         ...(kids.length ? childBlock(unnamed, kids.length > 1, weanable) : []),
         ...exampleBlock({
             withBody, signKinds: withBody ? signKinds : [],
@@ -2446,6 +2461,11 @@ function renderCycle() {
     const extra = el("#nrn-cycle-extra").empty();
     if (s.extra) extra.append(factRow(s.extraIcon, null, s.extra)).show(); else extra.hide();
 
+    /* Носит ли она сейчас. От этого зависят обе плашки: и род, и ношение —
+       про дитя в утробе, и после родов им обеим стоять пустыми. */
+    const carrying = s.state === "pregnant_unknown" || s.state === "pregnant_known"
+        || s.state === "threat";
+
     /* Род. Отец и гадание — двумя строками, не одной: признание отцовства
        это правовой факт, а толкование живота — присказка повитухи, и
        подсказка «гадание, а не знание» относится только ко второму. */
@@ -2468,12 +2488,27 @@ function renderCycle() {
             hintSpan("cycleOmen", s.omen, s.omenHint),
         ));
     }
-    for (const [iconName, label, key] of KIN_FIELDS) {
-        if (!state[key]) continue;
-        /* Ранг дитяти — единственное поле рода, которое само по себе не
-           читается: «хорнунг» ничего не говорит, пока не щёлкнешь. */
-        kin.push(factRow(iconName, label, state[key],
-            key === "childRank" ? childRankHint(state[key]) : null));
+    /*
+     * Род — только пока дитя в утробе.
+     *
+     * Стояло без условия, и фадерни со скирборинном висели у матери весь год
+     * после родов, а имя — третьей строкой, хотя оно уже написано в «детях».
+     * Решено это однажды, в час рождения; дальше род застыл в самом дитяти
+     * и показывается у него.
+     *
+     * Имя тут показываем и пустым: пока родители его не выбрали, строка
+     * говорит об этом прямо. Это не заглушка, а положение дел — до наречения
+     * имени нет, и в доме об этом знают.
+     */
+    if (carrying) {
+        for (const [iconName, label, key] of KIN_FIELDS) {
+            const value = state[key] ?? (key === "childName" ? "не выбрано" : null);
+            if (!value) continue;
+            /* Ранг дитяти — единственное поле рода, которое само по себе не
+               читается: «хорнунг» ничего не говорит, пока не щёлкнешь. */
+            kin.push(factRow(iconName, label, value,
+                key === "childRank" ? childRankHint(value) : null));
+        }
     }
     const hasKin = fillGroup("#nrn-cycle-kin", "Дом и род", kin);
 
@@ -2483,9 +2518,18 @@ function renderCycle() {
     const carry = [];
     if (s.due) carry.push(factRow("body-due", "Срок", s.due));
     if (s.size) carry.push(factRow("body-size", "Размер", s.size));
-    /* Заданная автором главнее сказанной сценой: это уговор ролевой,
-       а сцена могла просто не вспомнить о нём в этом ходу. */
-    const midwife = manualMidwife() ?? state.midwife;
+    /*
+     * Повитуха — только пока носит.
+     *
+     * Стояла безусловно, и «Льосмодир: Забава» висела в панели через год
+     * после родов. Льосмодир принимает роды и ходит за родильницей первые
+     * дни — дальше она в доме не нужна, и спрашивать её незачем ни панели,
+     * ни промпту. Понадобится — вернётся с новым ношением.
+     *
+     * Заданная автором главнее сказанной сценой: это уговор ролевой,
+     * а сцена могла просто не вспомнить о нём в этом ходу.
+     */
+    const midwife = carrying ? (manualMidwife() ?? state.midwife) : null;
     if (midwife) carry.push(factRow("watch-midwife", "Льосмодир", midwife));
     const hasHouse = fillGroup("#nrn-cycle-house", "Ношение", carry);
 
@@ -2565,6 +2609,20 @@ function renderChildren() {
            нужда о том, что сейчас, а эти две — о том, как оно есть. */
         if (kid.arms) line.append(factRow("child-arms", "На руках", kid.arms));
         if (kid.look) line.append(factRow("child-look", "Обличьем", kid.look));
+        /*
+         * Род — здесь, у самого дитяти, и здесь он застыл.
+         *
+         * У матери он стоял до конца чата, а решается однажды и не о ней:
+         * признают дитя, и по закону рождается дитя. У двойни поля свои
+         * у каждого, хотя обычно совпадают, — плашка на каждого своя.
+         *
+         * Стоят они ниже руки и обличья нарочно: те две про сегодняшний день,
+         * а эти две — про то, что было решено раз и навсегда.
+         */
+        if (kid.faderni) line.append(factRow("watch-faderni", "Фадерни", kid.faderni));
+        if (kid.rank) {
+            line.append(factRow("watch-rank", "По закону", kid.rank, childRankHint(kid.rank)));
+        }
         for (const mark of kid.marks) {
             line.append(factRow("child-mark", null, mark).addClass("nrn-child-mark"));
         }

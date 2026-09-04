@@ -645,7 +645,9 @@ const NRN_TOPICS = {
     BODY:   { body: "body" },
     BED:    { sex: "sex", internal: "internal" },
     BIRTH:  { midwife: "midwife" },
-    KIN:    { faderni: "faderni", rank: "child_rank" },
+    /* Имя здесь то же самое поле, что и у CHILD: выбранное до родов и данное
+       при наречении — одно имя, и держать под него два поля незачем. */
+    KIN:    { faderni: "faderni", rank: "child_rank", name: "child_name" },
     /* Утроба: с чем сравнить дитя и что видно по матери. И то и другое
        у панели есть своей заготовкой — сцена только подбирает слова. */
     WOMB:   { size: "womb_size", sign: "womb_sign" },

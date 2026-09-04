@@ -1791,6 +1791,49 @@ syncWholeChat(nursingChat);
 const anchored = findBodyState(nursingChat, null, {
     manualBody: pregnancyAnchor({ year: 1015, month: 8, day: 1 }, { part: 9, known: true }),
 });
+console.log("\n=== Род застывает в дитяти ===");
+
+/*
+ * Фадерни и положение по закону — не о матери.
+ *
+ * Стояли они у неё в панели до конца чата, а промпт спрашивал их каждый ход:
+ * блок KIN висел и после родов. Решается это однажды, в час рождения, и
+ * больше не меняется — признают дитя, и по закону рождается дитя.
+ *
+ * Имя туда же: выбранное до родов доезжает до новорождённого само, через
+ * TOLD_FIELDS, и второй раз его не спрашивают.
+ */
+const kinChat = (name) => {
+    /* Маркер собираем руками: у mk() полей рода нет, а нужны все три разом. */
+    const chat = [
+        {
+            is_user: false, gen_finished: `kin-${seq++}`, extra: {},
+            mes: ["проза", "", "<!-- [URD:", "eykt: хадеги", "date: 1 сольмануд 1015",
+                "faderni: признано", "child_rank: скирборинн", `child_name: ${name}`,
+                "weather: снег", "location: дом", "mood: ок",
+                "user_attire: а", "char_attire: б", "thought: в", "] -->"].join("\n"),
+        },
+        mk("хадеги", "date: 21 сольмануд 1015", "родила"),
+    ];
+    syncWholeChat(chat);
+    return findBodyState(chat, null, {
+        chatId: "kin",
+        manualBody: pregnancyAnchor({ year: 1015, month: 9, day: 1 }, { part: 9, known: true }),
+    });
+};
+
+const withKin = kinChat("Астрид");
+check("род застыл в дитяти", withKin.children[0].faderni, "признано");
+check("и положение по закону тоже", withKin.children[0].rank, "скирборинн");
+/* У матери его не остаётся: она носила, а признают дитя. */
+check("имя, выбранное до родов, доехало", withKin.children[0].name, "Астрид");
+check("«не выбрано» именем не становится",
+    String(kinChat("не выбрано").children[0].name), "null");
+
+const kinView = bodyView(withKin, { year: 1015, month: 9, day: 25 }, {});
+check("панель дитяти знает род", kinView.children[0].faderni, "признано");
+check("и его положение", kinView.children[0].rank, "скирборинн");
+
 /*
  * Кровь возвращает круг, но не отнимает дитя от груди.
  *

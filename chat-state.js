@@ -620,7 +620,7 @@ function applyBodyEvents(body, events, today, ctx = {}) {
                        и число берутся из неё, а решены они были в день зачатия. */
                     next.children = [
                         ...(next.children ?? []),
-                        ...bornChildren(next.pregnancy, today).map(
+                        ...bornChildren(next.pregnancy, today, ctx.kin).map(
                             (c) => (roll.early ? { ...c, early: true } : c)),
                     ];
                     /* Кормление само по себе отменяет тидир — счёт цикла встаёт
@@ -769,7 +769,7 @@ function startedPregnancy(conceived, ctx = {}) {
  * `order` нужен, чтобы двойня не жила в такт: нужды у них считаются от одного
  * дня рождения, и без порядкового номера оба всегда хотели бы одного и того же.
  */
-function bornChildren(pregnancy, today) {
+function bornChildren(pregnancy, today, kin = null) {
     const count = Math.max(1, pregnancy.births ?? 1);
     const sexes = pregnancy.sexes ?? [pregnancy.sex ?? null];
     return Array.from({ length: count }, (_, i) => ({
@@ -777,6 +777,20 @@ function bornChildren(pregnancy, today) {
         order: i,
         sex: sexes[i] ?? sexes[0] ?? null,
         name: null,
+        /*
+         * Отцовство и положение по закону кладём В САМО ДИТЯ, а не оставляем
+         * висеть у матери.
+         *
+         * Это её и не касается: признают дитя, и по закону рождается дитя.
+         * А в панели матери они стояли до конца чата — и промпт продолжал
+         * спрашивать их каждый ход, хотя решено это было однажды, в час
+         * рождения, и больше не менялось.
+         *
+         * У двойни оба поля общие: отец признаёт обоих, и закон судит их
+         * по одному и тому же браку.
+         */
+        faderni: kin?.faderni ?? null,
+        rank: kin?.rank ?? null,
     }));
 }
 
@@ -813,7 +827,12 @@ function nameChildren(children, told) {
     let changed = false;
     const out = children.map((child, i) => {
         const name = names[i];
-        if (!name || child.name === name || /^не наречен/i.test(name.replace(/ё/g, "е"))) return child;
+        /* Два служебных слова, а не одно: «не наречён» говорит childBlock
+           о рождённом, «не выбрано» — BLOCK_KIN о том, что в утробе. Оба
+           значат «имени ещё нет» и в имя записываться не должны. */
+        const flat = name.replace(/ё/g, "е");
+        if (!name || child.name === name
+            || /^не наречен/i.test(flat) || /^не выбрано/i.test(flat)) return child;
         changed = true;
         return { ...child, name };
     });
@@ -1201,6 +1220,16 @@ export function resolveDates(chat, startDate = null, options = {}) {
                 chatId: options.chatId,
                 chances: options.chances,
                 risks: options.risks,
+                /*
+                 * Род — то, что застывает в дитяти при рождении, и разбору
+                 * событий он нужен готовым. Берём и сказанное этим же
+                 * сообщением, и доехавшее из прошлых: маркер KIN и «родила»
+                 * вполне приходят вместе, а carryTold() считается ниже.
+                 */
+                kin: {
+                    faderni: state.faderni ?? toldCarried?.faderni ?? null,
+                    rank: state.childRank ?? toldCarried?.childRank ?? null,
+                },
             });
         }
 

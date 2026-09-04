@@ -2711,6 +2711,10 @@ function childrenView(children, today, opts = {}) {
              */
             stage: scene?.growing ? { ...s.stage, hint: String(scene.growing) } : s.stage,
             named: !!s.name,
+            /* Род застыл в дитяти в час рождения. У матери его больше нет:
+               признают дитя, и по закону рождается дитя, а не она. */
+            faderni: child.faderni ?? null,
+            rank: child.rank ?? null,
             need,
             /* Из сцены и только из сцены: на чьих руках и на кого похоже —
                панели этого не вывести ниоткуда. */
