@@ -4,29 +4,26 @@
  * ОГЛАВЛЕНИЕ (STRUCTURE):
  *
  * ДВЕ ОСИ ОФОРМЛЕНИЯ. `data-skin` на виджете решает, КАК блок стоит:
- * "board" — резная доска с книгой (разделы 3–6), "flat" — прежняя
- * плоская вёрстка колонками (раздел 18). `data-theme` решает, КАКОГО он
- * цвета (раздел 2), и работает в обеих раскладках. Разметка у раскладок
- * одна: лишнее в каждой спрятано стилями, а не пересобрано.
+ * "thread" — «Дом и его нити» (раздел 19), "loom" — её новая раскладка,
+ * и она лежит своим файлом, skin-loom.css. `data-theme` решает, КАКОГО
+ * он цвета (разделы 2, 20, 20b, 20c). Разметка у раскладок одна: лишнее
+ * в каждой спрятано стилями, а не пересобрано.
  *
- * 1. Fonts .............. Подключение шрифта Norse
- * 2. Themes ............. CSS-переменные тем (data-theme на виджете)
- * 3. Widget Base ........ Доска-картинка и пиксель макета (--nrn-px)
- * 4. Beam ............... Верхняя балка: погода, время суток, место
- * 5. Wood ............... Вегвизир, дата, календарик — по дереву
- * 6. Book ............... Книга: страница сводки, фигурки, дети
- * 7. Hints .............. Кликабельные слова-подсказки
- * 8. Weather & Location . Надписи погоды и места
- * 9. Leaf Rows .......... Строки страниц {{user}} / нити / {{char}}
- * 10. Calendar Grid ..... Сетка дней месяца
- * 11. Auknætr ........... Дополнительные дни (Sumarauki)
+ * 1. Fonts .............. Подключение шрифтов
+ * 2. Themes ............. Запасной набор ролей (data-theme на виджете)
+ * 3. Widget Base ........ Корень блока и контейнер для запросов по ширине
  * 12. Settings Panel .... Панель настроек в UI SillyTavern
  * 13. Tímatal ........... Мини-справочник из «волшебной палочки»
  * 14. Icons ............. Знаки полей из папки icons/ и строки фактов
- * 18. Flat Skin ......... Прежняя плоская раскладка (data-skin="flat")
+ * 17. Пояснения ......... Облачка над словами-подсказками
  * 19. Thread Skin ....... Раскладка «Дом и его нити» (data-skin="thread")
  * 20. Thread Themes ..... Три темы к ней, писанные в ролях --nrn-th-*
  * 20b. Thread Palettes .. Мост ролей и ещё восемнадцать тем к «нитям»
+ * 20c. Как в таверне .... Перекрас, снятый с самой SillyTavern
+ *
+ * Номера разделов сохранены от прежней разбивки нарочно: по ним писаны
+ * ссылки в комментариях и в index.js, и сдвигать их ради счёта дороже,
+ * чем оставить пропуски.
  */
 
 /* ============================================================
@@ -48,8 +45,8 @@
     font-display: swap;
 }
 
-/* Текстовый шрифт листов. Norse остаётся на подписях — см. правило регистра
-   в разделе 7. */
+/* Текстовый шрифт листов. Norse остаётся на подписях — см. правило
+   регистра в разделе 19. */
 @font-face {
     font-family: "Cormorant Unicase";
     src: url("fonts/CormorantUnicase-Medium.ttf") format("truetype");
@@ -58,8 +55,8 @@
     font-display: swap;
 }
 
-/* Alegreya — обычный текст в раскладке «Дом и его нити» (раздел 19).
-   В board и flat не используется: там листы набраны Cormorant Unicase. */
+/* Alegreya — обычный текст: одежда, приметы, слово повитухи. Подписи
+   и имена набраны другим, см. правило регистра в разделе 19. */
 @font-face {
     font-family: "Alegreya";
     src: url("fonts/Alegreya-Regular.ttf") format("truetype");
@@ -71,35 +68,21 @@
 /* ============================================================
  * 2. THEMES (CSS-переменные)
  *
- * Тема выбирается в панели настроек расширения (кубики) и вешается
- * атрибутом data-theme на всё, что помечено классом .nrn-themed:
- * виджет, окно Tímatal и его <dialog>-подложку. Благодаря общему
- * классу подложка красится нашими цветами, а не темой таверны.
+ * Тема выбирается в справочнике Tímatal и вешается атрибутом data-theme
+ * на всё, что помечено классом .nrn-themed: виджет, окно Tímatal и его
+ * <dialog>-подложку. Благодаря общему классу подложка красится нашими
+ * цветами, а не темой таверны.
  *
- * Тема отвечает только за ЦВЕТ и работает в обеих раскладках; за то,
- * КАК блок стоит, отвечает data-skin (разделы 3–6 и 18).
+ * Сами палитры лежат ниже, у своих раскладок: «Дому и его нитям» —
+ * разделы 20, 20b и 20c. Здесь только запасной набор ролей: то, чем
+ * красится блок, пока тема молчит. Тема, где роль не названа, берёт её
+ * отсюда — поэтому набор полный, а не куцый.
  *
  * Чтобы добавить новую тему — скопируйте блок [data-theme="..."]
- * и переопределите переменные.
- *
- * --- про --nrn-art-filter ---
- *
- * На резной доске цвет темы почти не за что зацепиться: дерево, книга и
- * фигурки нарисованы раз и навсегда, и тема красила бы одни надписи.
- * Поэтому у каждой темы есть ещё и фильтр — им подкрашивается сама
- * картинка: тёплый закат, холодная ночь, серый туман.
- *
- * Значение по умолчанию — `opacity(1)`, а не `none`: фильтр подставляется
- * в общий список (`brightness(0.78) saturate(0.7) var(--nrn-art-filter)`),
- * и `none` посреди списка сделал бы всё правило недействительным.
- *
- * На бумагу книги фильтр ложится тоже — иначе страница осталась бы белой
- * посреди посиневшей доски. Буквы он не трогает: подкрашены слои с
- * рисунками, а текст лежит поверх них.
+ * из раздела 20b и переопределите переменные.
  * ============================================================ */
 
-.nrn-themed,
-.nrn-themed[data-theme="default"] {
+.nrn-themed {
     --nrn-bg: #16151d;
     --nrn-bg-raised: #201e29;
     --nrn-bg-open: #262330;
@@ -116,7 +99,6 @@
     --nrn-text-day: #cfc4a8;
     --nrn-accent: #b8946a;
     --nrn-accent-contrast: #16151d;
-    --nrn-accent-glow: rgba(184, 148, 106, 0.5);
     --nrn-accent-glow-strong: rgba(184, 148, 106, 0.8);
     --nrn-accent-border-dim: rgba(184, 148, 106, 0.4);
     --nrn-chip-text: #c9a06a;
@@ -124,300 +106,36 @@
     --nrn-chip-border: rgba(201, 160, 106, 0.25);
     /* Праздник — своим цветом, не акцентным: рядом стоит «сегодня». */
     --nrn-feast: #c96a4a;
-    --nrn-feast-bg: rgba(201, 106, 74, 0.18);
-    /* Рисунки доски — как нарисованы. */
-    --nrn-art-filter: opacity(1);
-    /*
-     * Ореол под надписями по дереву (раздел 3).
-     *
-     * На тёмных темах он чёрный: светлая буква иначе пропадает на светлом
-     * пятне, которое лежит поперёк доски. На светлых — наоборот, белый:
-     * там и дерево высветлено фильтром, и буквы тёмные, и чёрная тень
-     * под ними превращала бы строку в грязь.
-     */
-    --nrn-text-halo: rgba(0, 0, 0, 0.85);
-    --nrn-text-halo-soft: rgba(0, 0, 0, 0.55);
-}
-
-/* Светлая тема — выбеленная кость и береста */
-.nrn-themed[data-theme="light"] {
-    --nrn-bg: #efe9db;
-    --nrn-bg-raised: #e3dccb;
-    --nrn-bg-open: #ddd4c0;
-    --nrn-bg-hover: #d4cab4;
-    --nrn-border: #a89a7d;
-    --nrn-border-soft: #c6bba3;
-    --nrn-text: #3d372a;
-    --nrn-text-bright: #2a251b;
-    --nrn-text-dim: #7d7461;
-    --nrn-text-muted: #5d5545;
-    --nrn-text-soft: #4a6076;
-    --nrn-text-panel: #4c4433;
-    --nrn-text-weather: #4a6076;
-    --nrn-text-day: #4c4433;
-    --nrn-accent: #8a6538;
-    --nrn-accent-contrast: #f7f2e6;
-    --nrn-accent-glow: rgba(138, 101, 56, 0.4);
-    --nrn-accent-glow-strong: rgba(138, 101, 56, 0.6);
-    --nrn-accent-border-dim: rgba(138, 101, 56, 0.45);
-    --nrn-chip-text: #7a5526;
-    --nrn-chip-bg: rgba(138, 101, 56, 0.10);
-    --nrn-chip-border: rgba(138, 101, 56, 0.35);
-    --nrn-feast: #a8452c;
-    --nrn-feast-bg: rgba(168, 69, 44, 0.16);
-    --nrn-art-filter: brightness(1.16) saturate(0.78);
-}
-
-/* Полуночное море — глубокая синева и серебро */
-.nrn-themed[data-theme="midnight"] {
-    --nrn-bg: #0d1420;
-    --nrn-bg-raised: #141d2e;
-    --nrn-bg-open: #18223a;
-    --nrn-bg-hover: #1f2c47;
-    --nrn-border: #33445e;
-    --nrn-border-soft: #24324a;
-    --nrn-text: #c3cfe2;
-    --nrn-text-bright: #e2ecfa;
-    --nrn-text-dim: #66778f;
-    --nrn-text-muted: #8fa0b8;
-    --nrn-text-soft: #9db6d4;
-    --nrn-text-panel: #aebdd3;
-    --nrn-text-weather: #9fc0dd;
-    --nrn-text-day: #b7c6da;
-    --nrn-accent: #6f9fd0;
-    --nrn-accent-contrast: #0d1420;
-    --nrn-accent-glow: rgba(111, 159, 208, 0.5);
-    --nrn-accent-glow-strong: rgba(111, 159, 208, 0.8);
-    --nrn-accent-border-dim: rgba(111, 159, 208, 0.4);
-    --nrn-chip-text: #8ab4de;
-    --nrn-chip-bg: rgba(111, 159, 208, 0.10);
-    --nrn-chip-border: rgba(111, 159, 208, 0.30);
-    --nrn-feast: #cf7a92;
-    --nrn-feast-bg: rgba(207, 122, 146, 0.18);
-    --nrn-art-filter: hue-rotate(168deg) saturate(0.62) brightness(0.78);
-}
-
-/* Жар очага — тёмное дерево, угли и медь */
-.nrn-themed[data-theme="ember"] {
-    --nrn-bg: #1c100d;
-    --nrn-bg-raised: #281713;
-    --nrn-bg-open: #2e1b16;
-    --nrn-bg-hover: #3a231c;
-    --nrn-border: #5e3a2c;
-    --nrn-border-soft: #402720;
-    --nrn-text: #e0c9b6;
-    --nrn-text-bright: #f2dcc4;
-    --nrn-text-dim: #8f7261;
-    --nrn-text-muted: #b5947f;
-    --nrn-text-soft: #c99f8a;
-    --nrn-text-panel: #d3b49b;
-    --nrn-text-weather: #d0a68e;
-    --nrn-text-day: #d9c0a8;
-    --nrn-accent: #d97b3f;
-    --nrn-accent-contrast: #1c100d;
-    --nrn-accent-glow: rgba(217, 123, 63, 0.5);
-    --nrn-accent-glow-strong: rgba(217, 123, 63, 0.8);
-    --nrn-accent-border-dim: rgba(217, 123, 63, 0.4);
-    --nrn-chip-text: #e0915a;
-    --nrn-chip-bg: rgba(217, 123, 63, 0.10);
-    --nrn-chip-border: rgba(217, 123, 63, 0.30);
-    --nrn-feast: #e0c163;
-    --nrn-feast-bg: rgba(224, 193, 99, 0.16);
-    --nrn-art-filter: saturate(1.35) hue-rotate(-8deg) brightness(0.94);
-}
-
-/* Кровь и железо — тёмная сталь и запёкшийся багрец */
-.nrn-themed[data-theme="blood"] {
-    --nrn-bg: #171314;
-    --nrn-bg-raised: #211a1b;
-    --nrn-bg-open: #281f20;
-    --nrn-bg-hover: #322627;
-    --nrn-border: #5a4144;
-    --nrn-border-soft: #3a2b2d;
-    --nrn-text: #d5c5c2;
-    --nrn-text-bright: #efe0dc;
-    --nrn-text-dim: #8b7370;
-    --nrn-text-muted: #ab9391;
-    --nrn-text-soft: #b08f96;
-    --nrn-text-panel: #c8b4b1;
-    --nrn-text-weather: #b9a3a4;
-    --nrn-text-day: #cbb9b6;
-    --nrn-accent: #b23b32;
-    --nrn-accent-contrast: #f4e7e3;
-    --nrn-accent-glow: rgba(178, 59, 50, 0.5);
-    --nrn-accent-glow-strong: rgba(178, 59, 50, 0.8);
-    --nrn-accent-border-dim: rgba(178, 59, 50, 0.45);
-    --nrn-chip-text: #cf6a5c;
-    --nrn-chip-bg: rgba(178, 59, 50, 0.10);
-    --nrn-chip-border: rgba(178, 59, 50, 0.3);
-    --nrn-feast: #d9a05a;
-    --nrn-feast-bg: rgba(217, 160, 90, 0.16);
-    --nrn-art-filter: hue-rotate(-18deg) saturate(1.25) brightness(0.82);
-}
-
-/* Чаща — мокрая хвоя, мох и потемневшая бронза */
-.nrn-themed[data-theme="forest"] {
-    --nrn-bg: #121711;
-    --nrn-bg-raised: #1a211a;
-    --nrn-bg-open: #202920;
-    --nrn-bg-hover: #283227;
-    --nrn-border: #46543f;
-    --nrn-border-soft: #2f3a2c;
-    --nrn-text: #c9d3c0;
-    --nrn-text-bright: #e3ecd9;
-    --nrn-text-dim: #77856f;
-    --nrn-text-muted: #9aa791;
-    --nrn-text-soft: #9dbb9e;
-    --nrn-text-panel: #bccbb2;
-    --nrn-text-weather: #a8bcae;
-    --nrn-text-day: #c0cdb6;
-    --nrn-accent: #8fae5c;
-    --nrn-accent-contrast: #121711;
-    --nrn-accent-glow: rgba(143, 174, 92, 0.5);
-    --nrn-accent-glow-strong: rgba(143, 174, 92, 0.8);
-    --nrn-accent-border-dim: rgba(143, 174, 92, 0.4);
-    --nrn-chip-text: #a3c46c;
-    --nrn-chip-bg: rgba(143, 174, 92, 0.10);
-    --nrn-chip-border: rgba(143, 174, 92, 0.3);
-    --nrn-feast: #d8a24e;
-    --nrn-feast-bg: rgba(216, 162, 78, 0.16);
-    --nrn-art-filter: hue-rotate(48deg) saturate(0.72) brightness(0.86);
-}
-
-/* Иней — светлая тема: седое утро, стылая вода */
-.nrn-themed[data-theme="frost"] {
-    --nrn-bg: #eef2f5;
-    --nrn-bg-raised: #e0e7ec;
-    --nrn-bg-open: #d5dee5;
-    --nrn-bg-hover: #c7d3dc;
-    --nrn-border: #93a5b2;
-    --nrn-border-soft: #bcc8d1;
-    --nrn-text: #2e3a44;
-    --nrn-text-bright: #1b2630;
-    --nrn-text-dim: #71818e;
-    --nrn-text-muted: #4d5b67;
-    --nrn-text-soft: #3d6079;
-    --nrn-text-panel: #37444f;
-    --nrn-text-weather: #3d6079;
-    --nrn-text-day: #3a4854;
-    --nrn-accent: #2f6d8f;
-    --nrn-accent-contrast: #f2f7fa;
-    --nrn-accent-glow: rgba(47, 109, 143, 0.4);
-    --nrn-accent-glow-strong: rgba(47, 109, 143, 0.65);
-    --nrn-accent-border-dim: rgba(47, 109, 143, 0.45);
-    --nrn-chip-text: #2b6480;
-    --nrn-chip-bg: rgba(47, 109, 143, 0.10);
-    --nrn-chip-border: rgba(47, 109, 143, 0.35);
-    --nrn-feast: #a8452c;
-    --nrn-feast-bg: rgba(168, 69, 44, 0.16);
-    --nrn-art-filter: hue-rotate(158deg) saturate(0.34) brightness(1.16);
-}
-
-/* Пергамент — светлая тема: телячья кожа и ореховые чернила */
-.nrn-themed[data-theme="parchment"] {
-    --nrn-bg: #f3e7cd;
-    --nrn-bg-raised: #e9dab9;
-    --nrn-bg-open: #e0cea6;
-    --nrn-bg-hover: #d6c294;
-    --nrn-border: #a58f62;
-    --nrn-border-soft: #c9b48a;
-    --nrn-text: #40331e;
-    --nrn-text-bright: #2b2113;
-    --nrn-text-dim: #877550;
-    --nrn-text-muted: #5c4b2c;
-    --nrn-text-soft: #5a5a3a;
-    --nrn-text-panel: #4a3b21;
-    --nrn-text-weather: #5a5a3a;
-    --nrn-text-day: #4a3b21;
-    --nrn-accent: #8a4f1c;
-    --nrn-accent-contrast: #f7eeda;
-    --nrn-accent-glow: rgba(138, 79, 28, 0.4);
-    --nrn-accent-glow-strong: rgba(138, 79, 28, 0.65);
-    --nrn-accent-border-dim: rgba(138, 79, 28, 0.45);
-    --nrn-chip-text: #7c4715;
-    --nrn-chip-bg: rgba(138, 79, 28, 0.10);
-    --nrn-chip-border: rgba(138, 79, 28, 0.35);
-    --nrn-feast: #9c3320;
-    --nrn-feast-bg: rgba(156, 51, 32, 0.16);
-    --nrn-art-filter: sepia(0.32) saturate(0.95) brightness(1.12);
-}
-
-/* Серый камень — ни тепла, ни цвета: гранит, зола и олово */
-.nrn-themed[data-theme="stone"] {
-    --nrn-bg: #17181a;
-    --nrn-bg-raised: #202224;
-    --nrn-bg-open: #26292c;
-    --nrn-bg-hover: #2e3134;
-    --nrn-border: #4d5155;
-    --nrn-border-soft: #33363a;
-    --nrn-text: #c6c9cc;
-    --nrn-text-bright: #e6e9ec;
-    --nrn-text-dim: #7c8085;
-    --nrn-text-muted: #9ba0a5;
-    --nrn-text-soft: #93a2ad;
-    --nrn-text-panel: #b6babe;
-    --nrn-text-weather: #a4adb4;
-    --nrn-text-day: #bcc0c4;
-    --nrn-accent: #9aa6ae;
-    --nrn-accent-contrast: #17181a;
-    --nrn-accent-glow: rgba(154, 166, 174, 0.45);
-    --nrn-accent-glow-strong: rgba(154, 166, 174, 0.75);
-    --nrn-accent-border-dim: rgba(154, 166, 174, 0.4);
-    --nrn-chip-text: #aeb8c0;
-    --nrn-chip-bg: rgba(154, 166, 174, 0.10);
-    --nrn-chip-border: rgba(154, 166, 174, 0.28);
-    --nrn-feast: #c08a6a;
-    --nrn-feast-bg: rgba(192, 138, 106, 0.16);
-    --nrn-art-filter: grayscale(0.8) brightness(0.95);
 }
 
 /* ============================================================
- * 3. WIDGET BASE — доска
+ * 3. WIDGET BASE — корень блока
  *
- * Доска больше не набрана рамками и заливками: это рисунок,
- * img/background.png, 1186×877. Отсюда всё, на чём держатся разделы ниже.
+ * От раскладки здесь ничего нет: как блок стоит, решает раздел 19, и
+ * решает целиком. Тут только то, без чего не обойтись любому скину, —
+ * коробка виджета, наследуемый цвет и кегль, да контейнер для запросов
+ * по ширине.
  *
- * ПЕРВОЕ. Доска хранит пропорции картинки (aspect-ratio) и тянется по
- * ширине чата. Значит, место на ней задаётся долей от её сторон, а не
- * пикселями: 22% ширины — это перекрестье вегвизира и на узкой колонке,
- * и на широком мониторе.
+ * --- про контейнер ---
  *
- * ВТОРОЕ. Буквы обязаны расти вместе с доской, иначе на широкой доске
- * дата потеряется, а на узкой вылезет за край дерева. Для этого заведён
- * --nrn-px — «пиксель макета»: их ровно 1186 в ширине доски, сколько бы
- * ни было настоящих. Всё, что написано по дереву, набрано им:
- *
- *     font-size: calc(30 * var(--nrn-px));   // 30 пикселей макета
- *
- * Исключение одно — текст на страницах книги. Он не подпись, а сводка в
- * десяток строк; мельчить его вслед за доской нельзя, поэтому кегли там
- * настоящие, а что не поместилось — прокручивается.
- *
- * Координаты сняты с макета (img/готовый с подсказкой.png, 1200×896, сам
- * рисунок доски лежит в нём со сдвигом 8×9) и переведены в доли. Исходное
- * число в пикселях макета оставлено рядом комментарием: правку есть с чем
- * сверить, не пересчитывая проценты обратно.
+ * Блок живёт в колонке чата: на широком мониторе с узкой колонкой окно
+ * «широкое», а места нет. Поэтому пороги вёрстки меряются не окном, а
+ * самим блоком — @container ncw в разделе 19.
  * ============================================================ */
 
 #nrn-widget {
     display: block;
     width: 100%;
-    /* Шире своего рисунка доску не тянем: PNG начал бы мылиться. */
+    /* Шире этого блок не растягиваем: строка в тысячу с лишним пикселей
+       читается уже хуже, чем колонка. */
     max-width: 1186px;
     margin: 0 auto 10px;
     position: relative;
     box-sizing: border-box;
     color: var(--nrn-text);
-    font-family: Georgia, "Times New Roman", serif;
     font-size: 16px;
     user-select: none;
-    /*
-     * Доска меряется собой, а не окном.
-     *
-     * Виджет живёт в колонке чата: на широком мониторе с узкой колонкой
-     * окно «широкое», а места нет. Контейнерный запрос смотрит на саму
-     * доску — и от него же считается --nrn-px.
-     */
+
     container-type: inline-size;
     container-name: ncw;
 }
@@ -427,905 +145,22 @@
     box-sizing: border-box;
 }
 
+/* Доска блока — общий корень раскладок: как она выглядит, решает скин,
+   здесь только точка отсчёта для того, что стоит на ней абсолютом. */
 .nrn-board {
     position: relative;
-    width: 100%;
-    aspect-ratio: 1186 / 877;
-    /* Правая страница книги обрезана краем доски — так и задумано в
-       макете. Обрезает её именно overflow. */
-    overflow: hidden;
-
-    /* Пиксель макета. Всё на дереве меряется им — см. заголовок раздела. */
-    --nrn-px: calc(100cqw / 1186);
-
-    /* Свечение активного луча вегвизира и обвод выбранной фигурки. Цвет
-       тёплый и свой: тема красит буквы, а огонь на дереве один на все
-       темы — это отсвет очага, а не краска. */
-    --nrn-fire: rgba(255, 186, 110, 0.95);
-    --nrn-fire-soft: rgba(255, 150, 60, 0.35);
-
-    transition: opacity 0.25s ease;
-}
-
-/*
- * Само дерево — отдельным слоем под всем остальным.
- *
- * Не фоном доски, а псевдоэлементом, потому что на него ложится фильтр
- * темы (--nrn-art-filter): фон доски отфильтровать в одиночку нельзя,
- * filter на самой доске покрасил бы заодно и все надписи на ней.
- *
- * Слой рисуется раньше балки, дерева и книги — те стоят в разметке ниже
- * и потому лежат поверх, — а кликов не ловит вовсе.
- */
-.nrn-board::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: url("img/background.png") 50% 50% / 100% 100% no-repeat;
-    filter: var(--nrn-art-filter, opacity(1));
-    pointer-events: none;
-}
-
-/*
- * Тень под всеми надписями по дереву.
- *
- * Дерево на рисунке пятнистое: полоса света поперёк доски, тёмные сучки
- * по краям. Светлая буква без тени на светлом пятне пропадает целиком,
- * поэтому тень здесь не украшение, а условие читаемости.
- */
-.nrn-beam-line,
-#nrn-datebox,
-#nrn-grid,
-#nrn-stub {
-    text-shadow:
-        0 calc(1 * var(--nrn-px)) calc(3 * var(--nrn-px)) var(--nrn-text-halo, rgba(0, 0, 0, 0.85)),
-        0 0 calc(8 * var(--nrn-px)) var(--nrn-text-halo-soft, rgba(0, 0, 0, 0.55));
-}
-
-/* Ожидание инфоблока — посреди пустой доски. */
-#nrn-stub {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    font-size: calc(22 * var(--nrn-px));
-    color: var(--nrn-text-dim);
-}
-
-/*
- * Зоны доски.
- *
- * Балка и дерево — не коробки, а прозрачные слои во всю доску: тогда
- * координаты их надписей считаются от самой доски и сверяются с макетом
- * напрямую. Кликов слои не ловят (pointer-events: none) — иначе пустое
- * дерево накрывало бы книгу под собой; ловят только те, кому положено.
- */
-.nrn-beam,
-.nrn-wood {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
-
-.nrn-beam .nrn-hintable,
-.nrn-wood .nrn-hintable,
-#nrn-grid {
-    pointer-events: auto;
-}
-
-/*
- * Чего на доске нет.
- *
- * Разметка у раскладок общая, и часть её нужна только плоской вёрстке:
- * круглый медальон погоды с надписью по дуге, знаки погоды и места,
- * сердцевина циферблата, подписи под кнопками. Здесь всё это лишнее —
- * доска нарисована, и знак рядом с надписью был бы вторым рисунком
- * поверх первого, а имя под фигуркой спорило бы с её лицом.
- *
- * Прячем, а не выкидываем из разметки: тогда раскладка переключается
- * одним атрибутом, мгновенно и без пересборки блока.
- */
-[data-skin="board"] .nrn-medallion-svg,
-[data-skin="board"] .nrn-medallion-icon,
-[data-skin="board"] .nrn-plate-icon,
-[data-skin="board"] .nrn-dial-hub,
-[data-skin="board"] .nrn-fig-name {
-    display: none;
-}
-
-/*
- * Светлые темы на доске всё равно пишут по дереву светлым.
- *
- * Тёмные темы на резаном дереве ложатся сами собой: их буквы светлые, а
- * доска тёмная. Со светлыми выходит наоборот — тёмная краска по тёмному
- * дереву, и строка даты пропадает целиком. Высветлить дерево фильтром
- * не выход: у картинки широкий разброс, и левая половина остаётся в
- * тени, сколько ни прибавляй яркости.
- *
- * Поэтому на дереве светлые темы берут не свою краску, а вот эту, общую.
- * Тему по-прежнему видно — по оттенку самой картинки, по цвету праздника
- * и «сегодня» в календарике, по чернилам на странице книги.
- *
- * Правило перечисляет темы поимённо: добавите светлую — впишите сюда,
- * иначе её надписи утонут в дереве.
- */
-[data-skin="board"][data-theme="light"] .nrn-beam,
-[data-skin="board"][data-theme="light"] .nrn-wood,
-[data-skin="board"][data-theme="frost"] .nrn-beam,
-[data-skin="board"][data-theme="frost"] .nrn-wood,
-[data-skin="board"][data-theme="parchment"] .nrn-beam,
-[data-skin="board"][data-theme="parchment"] .nrn-wood {
-    --nrn-text: #e2d7bd;
-    --nrn-text-bright: #f4ead1;
-    --nrn-text-dim: #b3a68a;
-    --nrn-text-muted: #d8cbaf;
-    --nrn-text-soft: #cddbe6;
-    --nrn-text-panel: #ece2c9;
-    --nrn-text-weather: #d3dfe9;
-    --nrn-text-day: #ded2b6;
-}
-
-/* ============================================================
- * 4. BEAM (верхняя балка: погода, время суток, место)
- *
- * Погода и место стоят друг напротив друга по разные стороны солнца,
- * время суток — под погодой. Знаков рядом с ними больше нет: на доске,
- * где всё нарисовано, знак у надписи — это второй рисунок поверх первого.
- * ============================================================ */
-
-.nrn-beam-line {
-    font-family: "Norse", Georgia, serif !important;
-    font-weight: 700 !important;
-    font-size: calc(34 * var(--nrn-px));
-    line-height: 1.15;
-    letter-spacing: calc(1.5 * var(--nrn-px));
-    text-transform: uppercase;
-    color: var(--nrn-text-bright);
-    /* Длинное место («двор Торстейна у Лососьей реки») переносится на
-       вторую строку, а не жуётся многоточием. Больше двух не даём: ниже
-       балка кончается и начинается дерево. */
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-/*
- * Левый край балки: погода, под ней время суток.
- *
- * Стопкой в общей коробке, а не двумя надписями по своим местам. Погода
- * приходит от модели живой фразой — «метель с моря, к ночи заворачивает», —
- * и в одну строку она не всегда ложится. Стояло бы время на своём месте
- * отдельно, вторая строка погоды легла бы прямо на него.
- *
- * Коробка занимает всю чистую высоту балки слева (30…150 макета), а стопка
- * стоит в ней серединой: одна строка — посреди балки, три — во всю её
- * высоту, и в обоих случаях надписи не задевают ни верхний край доски,
- * ни дерево под балкой.
- */
-.nrn-beam-left {
-    position: absolute;
-    left: 8.85%;    /* 105 макета */
-    top: 3.4%;      /* 30 */
-    width: 32%;     /* 380 — до солнца, дальше начинается его оправа */
-    height: 13.7%;  /* 120 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: calc(3 * var(--nrn-px));
-}
-
-#nrn-weather-text {
-    color: var(--nrn-text-weather);
-}
-
-/* Время суток — всегда одной строкой: имя эйкты с номером коротки, а на
-   вторую строку тут занимать нечего, её может попросить погода. */
-#nrn-time-line {
-    -webkit-line-clamp: 1;
-    color: var(--nrn-text-panel);
-}
-
-/* Номер эйкты — тем же шрифтом и кеглем, что и её имя: это одна надпись,
-   а не две. Отличается только цветом, потише. */
-#nrn-widget #nrn-eykt-num {
-    margin-left: calc(10 * var(--nrn-px));
-    color: var(--nrn-text-dim);
-}
-
-/* Место — по другую сторону солнца.                    692×48 макета
-   Ему под второй строкой пусто, поэтому оно стоит от своего верха. */
-#nrn-location-text {
-    position: absolute;
-    left: 58.3%;
-    top: 4.6%;
-    width: 36.5%;
-    color: var(--nrn-text-panel);
-}
-
-/* ============================================================
- * 5. WOOD (левая половина доски: вегвизир, дата, календарик)
- * ============================================================ */
-
-/*
- * Вегвизир.
- *
- * Циферблата больше нет — знак уже нарисован на доске, и рисовать поверх
- * него второй круг со стрелками значило бы спорить с картинкой. Сверху
- * лежит только прозрачный квадрат ровно по месту знака, а в нём восемь
- * полосок вдоль его лучей; горит одна, та, в чьей эйкте идёт сцена.
- *
- * Квадрат 240×240 пикселей макета серединой на перекрестье (142×204 от
- * угла доски, перекрестье — 262×324). Он квадратный по построению:
- * ширина задана долей, высота повторяет её через aspect-ratio.
- */
-.nrn-vegvisir {
-    position: absolute;
-    left: 11.97%;   /* 142 макета */
-    top: 23.26%;    /* 204 макета */
-    width: 20.24%;  /* 240 макета */
-    aspect-ratio: 1;
-    pointer-events: none;
-}
-
-.nrn-vegvisir-svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-}
-
-/*
- * Полоска луча: широкая тусклая под узкой яркой. Толщина задана в
- * единицах viewBox, то есть в пикселях макета, и растёт вместе с доской.
- *
- * Фильтров и размытий нет нарочно: они считаются в пикселях экрана, и на
- * широкой доске свечение расплылось бы вдвое против узкой.
- */
-.nrn-vegvisir-ray {
-    opacity: 0;
-    transition: opacity 0.45s ease;
-}
-
-.nrn-ray-halo {
-    stroke: var(--nrn-fire-soft);
-    stroke-width: 7;
-    stroke-linecap: round;
-}
-
-.nrn-ray-core {
-    stroke: var(--nrn-fire);
-    stroke-width: 2.2;
-    stroke-linecap: round;
-}
-
-.nrn-vegvisir[data-eykt="0"] .nrn-vegvisir-ray[data-ray="0"],
-.nrn-vegvisir[data-eykt="1"] .nrn-vegvisir-ray[data-ray="1"],
-.nrn-vegvisir[data-eykt="2"] .nrn-vegvisir-ray[data-ray="2"],
-.nrn-vegvisir[data-eykt="3"] .nrn-vegvisir-ray[data-ray="3"],
-.nrn-vegvisir[data-eykt="4"] .nrn-vegvisir-ray[data-ray="4"],
-.nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"],
-.nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"],
-.nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] {
-    opacity: 1;
-}
-
-/*
- * Дата — под вегвизиром, его же осью.
- *
- * Столбец узкий не от тесноты: слева по доске идёт плетёный узор, справа
- * начинается корешок книги, и между ними у дерева ровно столько чистого
- * места. Отсюда и ширина 258 пикселей макета — та же, что у календарика
- * под ним: это один столбец, а не два разных.
- */
-#nrn-datebox,
-#nrn-grid {
-    position: absolute;
-    left: 10.88%;   /* 129 макета — от узора остаётся полсотни пикселей */
-    width: 21.75%;  /* 258 макета — до корешка книги */
-    text-align: center;
-}
-
-/*
- * Дата стоит между вегвизиром и календариком и дальше не растёт.
- *
- * Нижний край задан нарочно: в праздничные сутки к дате прибавляется
- * строка, а в зимние ночи — ещё и «+2» к ней, и без границы эта строка
- * наезжала на календарик. Теперь лишнее прячется, а не сползает на
- * соседа; чтобы прятать приходилось пореже, луна набрана мельче даты.
- */
-#nrn-datebox {
-    top: 52.5%;     /* 460 макета */
-    bottom: 27.5%;  /* 241 — на 120 макета выше календарика */
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    overflow: hidden;
-}
-
-/*
- * Порядок строк в коробке даты.
- *
- * В разметке седмица и Луна лежат в общей обёртке .nrn-calfoot — она нужна
- * раскладке «нити», где обе сходятся в одну подпись под календариком. Здесь
- * обёртка прозрачная, и её дети становятся строками коробки напрямую; чтобы
- * Луна осталась под датой, а не сразу за седмицей, порядок назван числами.
- */
-#nrn-sun   { order: 1; }
-#nrn-week  { order: 2; }
-#nrn-date  { order: 3; }
-#nrn-moon  { order: 4; }
-#nrn-feast { order: 5; }
-
-/* Календарик прижат к нижнему краю дерева, а не к дате: сколько бы строк
-   ни набралось выше, неделя стоит на месте и не ездит вслед за ними. */
-#nrn-grid {
-    bottom: 14%;    /* 123 макета до нижнего узора доски */
-}
-
-.nrn-sun-line {
-    font-size: calc(19 * var(--nrn-px));
-    font-style: italic;
-    color: var(--nrn-text-dim);
-    margin-bottom: calc(6 * var(--nrn-px));
-}
-
-/* Строка недели: день недели · vika N.
-   Стоит над датой и набрана мельче — это «где мы в году», а не сама дата. */
-#nrn-week {
-    font-size: calc(21 * var(--nrn-px));
-    color: var(--nrn-text-soft);
-    margin: calc(3 * var(--nrn-px)) 0;
-}
-
-#nrn-date {
-    font-size: calc(28 * var(--nrn-px));
-    color: var(--nrn-text-muted);
-    margin: calc(3 * var(--nrn-px)) 0 calc(5 * var(--nrn-px));
-}
-
-/* Луна мельче даты и недели: она про то же самое время, но справочно —
-   и лишние пиксели её строки выталкивали праздник на календарик. */
-#nrn-moon {
-    font-size: calc(18 * var(--nrn-px));
-    color: var(--nrn-text-soft);
-    margin-bottom: calc(4 * var(--nrn-px));
-}
-
-/*
- * Строка праздника — последняя перед календариком, где он и покрашен.
- *
- * Набрана вровень с луной, но своим цветом: праздник не факт о времени,
- * как день недели или фаза, а обстоятельство, в котором стоит вся сцена.
- */
-#nrn-feast {
-    font-size: calc(21 * var(--nrn-px));
-    color: var(--nrn-feast);
-}
-
-#nrn-widget #nrn-week,
-#nrn-widget #nrn-date,
-#nrn-widget #nrn-moon,
-#nrn-widget #nrn-feast {
-    font-family: "Norse", Georgia, serif !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    letter-spacing: calc(0.5 * var(--nrn-px));
-    line-height: 1.2;
-}
-
-/* ============================================================
- * 6. BOOK (книга: страница сводки, фигурки, дети)
- *
- * Вместо трёх отдельных листов — одна книга, img/book.png. Левая страница
- * видна целиком, и на ней вся сводка; правая обрезана краем доски, и на
- * ней то, чем сводку переключают: фигурки {{user}} и {{char}}, медальон
- * нити Фрейи и дети.
- * ============================================================ */
-
-.nrn-book {
-    position: absolute;
-    left: 32.55%;   /* 386 макета */
-    top: 21.55%;    /* 189 макета */
-    width: 67.96%;  /* 806 макета — правый край уходит за доску, и его
-                       срезает overflow самой доски */
-    height: 75.03%; /* 658 макета */
-}
-
-/*
- * Чернила.
- *
- * Страница почти белая, а темы блока рассчитаны на тёмное дерево: их
- * светлые буквы на бумаге не видны вовсе. Поэтому переменные тем
- * переопределены здесь, на самой книге, — сами темы не тронуты.
- *
- * Только для резной доски: в плоской раскладке книги нет, страница снова
- * становится обычной панелью, и цвета ей нужны те, что дала тема. Правило
- * привязано к data-skin именно ради этого — иначе переменные протекли бы
- * в плоскую вёрстку через ту же книгу, оставшуюся в разметке.
- *
- * Цвета взяты из той же тёплой гаммы, что и вся доска: бурые чернила,
- * синеватая тушь на вторичных строках, ржавый сурик на выделении.
- */
-#nrn-widget[data-skin="board"] .nrn-book {
-    --nrn-text: #33261a;
-    --nrn-text-bright: #1b120a;
-    --nrn-text-dim: #7b6a55;
-    --nrn-text-muted: #4a3a29;
-    --nrn-text-soft: #3d4a5e;
-    --nrn-text-panel: #33261a;
-    --nrn-text-weather: #3d4a5e;
-    --nrn-text-day: #3a2c1e;
-    --nrn-accent: #9a4318;
-    --nrn-accent-contrast: #f3ead6;
-    --nrn-accent-glow: rgba(154, 67, 24, 0.35);
-    --nrn-accent-glow-strong: rgba(154, 67, 24, 0.6);
-    --nrn-accent-border-dim: rgba(154, 67, 24, 0.4);
-    --nrn-border: rgba(80, 58, 36, 0.5);
-    --nrn-border-soft: rgba(80, 58, 36, 0.28);
-    --nrn-chip-text: #7a4a1c;
-    --nrn-chip-bg: rgba(122, 74, 28, 0.09);
-    --nrn-chip-border: rgba(122, 74, 28, 0.3);
-    --nrn-feast: #a8452c;
-    --nrn-feast-bg: rgba(168, 69, 44, 0.16);
-
-    /* Подложки. Тёмных заливок тем на бумаге быть не может вовсе, поэтому
-       вместо них — лёгкая тень чернил; --nrn-bg отдан цвету самой страницы:
-       им закрашены зарубки ᚱ по краям таблички совета. */
-    --nrn-bg: #fdf1e6;
-    --nrn-board-bg: #fdf1e6;
-    --nrn-bg-raised: rgba(120, 90, 55, 0.07);
-    --nrn-bg-open: rgba(120, 90, 55, 0.12);
-    --nrn-bg-hover: rgba(120, 90, 55, 0.16);
-    --nrn-advice-bg: rgba(146, 108, 58, 0.11);
-}
-
-/* Сама книга — слоем под своими страницами, ради фильтра темы: иначе
-   бумага осталась бы белой посреди посиневшей или посеревшей доски. */
-.nrn-book::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: url("img/book.png") 0 0 / 100% 100% no-repeat;
-    filter: var(--nrn-art-filter, opacity(1));
-    pointer-events: none;
-}
-
-/*
- * Левая страница — сводка.
- *
- * Единственное место блока, где текст НЕ меряется --nrn-px: сводка о теле
- * бывает и в двадцать строк, и мельчить её вслед за узкой колонкой чата
- * значило бы сделать её нечитаемой. Кегли здесь настоящие (см. разделы
- * 9 и 15), а что не поместилось на страницу — прокручивается.
- */
-.nrn-page {
-    position: absolute;
-    left: 16.25%;   /* 131 от края книги */
-    top: 8.66%;     /* 57 от края книги */
-    width: 45.3%;   /* 365 — ширина чистого поля страницы */
-    height: 79.8%;  /* 525 — до нижнего края разворота */
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Докрутив страницу до конца, дальше листаем не чат, а ничего. */
-    overscroll-behavior: contain;
-    pointer-events: auto;
-}
-
-/*
- * Ужимка страниц на узкой доске.
- *
- * Кегли сводки настоящие, и на доске в 700 пикселей страница шириной в
- * 240 из них принимает по три слова в строку. Уменьшать буквы вслед за
- * доской нельзя — на узкой колонке чата вышло бы 10 пикселей, — но и
- * оставлять как есть тоже: сводка расползается на два экрана прокрутки.
- *
- * Середина — ступеньки: страница целиком ужимается zoom'ом, буквы падают
- * медленнее самой доски. Ступеньки, а не плавный расчёт, потому что делить
- * длину на длину в calc() браузеры до сих пор умеют по-разному.
- *
- * Считает контейнерный запрос, то есть ширину самой доски, а не окна:
- * виджет живёт в колонке чата, и ширина окна о нём ничего не говорит.
- */
-@container ncw (max-width: 1050px) {
-    .nrn-page, .nrn-children { zoom: 0.92; }
 }
-
-@container ncw (max-width: 900px) {
-    .nrn-page, .nrn-children { zoom: 0.84; }
-}
-
-@container ncw (max-width: 750px) {
-    .nrn-page, .nrn-children { zoom: 0.76; }
-}
-
-@container ncw (max-width: 620px) {
-    .nrn-page, .nrn-children { zoom: 0.68; }
-}
-
-/* Полоса прокрутки — тонкая и в цвет чернил: на бумаге ей быть заметной
-   незачем, но и прятать совсем нельзя, иначе не видно, что текст длиннее
-   страницы. */
-.nrn-page,
-.nrn-children {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(80, 58, 36, 0.35) transparent;
-}
-
-.nrn-page::-webkit-scrollbar,
-.nrn-children::-webkit-scrollbar {
-    width: calc(6 * var(--nrn-px));
-}
-
-.nrn-page::-webkit-scrollbar-track,
-.nrn-children::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.nrn-page::-webkit-scrollbar-thumb,
-.nrn-children::-webkit-scrollbar-thumb {
-    background: rgba(80, 58, 36, 0.35);
-    border-radius: calc(3 * var(--nrn-px));
-}
-
-/* Видна только та страница, чья фигурка нажата. */
-.nrn-leaf {
-    display: none;
-    flex-direction: column;
-    gap: 8px;
-    animation: nrn-fade-in 0.3s ease forwards;
-}
-
-/* Сходство по атрибуту, а не по id: страница показывает ту же букву, что
-   выбрана фигуркой. По id это работало бы ровно до второго виджета. */
-.nrn-page[data-tab="user"] .nrn-leaf[data-leaf="user"],
-.nrn-page[data-tab="freyja"] .nrn-leaf[data-leaf="freyja"],
-.nrn-page[data-tab="char"] .nrn-leaf[data-leaf="char"] {
-    display: flex;
-}
-
-.nrn-leaf-empty {
-    font-style: italic;
-    font-size: 13.5px;
-    color: var(--nrn-text-dim);
-}
-
-/* --- фигурки на правой странице --- */
-
-/*
- * Три вырезанные фигурки на шнурках: хозяйка, медальон нити Фрейи и
- * {{char}}. Подписей под ними нет — фигурку узнают в лицо, а имя живёт
- * в подсказке под курсором.
- *
- * Кликов сама кнопка не ловит. Рисунки висят внахлёст, и прямоугольник
- * медальона накрывает пустой угол над головой хозяйки; по прямоугольникам
- * клик уходил бы не туда, куда указывает глаз. Ловит вложенное «горячее
- * место» — оно обведено по самой фигурке, без шнурка.
- */
-.nrn-fig {
-    position: absolute;
-    padding: 0;
-    border: 0;
-    background: 0 0 / 100% 100% no-repeat;
-    background-image: var(--nrn-fig-img);
-    pointer-events: none;
-    /* Невыбранная фигурка приглушена — как вещь, лежащая в тени. Фильтр
-       темы приписан последним: фигурки должны выцветать и синеть вместе
-       с доской, иначе повиснут ярким пятном на выстывшей картинке. */
-    filter: brightness(0.78) saturate(0.7) var(--nrn-art-filter, opacity(1));
-    transition: filter 0.3s ease;
-}
-
-.nrn-fig-hit {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    /* Верх шнурка не в счёт: за нитку фигурку не берут. */
-    top: 26%;
-    display: block;
-    pointer-events: auto;
-    cursor: pointer;
-}
-
-.nrn-fig:hover {
-    filter: brightness(0.95) saturate(0.9) var(--nrn-art-filter, opacity(1));
-}
-
-/* Выбранная — при свете и с тёплым обводом по самому силуэту: drop-shadow
-   берёт форму из альфы рисунка, а не из прямоугольника кнопки. */
-.nrn-fig-on {
-    filter:
-        brightness(1.06)
-        var(--nrn-art-filter, opacity(1))
-        drop-shadow(0 0 calc(5 * var(--nrn-px)) var(--nrn-fire))
-        drop-shadow(0 0 calc(12 * var(--nrn-px)) var(--nrn-fire-soft));
-}
-
-.nrn-fig:focus-visible {
-    outline: none;
-    filter:
-        brightness(1.06)
-        var(--nrn-art-filter, opacity(1))
-        drop-shadow(0 0 calc(4 * var(--nrn-px)) var(--nrn-fire));
-}
-
-/* Хозяйка.                                            532×33 от края книги */
-#nrn-fig-user {
-    left: 66%;
-    top: 5.02%;
-    width: 17.24%;
-    height: 54.71%;
-    --nrn-fig-img: url("img/user.png");
-}
-
-/* Медальон нити Фрейи — женское здоровье.             571×36 от края книги */
-#nrn-fig-freyja {
-    left: 70.84%;
-    top: 5.47%;
-    width: 7.32%;
-    height: 15.65%;
-    --nrn-fig-img: url("img/Freyas_threads.png");
-}
-
-/* У медальона шнурок длиннее самого медальона, поэтому горячее место —
-   кружок по его нижней половине. */
-#nrn-fig-freyja .nrn-fig-hit {
-    top: 48%;
-    border-radius: 50%;
-}
-
-/* {{char}}.                                           643×34 от края книги */
-#nrn-fig-char {
-    left: 79.78%;
-    top: 5.17%;
-    width: 15.14%;
-    height: 49.85%;
-    --nrn-fig-img: url("img/char.png");
-}
-
-/*
- * Дети — вписаны в правую страницу под фигурками и видны на любой из трёх:
- * дитя не перестаёт просить есть оттого, что смотрят на {{char}}.
- */
-.nrn-children {
-    position: absolute;
-    left: 66.5%;    /* 536 от края книги */
-    top: 61.1%;     /* 402 */
-    width: 32.3%;   /* 260 */
-    height: 29.6%;  /* 195 */
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    pointer-events: auto;
-}
-
-
-/* ============================================================
- * 7. HINTS (кликабельные слова)
- * ============================================================ */
-
-/*
- * ПРАВИЛО РЕГИСТРА И ШРИФТА (одно на весь блок)
- *
- *   КАПС + Norse — всё, что подписывает: плашки, имена, дата, неделя, луна,
- *   сводка о теле, заголовки кучек, кнопка нити, погода в круге.
- *
- *   как написано + текстовый шрифт — всё, что сказала сцена: приметы, род,
- *   дом, одежда, состояние, мысль, совет. Здесь живые фразы с именами
- *   собственными («Léttari», «Торстейн»), и капс их калечит.
- *
- * Регистр наследуется, поэтому задан он на самих подписывающих блоках, а не
- * на кликабельном слове: раньше `.nrn-hintable` тащил капс с Norse всюду,
- * куда попадал, и толкование живота на листе выходило криком.
- */
-#nrn-widget .nrn-hintable {
-    letter-spacing: inherit;
-}
-
-/* Подчёркивания под кликабельными словами нет нарочно: их в блоке
-   несколько десятков, и пунктир под каждым читался как сплошная штриховка.
-   Что слово живое, видно по курсору и по подсветке под мышью. */
-.nrn-hintable {
-    cursor: pointer;
-    transition: color 0.15s ease;
-}
-
-.nrn-hintable:hover {
-    color: var(--nrn-text-bright);
-}
-
-.nrn-hint {
-    color: var(--nrn-accent) !important;
-    text-shadow: 0 0 8px var(--nrn-accent-glow);
-}
-
-/* ============================================================
- * 8. WEATHER & LOCATION
- * ============================================================ */
-
-/*
- * Погода и место живут на верхней балке — раскладка их в разделе 4.
- *
- * Здесь остались только буквы, и набраны они одинаково: балка одна,
- * надписи на ней вырезаны одной рукой. Прежней разницы в начертании
- * (погода тоньше, место жирнее) больше нет — она разводила круг и
- * железную вставку, а ни того, ни другого на доске уже не осталось.
- *
- * Правила стоят отдельно от `.nrn-beam-line` не по забывчивости: в них
- * по два идентификатора, и одним классом их всё равно не перебить.
- */
-#nrn-widget #nrn-weather-text,
-#nrn-widget #nrn-location-text {
-    font-family: "Norse", Georgia, serif !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    min-width: 0;
-}
-
-/* ============================================================
- * 9. LEAF ROWS (строки листов {{user}} / нити / {{char}})
- *
- * Раскрывающихся карточек с именами больше нет: имена уехали на деревяшки
- * (раздел 5), а их содержимое — на лист разворота. Здесь остались сами
- * строки, они одинаковы на всех трёх листах.
- * ============================================================ */
-
-@keyframes nrn-fade-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.nrn-attire {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-size: 14.5px;
-    line-height: 1.4;
-    color: var(--nrn-text-panel);
-    overflow-wrap: anywhere;
-}
-
-#nrn-widget .nrn-attire-icon {
-    width: 16px;
-    height: 16px;
-}
-
-.nrn-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-}
-
-.nrn-chip {
-    font-size: 13px;
-    padding: 3px 11px;
-    border-radius: 11px;
-    color: var(--nrn-chip-text);
-    background: var(--nrn-chip-bg);
-    border: 1px solid var(--nrn-chip-border);
-}
-
-.nrn-chip:empty {
-    display: none;
-}
-
-.nrn-thought {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 8px 0 0;
-    font-size: 14.5px;
-    font-style: italic;
-    line-height: 1.45;
-    color: var(--nrn-text-soft);
-    border-top: 1px dashed var(--nrn-border-soft);
-    animation: nrn-fade-in 0.5s ease forwards;
-}
-
-#nrn-widget .nrn-thought-icon {
-    width: 16px;
-    height: 16px;
-}
-
-#nrn-thought-text {
-    min-width: 0;
-}
-
-/* ============================================================
- * 10. CALENDAR GRID
- * ============================================================ */
 
-/*
- * Неделя — в самом низу колонки времени.
- *
- * `margin-top: auto` отжимает её к нижнему краю: сколько бы ни выросла сводка
- * о теле справа, календарик стоит на месте и не ездит вслед за ней.
- */
+/* Календарик прячется целиком, когда даты у сцены нет: класс вешает
+   buildGrid(), и правило одно на все раскладки — пустой сетке не место
+   ни в одной из них. */
 #nrn-grid.nrn-hidden {
     display: none;
 }
 
-.nrn-row {
-    display: flex;
-    gap: calc(4 * var(--nrn-px));
-    margin-bottom: calc(4 * var(--nrn-px));
-}
-
-.nrn-cell {
-    flex: 1 1 0;
-    min-width: 0;
-    font-size: calc(19 * var(--nrn-px));
-    padding: calc(5 * var(--nrn-px)) 0;
-    border-radius: calc(4 * var(--nrn-px));
-}
-
-.nrn-wd {
-    color: var(--nrn-accent);
-    font-weight: bold;
-    font-size: calc(15 * var(--nrn-px));
-    border-bottom: 1px solid var(--nrn-border);
-    margin-bottom: calc(3 * var(--nrn-px));
-    padding-bottom: calc(4 * var(--nrn-px));
-}
-
-.nrn-day {
-    color: var(--nrn-text-day);
-}
-
-.nrn-dim {
-    opacity: 0.35;
-}
-
-.nrn-today {
-    background: var(--nrn-accent);
-    color: var(--nrn-accent-contrast);
-    font-weight: bold;
-    box-shadow: 0 0 6px var(--nrn-accent-glow);
-}
-
-/*
- * Праздничные дни.
- *
- * Красятся ВСЕ дни праздника, а не только первый: трое суток зимних ночей —
- * это трое суток, и по полосе это должно читаться одним взглядом.
- *
- * Цвет отдельный от акцента, потому что рядом стоит `today`, и два разных
- * знака не должны спорить: сегодня — заливка акцентом, праздник — подложка
- * и черта снизу. Когда сегодня и есть праздник, видно оба.
- */
-.nrn-feast-day {
-    background: var(--nrn-feast-bg);
-    box-shadow: inset 0 -2px 0 var(--nrn-feast);
-}
-
-/* Первый день — тот, с которого праздник начался; отмечаем чертой и слева. */
-.nrn-feast-day.nrn-feast-first {
-    box-shadow: inset 0 -2px 0 var(--nrn-feast), inset 2px 0 0 var(--nrn-feast);
-}
-
-.nrn-day.nrn-feast-day.nrn-today {
-    background: var(--nrn-accent);
-    color: var(--nrn-accent-contrast);
-    box-shadow: 0 0 6px var(--nrn-accent-glow), inset 0 -3px 0 var(--nrn-feast);
-}
-
-/* ============================================================
- * 11. AUKNÆTR (Sumarauki)
- * ============================================================ */
-
-.nrn-auk-title {
-    font-size: calc(17 * var(--nrn-px));
-    letter-spacing: calc(1 * var(--nrn-px));
-    color: var(--nrn-accent);
-    padding: calc(5 * var(--nrn-px)) 0 calc(7 * var(--nrn-px));
-    border-bottom: 1px solid var(--nrn-border);
-    margin-bottom: calc(4 * var(--nrn-px));
-}
-
-.nrn-aukday {
-    border: 1px dashed var(--nrn-border);
+/* Пустое облачко настроения — не облачко: рамка вокруг пустоты. */
+.nrn-chip:empty {
+    display: none;
 }
 
 /* ============================================================
@@ -1969,7 +804,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     border-radius: 3px;
 }
 
-/* Зарубки по углам: две руны на подложке доски, поверх рамки. */
+/* Зарубки по углам: две руны на подложке панели, поверх рамки. */
 .nrn-advice::before,
 .nrn-advice::after {
     content: "ᚱ";
@@ -2025,7 +860,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  * Заголовок листа нити: фаза со счётом, под ней слова о теле.
  *
  * Стоят на самом листе, а не в колонке времени: это сводка об одной из трёх
- * вкладок, а не о всей доске. Копия в колонке была ошибкой — id совпадали,
+ * створок, а не обо всей панели. Копия в колонке была ошибкой — id совпадали,
  * и рендер писал в оба места разом.
  */
 #nrn-widget .nrn-cycle-head {
@@ -3343,727 +2178,21 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 /* ============================================================
- * 18. FLAT SKIN — прежняя плоская раскладка (data-skin="flat")
- *
- * Второй способ поставить те же самые элементы. Разметка у раскладок
- * общая — доска и плоская панель отличаются только стилями, — поэтому
- * переключение мгновенное: меняется один атрибут на виджете, и ни
- * выбранная страница, ни прокрутка чата не теряются.
- *
- * Что здесь делается, по порядку:
- *
- *   1. Отменяется всё, чем живёт доска: пропорции картинки, рисунки
- *      слоями, доли вместо пикселей, --nrn-px в кеглях.
- *   2. Возвращается вёрстка 2.7.3: навершие с круглым медальоном погоды,
- *      три колонки (время — лист — деревяшки), циферблат эйкт.
- *   3. Прячется то, что есть только на доске (фигурки на шнурках), и
- *      показывается то, что есть только здесь (подписи деревяшек,
- *      сердцевина циферблата, знаки погоды и места).
- *
- * Роли элементов при этом не меняются: кнопка страницы остаётся кнопкой
- * страницы, а превращается она из фигурки в деревяшку на подвязках.
- *
- * Правила ниже нарочно все с `#nrn-widget[data-skin="flat"]`:
- * им приходится перебивать раскладку доски, которая написана без
- * приставки и стоит выше по файлу.
- * ============================================================ */
-
-/* --- 18.1. отмена доски --- */
-
-#nrn-widget[data-skin="flat"] {
-    max-width: none;
-    margin: 0 0 10px;
-    /* Место под медальон погоды: круг свисает выше края панели. */
-    padding-top: 50px;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-board {
-    aspect-ratio: auto;
-    overflow: visible;
-    padding: 84px 16px 16px;
-    background: var(--nrn-board-bg, var(--nrn-bg));
-    border: 1px solid var(--nrn-border);
-    border-radius: 10px;
-    opacity: 0.97;
-    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
-
-    /*
-     * Пиксель макета здесь равен настоящему.
-     *
-     * Кегли этой раскладки заданы ниже в обычных пикселях, но если где-то
-     * в общих разделах останется calc(N * var(--nrn-px)) — а он там есть,
-     * например в сетке календаря, — то без этой строки он посчитался бы
-     * от ширины доски и съёжился бы втрое.
-     */
-    --nrn-px: 1px;
-
-    /*
-     * Три части в ряд: время — лист — деревяшки.
-     *
-     * Сетка живёт на самой панели, а не на обёртке: обёртки-разворота в
-     * разметке нет, книга объявлена display: contents и своих детей
-     * отдаёт сюда напрямую.
-     *
-     * Доли, а не пиксели: правило «середине больше, краям меньше»
-     * держится само на любой ширине. Календарю столько, сколько просит
-     * круг с датой; листу — всё остальное; деревяшкам самое малое, им
-     * хватает имени и кнопки.
-     */
-    display: grid;
-    grid-template-columns:
-        minmax(0, var(--nrn-col-left, 1.4fr))
-        minmax(0, var(--nrn-col-mid, 2.3fr))
-        minmax(0, var(--nrn-col-rail, 1fr));
-    grid-template-rows: auto auto auto 1fr;
-    gap: 14px 16px;
-}
-
-/* Рисунков в плоской раскладке нет: ни дерева, ни книги. */
-#nrn-widget[data-skin="flat"] .nrn-board::before,
-#nrn-widget[data-skin="flat"] .nrn-book::before {
-    content: none;
-}
-
-/* Тень нужна буквам на пятнистом дереве; на ровной панели она только
-   мылит их. */
-#nrn-widget[data-skin="flat"] .nrn-beam-line,
-#nrn-widget[data-skin="flat"] #nrn-datebox,
-#nrn-widget[data-skin="flat"] #nrn-grid,
-#nrn-widget[data-skin="flat"] #nrn-stub {
-    text-shadow: none;
-}
-
-/* Книга исчезает как коробка, но остаётся в разметке: её дети — лист,
-   кнопки и плашка детей — становятся ячейками сетки панели. */
-#nrn-widget[data-skin="flat"] .nrn-book {
-    display: contents;
-}
-
-/* --- 18.2. навершие: время, погода, место --- */
-
-/*
- * Навершие — две половины и просвет под круг между ними.
- *
- * Плашки стоят серединами своих половин, то есть ровно посередине между
- * краем панели и кругом погоды. Просвет задан колонкой сетки под ширину
- * круга с запасом; сам круг лежит поверх, вне потока, потому что свисает
- * выше панели.
- */
-#nrn-widget[data-skin="flat"] .nrn-beam {
-    position: absolute;
-    inset: auto;
-    top: var(--nrn-plate-inset, 18px);
-    left: 16px;
-    right: 16px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: var(--nrn-medallion-gap, 158px);
-    align-items: start;
-    justify-items: center;
-    pointer-events: auto;
-}
-
-/* Стопки «погода над временем» здесь нет: погода уходит в круг посередине,
-   время остаётся деревянной плашкой слева. Обёртка растворяется, и оба
-   становятся ячейками навершия. */
-#nrn-widget[data-skin="flat"] .nrn-beam-left {
-    display: contents;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-beam-line {
-    font-size: 30px;
-    line-height: 1.1;
-    letter-spacing: 1.2px;
-}
-
-/* Дерево — по левому краю панели, а не серединой своей половины: время
-   суток читают первым, и начинаться ему положено там же, где начинается
-   сама панель. */
-#nrn-widget[data-skin="flat"] #nrn-time-line {
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: start;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 100%;
-    padding: 10px 18px;
-    background: var(--nrn-plate-wood-bg, var(--nrn-bg-raised));
-    border: 1px solid var(--nrn-border);
-    border-radius: 5px;
-    color: var(--nrn-text-panel);
-}
-
-#nrn-widget[data-skin="flat"] #nrn-eykt-num {
-    flex-shrink: 0;
-    margin-left: 0;
-}
-
-/*
- * У места подложки нет: она налезала на круг погоды. Убрана именно
- * подложка — рамка, фон и поля, — а знак с надписью остались как были.
- */
-#nrn-widget[data-skin="flat"] #nrn-location-text {
-    position: static;
-    grid-column: 2;
-    grid-row: 1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: auto;
-    max-width: 100%;
-    color: var(--nrn-text-panel);
-}
-
-/* Знаки погоды и места живут только здесь: на доске их убрали нарочно —
-   там всё нарисовано, и знак рядом с надписью был бы вторым рисунком
-   поверх первого. */
-#nrn-widget[data-skin="flat"] .nrn-plate-icon {
-    display: inline-block;
-    flex-shrink: 0;
-    width: 1em;
-    height: 1em;
-}
-
-/* --- медальон погоды --- */
-
-#nrn-widget[data-skin="flat"] #nrn-weather-text {
-    position: absolute;
-    /* Отсчёт от верха навершия, а оно само отступило вниз на
-       --nrn-plate-inset: круг должен свисать за верхний край панели,
-       отсюда и вычитание. */
-    top: calc(-46px - var(--nrn-plate-inset, 18px));
-    left: 50%;
-    transform: translateX(-50%);
-    width: 130px;
-    height: 130px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--nrn-border);
-    border-radius: 50%;
-    background: var(--nrn-medallion-bg, var(--nrn-bg-raised));
-    box-shadow: 0 0 0 4px var(--nrn-board-bg, var(--nrn-bg));
-    overflow: visible;
-}
-
-/*
- * Надпись поверх круга, а не под ним.
- *
- * SVG идёт в разметке первым, поэтому знак погоды рисовался бы позже и
- * накрывал буквы. Порядок правим слоями, а не перестановкой: знаку нужна
- * серединка круга, надписи — дуга по низу, и меняться местами в разметке
- * им нельзя.
- */
-#nrn-widget[data-skin="flat"] .nrn-medallion-svg {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    pointer-events: none;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-medallion-text {
-    font-family: "Norse", Georgia, serif;
-    font-size: 16px;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    fill: var(--nrn-text-weather);
-    paint-order: stroke;
-    stroke: var(--nrn-medallion-bg, var(--nrn-bg-raised));
-    stroke-width: 3px;
-    stroke-linejoin: round;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-medallion-icon {
-    display: inline-block;
-    position: relative;
-    z-index: 1;
-    width: 62px;
-    height: 62px;
-    /* Знак стоит выше середины: низ круга занят надписью. */
-    margin-bottom: 26px;
-}
-
-/* Погода, которая на дугу не легла, — прямой строкой под кругом. */
-#nrn-widget[data-skin="flat"] #nrn-weather-value {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: 320px;
-    max-width: 40vw;
-    text-align: center;
-    font-weight: 400;
-    font-size: 18px;
-    letter-spacing: 1.5px;
-    color: var(--nrn-text-weather);
-}
-
-/* А та, что легла, второй раз не пишется. */
-#nrn-widget[data-skin="flat"] .nrn-weather-curved #nrn-weather-value {
-    display: none;
-}
-
-/* --- 18.3. левая колонка: круг эйкт, дата, календарик --- */
-
-#nrn-widget[data-skin="flat"] .nrn-wood {
-    position: static;
-    grid-column: 1;
-    grid-row: 1 / -1;
-    pointer-events: auto;
-    min-width: 0;
-    text-align: center;
-    /* Столбцом — чтобы календарик внизу можно было отжать margin-top: auto.
-       Колонка тянется на всю высоту панели, так что неделя всегда у нижнего
-       края и при растягивании не скачет. */
-    display: flex;
-    flex-direction: column;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-datebox {
-    position: static;
-    width: auto;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-grid {
-    position: static;
-    bottom: auto;
-    width: auto;
-    margin-top: auto;
-    padding-top: 12px;
-    border-top: 1px solid var(--nrn-border-soft);
-}
-
-/*
- * Круг эйкт.
- *
- * Те же восемь лучей, что подсвечивают вегвизир на доске, здесь
- * становятся циферблатом: сутки делятся не на часы, а на восемь эйкт, и
- * круг показывает это прямо — луч на каждую, подсвечен тот, в котором
- * сцена. Стрелок две не нужно: час в этом счёте никто не считал.
- *
- * Круг занимает всю ширину колонки, но не больше 230px: колонка бывает
- * широкой, и жёсткие пиксели оставляли бы по бокам пустоту.
- */
-#nrn-widget[data-skin="flat"] .nrn-vegvisir {
-    position: relative;
-    left: auto;
-    top: auto;
-    width: min(100%, 230px);
-    margin: 2px auto 12px;
-    pointer-events: auto;
-}
-
-/* Лучи на доске идут от 16 до 96 единиц от середины — там их длина
-   подогнана под нарисованный знак. Здесь знака нет, и лучам положено
-   доставать до самого края круга: короткие ножки на пустом поле выглядели
-   бы обрубками. */
-#nrn-widget[data-skin="flat"] .nrn-vegvisir-svg {
-    transform: scale(1.2);
-}
-
-/* Свечение вокруг луча — примета доски: там оно отсвет очага на дереве.
-   На ровной панели луч просто крашеный. */
-#nrn-widget[data-skin="flat"] .nrn-ray-halo {
-    display: none;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-ray-core {
-    stroke: var(--nrn-dial-ray-bg, var(--nrn-text-muted));
-    stroke-width: 7;
-    stroke-linecap: butt;
-}
-
-/* Погасшие лучи здесь видны, а не спрятаны: из восьми складывается сам
-   циферблат, и без них подсвеченный висел бы в пустоте. */
-#nrn-widget[data-skin="flat"] .nrn-vegvisir-ray {
-    opacity: 0.75;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="0"] .nrn-vegvisir-ray[data-ray="0"],
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="1"] .nrn-vegvisir-ray[data-ray="1"],
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="2"] .nrn-vegvisir-ray[data-ray="2"],
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="3"] .nrn-vegvisir-ray[data-ray="3"],
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="4"] .nrn-vegvisir-ray[data-ray="4"],
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"],
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"],
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] {
-    opacity: 1;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="0"] .nrn-vegvisir-ray[data-ray="0"] .nrn-ray-core,
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="1"] .nrn-vegvisir-ray[data-ray="1"] .nrn-ray-core,
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="2"] .nrn-vegvisir-ray[data-ray="2"] .nrn-ray-core,
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="3"] .nrn-vegvisir-ray[data-ray="3"] .nrn-ray-core,
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="4"] .nrn-vegvisir-ray[data-ray="4"] .nrn-ray-core,
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"] .nrn-ray-core,
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"] .nrn-ray-core,
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] .nrn-ray-core {
-    stroke: var(--nrn-accent);
-    filter: drop-shadow(0 0 4px var(--nrn-accent-glow));
-}
-
-/* Сердцевина — деревянный кружок поверх лучей: он же прячет их внутренние
-   концы. На доске середину знака рисует сама картинка, и там сердцевина
-   спрятана. */
-#nrn-widget[data-skin="flat"] .nrn-dial-hub {
-    display: flex;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 48%;
-    height: 48%;
-    transform: translate(-50%, -50%);
-    align-items: center;
-    justify-content: center;
-    background: var(--nrn-dial-hub-bg, var(--nrn-bg-raised));
-    border: 1px solid var(--nrn-border);
-    border-radius: 50%;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-dial-pointer {
-    position: absolute;
-    inset: 0;
-    transition: transform 0.35s ease;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-dial-pointer::before {
-    content: "";
-    position: absolute;
-    top: 4px;
-    left: 50%;
-    margin-left: -8px;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 12px solid var(--nrn-accent);
-}
-
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="0"] .nrn-dial-pointer { transform: rotate(0deg); }
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="1"] .nrn-dial-pointer { transform: rotate(45deg); }
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="2"] .nrn-dial-pointer { transform: rotate(90deg); }
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="3"] .nrn-dial-pointer { transform: rotate(135deg); }
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="4"] .nrn-dial-pointer { transform: rotate(180deg); }
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="5"] .nrn-dial-pointer { transform: rotate(225deg); }
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="6"] .nrn-dial-pointer { transform: rotate(270deg); }
-#nrn-widget[data-skin="flat"] .nrn-vegvisir[data-eykt="7"] .nrn-dial-pointer { transform: rotate(315deg); }
-
-/* Второй кружок — под знак времени суток. */
-#nrn-widget[data-skin="flat"] .nrn-dial-core {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 66%;
-    height: 66%;
-    background: var(--nrn-dial-core-bg, var(--nrn-bg-open));
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 50%;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-dial-icon {
-    display: inline-block;
-    width: 68%;
-    height: 68%;
-}
-
-/* --- строки даты: кегли настоящие, а не доли доски --- */
-
-#nrn-widget[data-skin="flat"] .nrn-sun-line {
-    font-size: 17px;
-    margin-bottom: 10px;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-week {
-    font-size: 22px;
-    letter-spacing: 0.5px;
-    margin: 4px 0;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-date {
-    font-size: 30px;
-    margin: 4px 0 6px;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-moon {
-    font-size: 20px;
-    margin-bottom: 7px;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-feast {
-    font-size: 23px;
-    margin-bottom: 8px;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-row {
-    gap: 4px;
-    margin-bottom: 4px;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-cell {
-    font-size: 15px;
-    padding: 6px 0;
-    border-radius: 4px;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-wd {
-    font-size: 13px;
-    margin-bottom: 3px;
-    padding-bottom: 5px;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-auk-title {
-    font-size: 15px;
-    letter-spacing: 1px;
-    padding: 7px 0 9px;
-    margin-bottom: 4px;
-}
-
-/* --- 18.4. лист и деревяшки --- */
-
-/* Средняя часть — лист, на который пишет выбранная деревяшка. */
-#nrn-widget[data-skin="flat"] .nrn-page {
-    position: static;
-    grid-column: 2;
-    grid-row: 1 / -1;
-    width: auto;
-    height: auto;
-    min-width: 0;
-    padding: 12px 16px;
-    overflow: visible;
-    zoom: 1;
-    background: var(--nrn-page-bg, var(--nrn-bg-raised));
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 4px;
-}
-
-/*
- * Деревяшка на кожаных подвязках — та же кнопка страницы, что на доске
- * была фигуркой. Подвязки нарисованы псевдоэлементами: две кожаные
- * полоски, уходящие вверх за край деревяшки.
- */
-#nrn-widget[data-skin="flat"] .nrn-fig {
-    position: relative;
-    grid-column: 3;
-    align-self: start;
-    display: block;
-    width: 100%;
-    height: auto;
-    left: auto;
-    top: auto;
-    margin-top: 10px;
-    padding: 9px 10px 10px;
-    background: var(--nrn-plank-bg, var(--nrn-bg-raised));
-    background-image: none;
-    border: 1px solid var(--nrn-border);
-    border-radius: 5px;
-    filter: none;
-    pointer-events: auto;
-    cursor: pointer;
-    color: var(--nrn-text-panel);
-    font: inherit;
-    transition: background 0.25s ease, border-color 0.25s ease;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-fig::before,
-#nrn-widget[data-skin="flat"] .nrn-fig::after {
-    content: "";
-    position: absolute;
-    top: -10px;
-    width: 4px;
-    height: 12px;
-    background: var(--nrn-strap-bg, var(--nrn-border));
-    border-radius: 2px 2px 0 0;
-    opacity: 0.8;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-fig::before { left: 22%; }
-#nrn-widget[data-skin="flat"] .nrn-fig::after { right: 22%; }
-
-#nrn-widget[data-skin="flat"] .nrn-fig:hover {
-    filter: none;
-    background: var(--nrn-bg-hover);
-}
-
-/* Горячее место нужно было фигуркам: их прямоугольники налезали друг на
-   друга. У деревяшек такой беды нет, и кликает вся кнопка целиком. */
-#nrn-widget[data-skin="flat"] .nrn-fig-hit {
-    display: none;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-fig-name {
-    display: block;
-    padding: 2px 0;
-    font-family: "Norse", Georgia, serif !important;
-    font-weight: 700 !important;
-    font-size: 24px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-fig-on {
-    background: var(--nrn-plank-on-bg, var(--nrn-bg-open));
-    border-color: var(--nrn-accent-border-dim);
-    filter: none;
-}
-
-#nrn-widget[data-skin="flat"] .nrn-fig-on .nrn-fig-name {
-    color: var(--nrn-text-bright);
-}
-
-#nrn-widget[data-skin="flat"] .nrn-fig:focus-visible {
-    filter: none;
-    outline: 1px solid var(--nrn-accent);
-    outline-offset: 2px;
-}
-
-/*
- * Нить Фрейи — не деревяшка, а кнопка потише: она про одно, а не про
- * всё. Стоит вплотную под деревяшкой хозяйки, потому что это её тело,
- * и своей доски оно не просит.
- */
-#nrn-widget[data-skin="flat"] #nrn-fig-freyja {
-    margin-top: -4px;
-    padding: 5px 8px;
-    background: var(--nrn-chip-bg);
-    border: 1px solid var(--nrn-chip-border);
-    border-radius: 10px;
-    color: var(--nrn-chip-text);
-}
-
-#nrn-widget[data-skin="flat"] #nrn-fig-freyja::before,
-#nrn-widget[data-skin="flat"] #nrn-fig-freyja::after {
-    content: none;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-fig-freyja .nrn-fig-name {
-    font-weight: 400 !important;
-    font-size: 16px;
-    letter-spacing: 1.2px;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-fig-freyja.nrn-fig-on {
-    background: var(--nrn-accent-glow);
-    border-color: var(--nrn-accent);
-    color: var(--nrn-accent-contrast);
-}
-
-#nrn-widget[data-skin="flat"] #nrn-fig-freyja.nrn-fig-on .nrn-fig-name {
-    color: var(--nrn-accent-contrast);
-}
-
-/* Листик с детьми — под кнопками и на любой странице. */
-#nrn-widget[data-skin="flat"] .nrn-children {
-    position: static;
-    grid-column: 3;
-    grid-row: 4;
-    align-self: start;
-    width: auto;
-    height: auto;
-    left: auto;
-    top: auto;
-    overflow: visible;
-    zoom: 1;
-    padding: 10px 12px;
-    background: var(--nrn-page-bg, var(--nrn-bg-raised));
-    border: 1px solid var(--nrn-border-soft);
-    border-radius: 4px;
-}
-
-#nrn-widget[data-skin="flat"] #nrn-stub {
-    position: static;
-    grid-column: 1 / -1;
-    transform: none;
-    padding: 8px 0 4px;
-    font-size: 15px;
-}
-
-/* --- 18.5. узкая колонка чата --- */
-
-/* В узкой панели три части складываются в столбик: время, деревяшки, лист.
-   Деревяшки идут перед листом — сперва выбираешь, потом читаешь. */
-@container ncw (max-width: 900px) {
-    #nrn-widget[data-skin="flat"] .nrn-board {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto;
-    }
-    #nrn-widget[data-skin="flat"] .nrn-wood,
-    #nrn-widget[data-skin="flat"] .nrn-page,
-    #nrn-widget[data-skin="flat"] .nrn-fig,
-    #nrn-widget[data-skin="flat"] .nrn-children {
-        grid-column: 1;
-        grid-row: auto;
-    }
-    #nrn-widget[data-skin="flat"] .nrn-wood {
-        order: 1;
-        border-bottom: 1px solid var(--nrn-border-soft);
-        padding-bottom: 12px;
-    }
-    #nrn-widget[data-skin="flat"] .nrn-fig { order: 2; }
-    #nrn-widget[data-skin="flat"] .nrn-children { order: 3; }
-    #nrn-widget[data-skin="flat"] .nrn-page { order: 4; }
-}
-
-/* Совсем узкая: круг погоды перестаёт свисать за край и встаёт в столбик
-   вместе с плашками — свисать ему больше не над чем. */
-@container ncw (max-width: 480px) {
-    #nrn-widget[data-skin="flat"] {
-        padding-top: 0;
-    }
-    #nrn-widget[data-skin="flat"] .nrn-board {
-        padding-top: 16px;
-    }
-    #nrn-widget[data-skin="flat"] .nrn-beam {
-        position: static;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 14px;
-    }
-    #nrn-widget[data-skin="flat"] #nrn-weather-text {
-        position: static;
-        transform: none;
-        order: -1;
-        width: 108px;
-        height: 108px;
-    }
-    #nrn-widget[data-skin="flat"] .nrn-medallion-icon {
-        width: 50px;
-        height: 50px;
-        margin-bottom: 22px;
-    }
-    #nrn-widget[data-skin="flat"] #nrn-weather-value {
-        position: static;
-        transform: none;
-        width: auto;
-        max-width: 100%;
-    }
-}
-
-/* ============================================================
  * 19. THREAD SKIN — «Дом и его нити» (data-skin="thread")
  *
- * Раскладка сделана по макету «NORNIR Дом и его нити» и НЕ надстраивается
- * над доской: она её отрезает. Первым делом идёт отсечка (19.0), которая
- * гасит всё, что доска навесила на текст, — тени по дереву, свечения,
- * курсив, скругления, жир. Дальше ставится только то, что есть в макете.
+ * Раскладка сделана по макету «NORNIR Дом и его нити». Первым делом идёт
+ * отсечка (19.0): она гасит тени, свечения, курсив, скругления и жир, что
+ * бы их ни принесло. Дальше ставится только то, что есть в макете.
  *
  * Слева столбец времени и места, справа книга из трёх створок: героиня,
  * {{char}} и дети. Нить Фрейи своей створки не имеет — она внутри створки
  * героини, под её одеждой.
  *
- * ДВЕ ХИТРОСТИ РАЗМЕТКИ. Разметка у трёх раскладок одна, а порядок в ней
- * нужен разный:
+ * ДВЕ ХИТРОСТИ РАЗМЕТКИ. Разметка у раскладок одна, а порядок в ней нужен
+ * разный:
  *
  *   1. display: contents на .nrn-wood, .nrn-beam и #nrn-datebox. Их дети
- *      становятся детьми доски, и эйкта с погодой встают в левый столбец,
+ *      становятся детьми панели, и эйкта с погодой встают в левый столбец,
  *      хотя в разметке лежат в верхней балке. Каждому назначен свой ряд
  *      сетки — иначе он уехал бы по порядку разметки, а не по смыслу.
  *
@@ -4077,8 +2206,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  * стоит display: none !important. Без него нить Фрейи оставалась на
  * экране поверх створки {{char}}.
  *
- * Цвета — только через переменные тем (раздел 20). Ролей у этого скина
- * больше, чем у доски, и зовутся они --nrn-th-*.
+ * Цвета — только через переменные тем (разделы 20, 20b, 20c). Роли этого
+ * скина зовутся --nrn-th-*; у новой раскладки свои, --nrn-lm-*.
  * ============================================================ */
 
 /* ------------------------------------------------------------
@@ -4086,10 +2215,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  * ------------------------------------------------------------ */
 
 /*
- * Доска рисует буквы поверх фотографии дерева, и там тень под буквой —
- * условие читаемости, а курсив и свечение — часть резьбы. Здесь ничего
- * этого нет: поле чистое, буква лежит на ровной подложке. Всё гасим
- * разом, а нужное ставим обратно ниже.
+ * Чистый лист.
+ *
+ * Скин рисует буквы на ровной подложке, и ни теней, ни свечений, ни
+ * курсива, ни скруглений ему не нужно — что бы ни принесли с собой
+ * браузер, таверна или общие правила блока. Гасим разом, а нужное
+ * ставим обратно ниже.
  *
  * Правило намеренно слабее любого именного: `[data-skin] *` — это (1,1,0),
  * а всё, что стоит ниже, идёт с классом или идентификатором и перебивает
@@ -4110,65 +2241,19 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     transition: none;
 }
 
-/*
- * Снимаем доску.
- *
- * Балка, дерево, книга, фигурки и дети прибиты к картинке абсолютом и
- * процентами от её ширины. Здесь картинки нет — вернуть их в поток надо
- * прежде всего остального, иначе сетка ниже просто не про них.
- */
-#nrn-widget[data-skin="thread"] .nrn-beam,
-#nrn-widget[data-skin="thread"] .nrn-beam-left,
-#nrn-widget[data-skin="thread"] .nrn-beam-line,
-#nrn-widget[data-skin="thread"] .nrn-wood,
-#nrn-widget[data-skin="thread"] .nrn-vegvisir,
-#nrn-widget[data-skin="thread"] #nrn-datebox,
-#nrn-widget[data-skin="thread"] .nrn-calfoot,
-#nrn-widget[data-skin="thread"] #nrn-grid,
-#nrn-widget[data-skin="thread"] .nrn-book,
-#nrn-widget[data-skin="thread"] .nrn-page,
-#nrn-widget[data-skin="thread"] .nrn-fig,
-#nrn-widget[data-skin="thread"] .nrn-children,
-#nrn-widget[data-skin="thread"] #nrn-stub {
-    position: static;
-    inset: auto;
-    width: auto;
-    height: auto;
-    margin: 0;
-    zoom: 1;
-    transform: none;
-    overflow: visible;
-    /* Фигурки на доске кликов не ловят — ловит «горячее место» внутри.
-       Здесь горячих мест нет, створку открывает сама строка заголовка. */
-    pointer-events: auto;
-}
-
-/* Ни доски, ни книжной картинки, ни резьбы: скин рисуется вёрсткой. */
-#nrn-widget[data-skin="thread"] .nrn-board::before,
-#nrn-widget[data-skin="thread"] .nrn-board::after,
-#nrn-widget[data-skin="thread"] .nrn-book::before,
-#nrn-widget[data-skin="thread"] .nrn-book::after,
-#nrn-widget[data-skin="thread"] .nrn-fig::before {
-    content: none;
-}
-
 /* Знаки полей здесь не рисуются: вместо них словесные ярлыки. Кроме
    звёздочки совета — она в макете есть, и ей отдан знак совета. */
 #nrn-widget[data-skin="thread"] .nrn-icon:not(.nrn-advice-icon),
-#nrn-widget[data-skin="thread"] .nrn-dial-hub,
-#nrn-widget[data-skin="thread"] .nrn-fig-hit,
-#nrn-widget[data-skin="thread"] .nrn-medallion-svg,
 #nrn-widget[data-skin="thread"] .nrn-cycle-debug,
 #nrn-widget[data-skin="thread"] #nrn-fig-freyja {
     display: none !important;
 }
 
 /*
- * Шрифты. На доске Norse навешен !important-ом в семи местах — там он
- * держит резьбу, и одним классом его не перебить (об этом сказано и в
- * самих тех правилах). В макете Norse стоит на именах, эйкте, дате и
- * календарике; обычный текст — Alegreya, всё остальное — Cormorant
- * Unicase. Перебивать приходится тем же !important, иначе никак.
+ * Шрифты. Norse стоит на именах, эйкте, дате и календарике; обычный
+ * текст — Alegreya, всё остальное — Cormorant Unicase. !important здесь
+ * не перестраховка: те же места набраны Norse-ом с !important и в общих
+ * правилах блока, и слабее их перебить нечем.
  */
 #nrn-widget[data-skin="thread"] {
     font-family: "Cormorant Unicase", serif;
@@ -4423,10 +2508,9 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 /*
  * Календарик — семь голых чисел.
  *
- * Ни подписи дней недели сверху, ни оранжевой полосы под праздником: и то,
- * и другое пришло с доски, где полоса была вторым знаком праздника рядом с
- * подложкой. Здесь праздничный день назван цветом, и этого довольно —
- * день недели всё равно написан словом строкой ниже.
+ * Ни подписи дней недели сверху, ни полосы под праздником: праздничный
+ * день назван цветом, и этого довольно — день недели всё равно написан
+ * словом строкой ниже.
  */
 #nrn-widget[data-skin="thread"] #nrn-grid { margin-top: 11px; }
 
@@ -4507,9 +2591,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     display: inline !important;
     width: auto;
     height: auto;
-    /* Знаку в левой колонке доска даёт поле справа — там он стоит перед
-       словом. Точке поле ни к чему: зазоры держит gap, а с полем между
-       днём недели и викой зияла дыра в два пробела. */
+    /* Точке поле ни к чему: зазоры держит gap, а с полем между днём
+       недели и викой зияла дыра в два пробела. */
     margin: 0;
     background: none;
     color: var(--nrn-th-dot);
@@ -4922,10 +3005,9 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     font-size: inherit;
 }
 
-/* Приметы — по строке на примету. На доске они стоят сеткой в два
-   столбца, потому что лист там вдвое уже. */
-/* Приметы стоят ниже рода с домом и отделены от них чертой во всю ширину
-   листа: их к концу срока десяток, и без черты они прирастают к дому. */
+/* Приметы — по строке на примету. Стоят ниже рода с домом и отделены от
+   них чертой во всю ширину листа: их к концу срока десяток, и без черты
+   они прирастают к дому. */
 #nrn-widget[data-skin="thread"] #nrn-cycle-signs {
     display: block;
     margin-top: 15px;
@@ -5087,9 +3169,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 /*
  * «Род» и «Дом» — слово и одна черта до края столбца.
  *
- * На доске у заголовка своя черта снизу, во всю ширину, и вместе с этой
- * их выходило две подряд. Ту снимаем: черта здесь идёт от слова вбок,
- * а не под ним.
+ * Черта идёт от слова вбок, а не под ним: подчёркнутый заголовок и черта
+ * рядом дали бы две линии подряд.
  */
 #nrn-widget[data-skin="thread"] .nrn-group-title {
     display: flex;
@@ -5366,10 +3447,9 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-happened-text { flex: none; }
 
 /*
- * Слово повитухи. Врезанная табличка доски снята: подножие уже отделено
- * чертой сверху. Зарубки-руны по углам оттуда же — левая становится
- * словесным ярлыком в строке, правой не нужно вовсе, а звёздочку между
- * ярлыком и словом рисует знак совета.
+ * Слово повитухи. Ни таблички, ни рамки: подножие уже отделено чертой
+ * сверху. Слева словесный ярлык, между ним и словом — звёздочка знака
+ * совета.
  */
 #nrn-widget[data-skin="thread"] #nrn-advice {
     position: static;
@@ -5463,28 +3543,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-rule-kids .nrn-rule-eye { stroke: var(--nrn-th-place); }
 #nrn-widget[data-skin="thread"] .nrn-rule-kids .nrn-rule-dot { fill: var(--nrn-th-place); }
 
-/* Разделители, заголовок детей, строка «что было» и ставы вегвизира —
-   только здесь. Старые полоски эйкт, наоборот, в этом скине не рисуются:
-   древко есть у самого става. */
-#nrn-widget:not([data-skin="thread"]) .nrn-rule,
-#nrn-widget:not([data-skin="thread"]) .nrn-kids-head,
-#nrn-widget:not([data-skin="thread"]) .nrn-happened,
-#nrn-widget:not([data-skin="thread"]) .nrn-ray-stave { display: none !important; }
-
-/* Обёртки, заведённые ради этого скина, в двух других прозрачны: подножие
-   остаётся последними строками листа нити, а седмица с Луной — двумя
-   отдельными строками в коробке даты, как и было. */
-#nrn-widget:not([data-skin="thread"]) .nrn-foot,
-#nrn-widget:not([data-skin="thread"]) .nrn-calfoot { display: contents; }
-
-#nrn-widget[data-skin="thread"] .nrn-ray-halo,
-#nrn-widget[data-skin="thread"] .nrn-ray-core { display: none; }
-
-/* На доске из восьми лучей виден один — тот, в чьей эйкте идёт сцена;
-   остальные дорисованы картинкой. Здесь картинки нет, и знак рисуется
-   целиком: восемь ставов стоят всегда, светится один. */
-#nrn-widget[data-skin="thread"] .nrn-vegvisir-ray { opacity: 1; }
-
+/* Став луча: восемь стоят всегда, светится тот, в чьей эйкте идёт сцена. */
 #nrn-widget[data-skin="thread"] .nrn-ray-stave {
     fill: none;
     stroke: var(--nrn-th-label2);
@@ -5508,6 +3567,56 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 /* ------------------------------------------------------------
+ * 19.10a. Строй левого столбца: жир, шаг и воздух
+ *
+ * Мелочи, на которых держится счёт времени: жир на строках балки и
+ * календарика, тесный шаг строк и по несколько пикселей воздуха между
+ * ними. Собраны в одном месте нарочно — правятся они вместе, а стоят в
+ * пяти разных правилах выше.
+ * ------------------------------------------------------------ */
+
+/* Погода, место и счёт времени — жирным по всей балке. */
+#nrn-widget[data-skin="thread"] .nrn-beam-line {
+    font-weight: 700;
+}
+
+/* Имя эйкты и счёт под ним — одна надпись в две строки, шаг у неё тесный. */
+#nrn-widget[data-skin="thread"] #nrn-time-line {
+    line-height: 1.15;
+}
+
+#nrn-widget[data-skin="thread"] #nrn-eykt-num {
+    margin-left: 8px;
+}
+
+/* Строки календарика: седмица, дата, луна, праздник. */
+#nrn-widget[data-skin="thread"] .nrn-cal-line {
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-sun-line { margin-bottom: 5px; }
+#nrn-widget[data-skin="thread"] #nrn-date { margin-bottom: 4px; }
+#nrn-widget[data-skin="thread"] .nrn-row { margin-bottom: 3px; }
+
+/* Дни недели в полоске делятся поровну и жмутся без остатка. */
+#nrn-widget[data-skin="thread"] .nrn-cell { min-width: 0; }
+
+#nrn-widget[data-skin="thread"] #nrn-weather-text,
+#nrn-widget[data-skin="thread"] #nrn-location-text { min-width: 0; }
+
+/* Квадрат вегвизира: SVG блоком, иначе под ним остаётся полоска
+   строчной базовой линии и шапка становится выше на четыре пикселя. */
+#nrn-widget[data-skin="thread"] .nrn-vegvisir-svg { display: block; }
+
+/* Одежда — знак и фраза в строку. */
+#nrn-widget[data-skin="thread"] .nrn-attire {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+/* ------------------------------------------------------------
  * 19.11. Гармошка: та же панель на телефоне и в узкой колонке
  *
  * Сделана по макету «NORNIR Mobile Accordion». Два столбца сходятся в
@@ -5517,9 +3626,9 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  * (см. THREAD_TABS в index.js), здесь ей меняют только раскладку. Ни
  * одной новой вкладки, ни одного нового узла в разметке.
  *
- * Меряем контейнерным запросом, а не окном, — как и плоская панель в
- * 18.5. Виджет живёт в колонке чата: на широком мониторе с узкой
- * колонкой окно «широкое», а места нет, и ломалось там заметнее всего.
+ * Меряем контейнерным запросом, а не окном. Виджет живёт в колонке чата:
+ * на широком мониторе с узкой колонкой окно «широкое», а места нет, и
+ * ломалось там заметнее всего.
  *
  * Порог 680, и взят он от книги, а не от телефона. Книге рядом со
  * столбцом в 292 нужно около 390: на меньшем «Отвар из дягиля и покой
@@ -5540,9 +3649,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
      * местом вышли бы разной ширины.
      *
      * Высоты у панели больше нет: она растёт от створки, а створка
-     * отмерена ниже. Пропорцию доски (aspect-ratio из раздела 3) снимаем
-     * здесь же — иначе она возвращает панели ширину, делённую на 1.35, и
-     * overflow: hidden срезает всё ниже вегвизира.
+     * отмерена ниже.
      */
     #nrn-widget[data-skin="thread"] .nrn-board {
         grid-template-columns: repeat(4, 1fr);
@@ -5690,7 +3797,7 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     /*
      * Открытая створка не тянется, а упирается в потолок.
      *
-     * В широкой панели высота задана всей доске, и створка забирает
+     * В широкой панели высота задана всей панели, и створка забирает
      * остаток. Здесь высоты нет, расти панели некуда, кроме как вниз, —
      * и лист нити к концу срока растянул бы её на три экрана. Поэтому у
      * створки свой потолок, а лишнее листают пальцем внутри неё:
@@ -5829,24 +3936,31 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     #nrn-widget[data-skin="thread"] .nrn-foot { gap: 5px; padding: 10px 16px 12px; }
     #nrn-widget[data-skin="thread"] .nrn-happened { font-size: 14px; }
     #nrn-widget[data-skin="thread"] #nrn-advice { gap: 10px; font-size: 17px; }
+
+    /* Воздух между строками времени (19.10a) на телефоне вдвое тише: там
+       эти три пикселя стоят целой строки. */
+    #nrn-widget[data-skin="thread"] #nrn-eykt-num { margin-left: 3px; }
+    #nrn-widget[data-skin="thread"] .nrn-sun-line { margin-bottom: 2px; }
+    #nrn-widget[data-skin="thread"] #nrn-date { margin-bottom: 2px; }
+    #nrn-widget[data-skin="thread"] .nrn-row { margin-bottom: 1px; }
 }
 
 /* ============================================================
  * 20. ТЕМЫ ДЛЯ СКИНА «ДОМ И ЕГО НИТИ»
  *
- * Три палитры, снятые с макета один в один. Ролей у скина больше, чем
- * у доски: там хватало «текста», «тусклого» и «яркого», здесь у погоды,
- * места, тела и совета свои голоса, а линий три силы вместо одной.
- * Поэтому переменные свои, с приставкой --nrn-th-, а в конце каждой темы
- * общие --nrn-* переставлены на те же цвета: подсказки, тревога и знаки
- * живут в общих правилах и должны краситься заодно.
+ * Три палитры, снятые с макета один в один. Ролей у скина много: у погоды,
+ * места, тела и совета свои голоса, а линий три силы вместо одной. Поэтому
+ * переменные свои, с приставкой --nrn-th-, а в конце каждой темы общие
+ * --nrn-* переставлены на те же цвета: подсказки, тревога и знаки живут в
+ * общих правилах и должны краситься заодно.
  *
  * Ланнистеры отсюда ушли в раздел 20b — старая тема несла золото на всём
  * тексте разом, и переписана она целиком, а не поправлена.
  *
  * Эти темы — только для «нитей», и список в index.js их туда и запирает:
- * на доске у них нет половины ролей, а у доски нет этих. Новые темы (20b)
- * пишутся уже в общих именах и разбираются мостом в начале того раздела.
+ * у новой раскладки роли зовутся иначе, и цвет отсюда красил бы её
+ * наполовину. Новые темы (20b) пишутся уже в общих именах и разбираются
+ * мостом в начале того раздела.
  * ============================================================ */
 
 /* Тьма — уголь и старое серебро, свеча в углу */
@@ -5899,7 +4013,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-chip-bg: #17171d;
     --nrn-chip-border: #3a3b45;
     --nrn-feast: #c96a4a;
-    --nrn-art-filter: sepia(0.2) saturate(0.9);
 }
 
 /* Свет — беленый лен и сургуч */
@@ -5952,9 +4065,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-chip-bg: #f4f1ea;
     --nrn-chip-border: #b8b0a2;
     --nrn-feast: #a52a1f;
-    --nrn-text-halo: rgba(255, 255, 255, 0.85);
-    --nrn-text-halo-soft: rgba(255, 255, 255, 0.6);
-    --nrn-art-filter: brightness(1.12) saturate(0.6);
 }
 
 /* Покой — светлая бумага и приглушенная зелень */
@@ -6007,9 +4117,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-chip-bg: #f0ede5;
     --nrn-chip-border: #bcc1bb;
     --nrn-feast: #7a9a80;
-    --nrn-text-halo: rgba(255, 255, 255, 0.85);
-    --nrn-text-halo-soft: rgba(255, 255, 255, 0.6);
-    --nrn-art-filter: brightness(1.12) saturate(0.6);
 }
 
 /* ============================================================
@@ -6112,15 +4219,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #cdcbc6;
     --nrn-accent:             #6a8ea0;
     --nrn-accent-contrast:    #070808;
-    --nrn-accent-glow:        rgba(106, 142, 160, 0.45);
     --nrn-accent-glow-strong: rgba(106, 142, 160, 0.75);
     --nrn-accent-border-dim:  rgba(106, 142, 160, 0.35);
     --nrn-chip-text:          #ded9cf;
     --nrn-chip-bg:            #17181a;
     --nrn-chip-border:        #34383d;
     --nrn-feast:              #678e7a;
-    --nrn-feast-bg:           rgba(103, 142, 122, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6145,15 +4249,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #d5cebe;
     --nrn-accent:             #be2d40;
     --nrn-accent-contrast:    #0c0808;
-    --nrn-accent-glow:        rgba(190, 45, 64, 0.45);
     --nrn-accent-glow-strong: rgba(190, 45, 64, 0.75);
     --nrn-accent-border-dim:  rgba(190, 45, 64, 0.35);
     --nrn-chip-text:          #ece3cb;
     --nrn-chip-bg:            #2c1416;
     --nrn-chip-border:        #493d2d;
     --nrn-feast:              #d6b351;
-    --nrn-feast-bg:           rgba(214, 179, 81, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6178,15 +4279,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c7c9cc;
     --nrn-accent:             #932f2f;
     --nrn-accent-contrast:    #070606;
-    --nrn-accent-glow:        rgba(147, 47, 47, 0.45);
     --nrn-accent-glow-strong: rgba(147, 47, 47, 0.75);
     --nrn-accent-border-dim:  rgba(147, 47, 47, 0.35);
     --nrn-chip-text:          #d8dbdf;
     --nrn-chip-bg:            #191516;
     --nrn-chip-border:        #3b3233;
     --nrn-feast:              #a48170;
-    --nrn-feast-bg:           rgba(164, 129, 112, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6211,15 +4309,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #cfcbc4;
     --nrn-accent:             #b38942;
     --nrn-accent-contrast:    #070706;
-    --nrn-accent-glow:        rgba(179, 137, 66, 0.45);
     --nrn-accent-glow-strong: rgba(179, 137, 66, 0.75);
     --nrn-accent-border-dim:  rgba(179, 137, 66, 0.35);
     --nrn-chip-text:          #dfd8c3;
     --nrn-chip-bg:            #191815;
     --nrn-chip-border:        #3b3832;
     --nrn-feast:              #bfa969;
-    --nrn-feast-bg:           rgba(191, 169, 105, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6244,15 +4339,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c6cbcd;
     --nrn-accent:             #4f8770;
     --nrn-accent-contrast:    #070808;
-    --nrn-accent-glow:        rgba(79, 135, 112, 0.45);
     --nrn-accent-glow-strong: rgba(79, 135, 112, 0.75);
     --nrn-accent-border-dim:  rgba(79, 135, 112, 0.35);
     --nrn-chip-text:          #d8dedf;
     --nrn-chip-bg:            #16191b;
     --nrn-chip-border:        #323b3e;
     --nrn-feast:              #9d916c;
-    --nrn-feast-bg:           rgba(157, 145, 108, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6277,15 +4369,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #d1cdc2;
     --nrn-accent:             #6b924f;
     --nrn-accent-contrast:    #070807;
-    --nrn-accent-glow:        rgba(107, 146, 79, 0.45);
     --nrn-accent-glow-strong: rgba(107, 146, 79, 0.75);
     --nrn-accent-border-dim:  rgba(107, 146, 79, 0.35);
     --nrn-chip-text:          #e2dccb;
     --nrn-chip-bg:            #181a16;
     --nrn-chip-border:        #373d34;
     --nrn-feast:              #b79f66;
-    --nrn-feast-bg:           rgba(183, 159, 102, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6310,15 +4399,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #d2ccc1;
     --nrn-accent:             #c2723d;
     --nrn-accent-contrast:    #0a0908;
-    --nrn-accent-glow:        rgba(194, 114, 61, 0.45);
     --nrn-accent-glow-strong: rgba(194, 114, 61, 0.75);
     --nrn-accent-border-dim:  rgba(194, 114, 61, 0.35);
     --nrn-chip-text:          #e4dbc8;
     --nrn-chip-bg:            #1c1917;
     --nrn-chip-border:        #403933;
     --nrn-feast:              #a278b0;
-    --nrn-feast-bg:           rgba(162, 120, 176, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6343,15 +4429,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c5c9ce;
     --nrn-accent:             #6496b9;
     --nrn-accent-contrast:    #08090a;
-    --nrn-accent-glow:        rgba(100, 150, 185, 0.45);
     --nrn-accent-glow-strong: rgba(100, 150, 185, 0.75);
     --nrn-accent-border-dim:  rgba(100, 150, 185, 0.35);
     --nrn-chip-text:          #dce1e5;
     --nrn-chip-bg:            #17191c;
     --nrn-chip-border:        #34383f;
     --nrn-feast:              #919cac;
-    --nrn-feast-bg:           rgba(145, 156, 172, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6376,15 +4459,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c6cacd;
     --nrn-accent:             #964a4a;
     --nrn-accent-contrast:    #070808;
-    --nrn-accent-glow:        rgba(150, 74, 74, 0.45);
     --nrn-accent-glow-strong: rgba(150, 74, 74, 0.75);
     --nrn-accent-border-dim:  rgba(150, 74, 74, 0.35);
     --nrn-chip-text:          #d7dde0;
     --nrn-chip-bg:            #16191b;
     --nrn-chip-border:        #32393e;
     --nrn-feast:              #749669;
-    --nrn-feast-bg:           rgba(116, 150, 105, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6409,15 +4489,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #cec8c5;
     --nrn-accent:             #7f2f2f;
     --nrn-accent-contrast:    #060505;
-    --nrn-accent-glow:        rgba(127, 47, 47, 0.45);
     --nrn-accent-glow-strong: rgba(127, 47, 47, 0.75);
     --nrn-accent-border-dim:  rgba(127, 47, 47, 0.35);
     --nrn-chip-text:          #dad6d2;
     --nrn-chip-bg:            #181414;
     --nrn-chip-border:        #3a3231;
     --nrn-feast:              #886c63;
-    --nrn-feast-bg:           rgba(136, 108, 99, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6442,15 +4519,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c7c9cc;
     --nrn-accent:             #56a4bd;
     --nrn-accent-contrast:    #050505;
-    --nrn-accent-glow:        rgba(86, 164, 189, 0.45);
     --nrn-accent-glow-strong: rgba(86, 164, 189, 0.75);
     --nrn-accent-border-dim:  rgba(86, 164, 189, 0.35);
     --nrn-chip-text:          #d7dce0;
     --nrn-chip-bg:            #151517;
     --nrn-chip-border:        #31343a;
     --nrn-feast:              #7e8a95;
-    --nrn-feast-bg:           rgba(126, 138, 149, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6475,15 +4549,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c6cccd;
     --nrn-accent:             #a2423f;
     --nrn-accent-contrast:    #060707;
-    --nrn-accent-glow:        rgba(162, 66, 63, 0.45);
     --nrn-accent-glow-strong: rgba(162, 66, 63, 0.75);
     --nrn-accent-border-dim:  rgba(162, 66, 63, 0.35);
     --nrn-chip-text:          #d8dedf;
     --nrn-chip-bg:            #151819;
     --nrn-chip-border:        #323a3c;
     --nrn-feast:              #799a9a;
-    --nrn-feast-bg:           rgba(121, 154, 154, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6508,15 +4579,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #d2cbc1;
     --nrn-accent:             #b8763d;
     --nrn-accent-contrast:    #0c0a09;
-    --nrn-accent-glow:        rgba(184, 118, 61, 0.45);
     --nrn-accent-glow-strong: rgba(184, 118, 61, 0.75);
     --nrn-accent-border-dim:  rgba(184, 118, 61, 0.35);
     --nrn-chip-text:          #e4dac8;
     --nrn-chip-bg:            #1e1b17;
     --nrn-chip-border:        #423b33;
     --nrn-feast:              #c1a067;
-    --nrn-feast-bg:           rgba(193, 160, 103, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6541,15 +4609,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #cec9c5;
     --nrn-accent:             #b75f34;
     --nrn-accent-contrast:    #070606;
-    --nrn-accent-glow:        rgba(183, 95, 52, 0.45);
     --nrn-accent-glow-strong: rgba(183, 95, 52, 0.75);
     --nrn-accent-border-dim:  rgba(183, 95, 52, 0.35);
     --nrn-chip-text:          #dbd2c7;
     --nrn-chip-bg:            #191715;
     --nrn-chip-border:        #3b3632;
     --nrn-feast:              #a0856a;
-    --nrn-feast-bg:           rgba(160, 133, 106, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6574,15 +4639,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #d1cac2;
     --nrn-accent:             #983e50;
     --nrn-accent-contrast:    #080707;
-    --nrn-accent-glow:        rgba(152, 62, 80, 0.45);
     --nrn-accent-glow-strong: rgba(152, 62, 80, 0.75);
     --nrn-accent-border-dim:  rgba(152, 62, 80, 0.35);
     --nrn-chip-text:          #dfd5c3;
     --nrn-chip-bg:            #1b1716;
     --nrn-chip-border:        #3e3532;
     --nrn-feast:              #b6935d;
-    --nrn-feast-bg:           rgba(182, 147, 93, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6607,15 +4669,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c7c5ce;
     --nrn-accent:             #525ead;
     --nrn-accent-contrast:    #070709;
-    --nrn-accent-glow:        rgba(82, 94, 173, 0.45);
     --nrn-accent-glow-strong: rgba(82, 94, 173, 0.75);
     --nrn-accent-border-dim:  rgba(82, 94, 173, 0.35);
     --nrn-chip-text:          #d8d7e0;
     --nrn-chip-bg:            #16151b;
     --nrn-chip-border:        #34313f;
     --nrn-feast:              #9783a5;
-    --nrn-feast-bg:           rgba(151, 131, 165, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6640,15 +4699,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c5c8ce;
     --nrn-accent:             #c7944d;
     --nrn-accent-contrast:    #070709;
-    --nrn-accent-glow:        rgba(199, 148, 77, 0.45);
     --nrn-accent-glow-strong: rgba(199, 148, 77, 0.75);
     --nrn-accent-border-dim:  rgba(199, 148, 77, 0.35);
     --nrn-chip-text:          #e6dfd1;
     --nrn-chip-bg:            #15161c;
     --nrn-chip-border:        #303440;
     --nrn-feast:              #5e8d79;
-    --nrn-feast-bg:           rgba(94, 141, 121, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6673,15 +4729,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-text-day:           #c6cbcd;
     --nrn-accent:             #72a4b6;
     --nrn-accent-contrast:    #08090a;
-    --nrn-accent-glow:        rgba(114, 164, 182, 0.45);
     --nrn-accent-glow-strong: rgba(114, 164, 182, 0.75);
     --nrn-accent-border-dim:  rgba(114, 164, 182, 0.35);
     --nrn-chip-text:          #dde2e4;
     --nrn-chip-bg:            #171a1c;
     --nrn-chip-border:        #353b3e;
     --nrn-feast:              #afaca1;
-    --nrn-feast-bg:           rgba(175, 172, 161, 0.16);
-    --nrn-art-filter:         opacity(1);
     --nrn-thread-spine:       rgba(0, 0, 0, 0.55);
 }
 
@@ -6768,17 +4821,14 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
        погода и строка тела. */
     --nrn-accent:             var(--nrn-tav-quote);
     --nrn-accent-contrast:    var(--SmartThemeBlurTintColor, #101013);
-    --nrn-accent-glow:        color-mix(in srgb, var(--nrn-tav-quote) 45%, transparent);
     --nrn-accent-glow-strong: color-mix(in srgb, var(--nrn-tav-quote) 75%, transparent);
     --nrn-accent-border-dim:  color-mix(in srgb, var(--nrn-tav-quote) 35%, transparent);
     --nrn-feast:              var(--nrn-tav-em);
-    --nrn-feast-bg:           color-mix(in srgb, var(--nrn-tav-em) 16%, transparent);
     --nrn-text-panel:         color-mix(in srgb, var(--nrn-tav-em) 82%, transparent);
     --nrn-text-weather:       var(--nrn-tav-under);
 
     /* Корешок книги — тенью таверны, если она у неё задана. */
     --nrn-thread-spine:       var(--SmartThemeShadowColor, rgba(0, 0, 0, 0.55));
-    --nrn-art-filter:         opacity(1);
 }
 
 /*

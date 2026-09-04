@@ -1,0 +1,1913 @@
+/*
+ * NORNIR — раскладка «Дом и его нити (новая)» (data-skin="loom")
+ *
+ * Отдельный файл, и это нарочно. Раскладка снята с «Дома и его нитей» и
+ * заведена под правку вёрстки; пока правка идёт, прежняя раскладка
+ * обязана стоять как стояла — а стоит она в style.css, куда отсюда никто
+ * не тянется. Сломать одну, не тронув другую, из этого файла нельзя.
+ *
+ * Подключается из index.js (loadSkinCss), потому что в manifest.json
+ * значится одна таблица стилей и трогать её ради опыта незачем.
+ *
+ * ЧТО ОТКУДА. Разметка общая — её строит тот же index.js, и здесь она
+ * только раскладывается. Общие правила блока (корень виджета, знаки,
+ * справочник) лежат в style.css; здесь всё, что относится к самой
+ * раскладке, и её цвета. Роли цвета зовутся --nrn-lm-*, а не --nrn-th-*:
+ * у прежней раскладки свои, и делить их значило бы править обе разом.
+ * Тема здесь одна — «Нити: тьма», [data-theme="loom-dark"] в конце файла.
+ *
+ * --- ЧЕМ ЭТА РАСКЛАДКА ОТЛИЧАЕТСЯ ОТ ПРЕЖНЕЙ ---
+ *
+ * Панель говорит короткими парами «ярлык → слово», и таких пар в ней до
+ * сорока. Прежняя раскладка ставила их по-разному в каждой кучке, и текст
+ * читался кучей. Здесь четыре правила, и они держат всё остальное:
+ *
+ *   1. ОДНА СЕТКА. Столбец ярлыка отмерен числом (--nrn-lm-labelw), слово
+ *      забирает остаток. Все пары стоят на ней — в любой створке, в любой
+ *      кучке, — и слова выстроены по одной вертикали. Раньше отступов
+ *      было три: 74 у примет, 82 у рода, 96 у дома.
+ *
+ *   2. ТРИ НАЧЕРТАНИЯ. Заголовок, ярлык, слово — и ни одного больше.
+ *      Важность держится цветом, а не кеглем: то, что изменилось за ход
+ *      или требует внимания, красится акцентом и остаётся того же роста.
+ *      Раньше у соседних строк кегль расходился на пять пунктов без
+ *      всякой причины.
+ *
+ *   3. ЧЕРТА — ТОЛЬКО НА СМЕНЕ УРОВНЯ. Внутри карточки человека линий нет
+ *      вовсе: кучки разделяет воздух (--nrn-lm-air). Черта осталась там,
+ *      где кончается один человек и начинается другой (заголовки створок)
+ *      и где кончается книга (подножие). Ромб со ставом — один на всю
+ *      панель, на границе перед детьми. Что нужно выделить сильнее, стоит
+ *      на подложке в полтона, а не в рамке (весть о теле).
+ *
+ *   4. КАПС — ТОЛЬКО ЯРЛЫКАМ И КОРОТКИМ ЗАГОЛОВКАМ. Всё, что длиннее двух
+ *      слов, — обычным регистром: состояние тела, одежда, совет норны.
+ *      Мысль вдобавок курсивом: это единственное место, где говорят
+ *      голосом. Капс на живой фразе читался криком и мешал.
+ *
+ * ОГЛАВЛЕНИЕ (номера сохранены от исходной раскладки, чтобы правку было
+ * с чем сверять):
+ *
+ *   0.   Отсечка и шрифты
+ *   1.   Сетка панели: левый столбец и книга
+ *   2.   Левый столбец: вегвизир, эйкта, дата, календарик
+ *   3.   Подножие левого столбца: погода и место
+ *   4.   Книга: три створки
+ *   5.   Заголовки створок
+ *   6.   Створка героини: тело, одежда, нить Фрейи
+ *   7.   Створка {{char}}: нрав, тело, одежда, мысль
+ *   8.   Створка детей
+ *   9.   Весть о теле и слово норны
+ *   10.  Общее: подсказки, разделители, вегвизир
+ *   10a. Строй левого столбца: жир, шаг и воздух
+ *   10b. Род и дом в один столбец — раньше гармошки
+ *   11.  Гармошка: та же панель на телефоне и в узкой колонке
+ *   12.  Тема «Нити: тьма»
+ */
+
+/* ------------------------------------------------------------
+ * 0. Отсечка
+ * ------------------------------------------------------------ */
+
+/*
+ * Чистый лист.
+ *
+ * Скин рисует буквы на ровной подложке, и ни теней, ни свечений, ни
+ * курсива, ни скруглений ему не нужно — что бы ни принесли с собой
+ * браузер, таверна или общие правила блока. Гасим разом, а нужное
+ * ставим обратно ниже.
+ *
+ * Правило намеренно слабее любого именного: `[data-skin] *` — это (1,1,0),
+ * а всё, что стоит ниже, идёт с классом или идентификатором и перебивает
+ * отсечку само собой. !important тут не нужен и был бы вреден.
+ */
+#nrn-widget[data-skin="loom"],
+#nrn-widget[data-skin="loom"] *,
+#nrn-widget[data-skin="loom"] *::before,
+#nrn-widget[data-skin="loom"] *::after {
+    text-shadow: none;
+    box-shadow: none;
+    filter: none;
+    font-style: normal;
+    font-weight: 400;
+    border-radius: 0;
+    text-decoration: none;
+    animation: none;
+    transition: none;
+}
+
+/* Знаки полей здесь не рисуются: вместо них словесные ярлыки. Кроме
+   звёздочки совета — она в макете есть, и ей отдан знак совета. */
+#nrn-widget[data-skin="loom"] .nrn-icon:not(.nrn-advice-icon),
+#nrn-widget[data-skin="loom"] .nrn-cycle-debug,
+#nrn-widget[data-skin="loom"] #nrn-fig-freyja {
+    display: none !important;
+}
+
+/*
+ * Шрифты. Norse стоит на именах, эйкте, дате и календарике; обычный
+ * текст — Alegreya, всё остальное — Cormorant Unicase. !important здесь
+ * не перестраховка: те же места набраны Norse-ом с !important и в общих
+ * правилах блока, и слабее их перебить нечем.
+ */
+#nrn-widget[data-skin="loom"] {
+    font-family: "Cormorant Unicase", serif;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-beam-line,
+#nrn-widget[data-skin="loom"] #nrn-weather-text,
+#nrn-widget[data-skin="loom"] #nrn-location-text,
+#nrn-widget[data-skin="loom"] #nrn-week,
+#nrn-widget[data-skin="loom"] #nrn-moon,
+#nrn-widget[data-skin="loom"] #nrn-feast,
+#nrn-widget[data-skin="loom"] #nrn-sun,
+#nrn-widget[data-skin="loom"] .nrn-cycle-head,
+#nrn-widget[data-skin="loom"] .nrn-chip,
+#nrn-widget[data-skin="loom"] .nrn-thought,
+#nrn-widget[data-skin="loom"] .nrn-state,
+#nrn-widget[data-skin="loom"] #nrn-draught-name {
+    font-family: "Cormorant Unicase", serif !important;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cycle-sub,
+#nrn-widget[data-skin="loom"] .nrn-attire,
+#nrn-widget[data-skin="loom"] .nrn-fact-value,
+#nrn-widget[data-skin="loom"] .nrn-leaf-empty,
+#nrn-widget[data-skin="loom"] #nrn-draught-text {
+    font-family: "Alegreya", serif !important;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-eykt-name,
+#nrn-widget[data-skin="loom"] #nrn-date,
+#nrn-widget[data-skin="loom"] .nrn-cell,
+#nrn-widget[data-skin="loom"] .nrn-fig-name,
+#nrn-widget[data-skin="loom"] .nrn-kids-name,
+#nrn-widget[data-skin="loom"] .nrn-child-name,
+#nrn-widget[data-skin="loom"] .nrn-cycle-head::before {
+    font-family: "Norse", Georgia, serif !important;
+}
+
+/* ------------------------------------------------------------
+ * 1. Сетка панели
+ *
+ * Два столбца: время и место слева, книга справа. Одиннадцать рядов —
+ * это левый столбец сверху вниз; пятый пустой и тянется, он и отжимает
+ * дату с календариком к нижнему краю. Книга занимает все ряды разом.
+ *
+ * Ширина — во всю строку сообщения: столбец слева отмерен числом, книга
+ * забирает остаток.
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] {
+    --nrn-lm-col: 292px;
+    --nrn-lm-pad: 20px;
+    --nrn-lm-h: 665px;
+
+    /*
+     * ОДНА СЕТКА НА ВСЮ КНИГУ.
+     *
+     * Каждая пара «ярлык → слово» стоит на ней: столбец ярлыка отмерен
+     * числом, слово забирает остаток. Оттого значения выстроены по одной
+     * вертикали в любой створке и в любой кучке — раньше у примет,
+     * рода и дитяти были три разных отступа, и глазу не за что было
+     * зацепиться.
+     */
+    --nrn-lm-labelw: 92px;
+    --nrn-lm-gap: 12px;
+
+    /*
+     * ТРИ НАЧЕРТАНИЯ И НИ ОДНИМ БОЛЬШЕ: заголовок, ярлык, слово.
+     *
+     * Четвёртое — не размер, а цвет: слово, которое изменилось за ход
+     * или требует внимания, красится акцентом и остаётся того же кегля.
+     * Разный кегль у соседних строк читался как разная важность там, где
+     * её нет: «НУЖНО» крупнее «РАСТЁТ» просто оттого, что так сложилось.
+     */
+    --nrn-lm-title: 23px;
+    --nrn-lm-label-fs: 11px;
+    --nrn-lm-value: 18px;
+
+    /* Воздух между кучками — вместо черт (см. 6). */
+    --nrn-lm-air: 22px;
+
+    color: var(--nrn-lm-body);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-board {
+    display: grid;
+    grid-template-columns: var(--nrn-lm-col) 1fr;
+    grid-template-rows: auto auto auto auto 1fr auto auto auto auto auto;
+    width: 100%;
+    max-width: none;
+    height: var(--nrn-lm-h);
+    background: var(--nrn-lm-bg1);
+    /* Первый слой — подложка левого столбца: своей коробки под него нет,
+       .nrn-wood растворён. Два следующих — холщовая штриховка. */
+    background-image:
+        linear-gradient(90deg, var(--nrn-lm-bg2) 0 var(--nrn-lm-col), rgba(0, 0, 0, 0) var(--nrn-lm-col)),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 1px, rgba(0, 0, 0, 0) 1px 3px),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.011) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+    border: 1px solid var(--nrn-lm-line);
+    overflow: hidden;
+}
+
+/* Обёртки балки, столбца и коробки даты растворяются — их дети встают
+   в сетку панели сами. */
+#nrn-widget[data-skin="loom"] .nrn-wood,
+#nrn-widget[data-skin="loom"] .nrn-beam,
+#nrn-widget[data-skin="loom"] .nrn-beam-left,
+#nrn-widget[data-skin="loom"] #nrn-datebox {
+    display: contents;
+}
+
+/* Общее для всего левого столбца: поля по краям, середина по центру. */
+#nrn-widget[data-skin="loom"] .nrn-vegvisir,
+#nrn-widget[data-skin="loom"] #nrn-time-line,
+#nrn-widget[data-skin="loom"] #nrn-sun,
+#nrn-widget[data-skin="loom"] #nrn-feast,
+#nrn-widget[data-skin="loom"] #nrn-date,
+#nrn-widget[data-skin="loom"] #nrn-grid,
+#nrn-widget[data-skin="loom"] .nrn-calfoot,
+#nrn-widget[data-skin="loom"] #nrn-weather-text,
+#nrn-widget[data-skin="loom"] #nrn-location-text {
+    grid-column: 1;
+    justify-self: center;
+    width: 100%;
+    max-width: calc(var(--nrn-lm-col) - var(--nrn-lm-pad) * 2);
+    text-align: center;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-vegvisir      { grid-row: 1; }
+#nrn-widget[data-skin="loom"] #nrn-time-line     { grid-row: 2; }
+#nrn-widget[data-skin="loom"] #nrn-sun           { grid-row: 3; }
+#nrn-widget[data-skin="loom"] #nrn-feast         { grid-row: 4; }
+/* ряд 5 — пустой и тянущийся: он отжимает дату к низу */
+#nrn-widget[data-skin="loom"] #nrn-date          { grid-row: 6; }
+#nrn-widget[data-skin="loom"] #nrn-grid          { grid-row: 7; }
+#nrn-widget[data-skin="loom"] .nrn-calfoot       { grid-row: 8; }
+#nrn-widget[data-skin="loom"] #nrn-weather-text  { grid-row: 9; }
+#nrn-widget[data-skin="loom"] #nrn-location-text { grid-row: 10; }
+
+#nrn-widget[data-skin="loom"] .nrn-book {
+    grid-column: 2;
+    grid-row: 1 / -1;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-stub {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    align-self: center;
+    justify-self: center;
+    font-family: "Norse", serif;
+    font-size: 17px;
+    letter-spacing: 1.4px;
+    color: var(--nrn-lm-label2);
+}
+
+/* ------------------------------------------------------------
+ * 2. Левый столбец: вегвизир, эйкта, дата, календарик
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] .nrn-vegvisir {
+    width: 176px;
+    height: 176px;
+    max-width: none;
+    margin-top: 24px;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-vegvisir-svg {
+    position: static;
+    width: 100%;
+    height: 100%;
+    /* Остриё става выходит за край квадрата — резать его нечем. */
+    overflow: visible;
+}
+
+/* Эйкта: имя крупно, счёт под ним мелко — «эйкта 5 из 8». */
+#nrn-widget[data-skin="loom"] #nrn-time-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-eykt-name {
+    margin-top: 13px;
+    font-size: 27px;
+    letter-spacing: 1.6px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--nrn-lm-name);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-eykt-num {
+    margin-top: 4px;
+    font-size: 12px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-sun {
+    display: block;
+    margin-top: 6px;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--nrn-lm-sun);
+}
+
+/* Праздник — со звёздочкой вместо знака: знаки здесь не рисуются, а
+   праздник единственное в столбце, что просит взгляда. */
+#nrn-widget[data-skin="loom"] #nrn-feast {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 10px;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    line-height: 1.35;
+    text-transform: uppercase;
+    color: var(--nrn-lm-accent2);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-feast::before {
+    content: "✦";
+    flex: none;
+    font-size: 9px;
+    letter-spacing: 0;
+    color: var(--nrn-lm-accent);
+}
+
+/*
+ * Дата обрамлена двумя чертами во всю ширину столбца.
+ *
+ * Черты растягиваются, сама дата — нет: без flex: none она рассыпается
+ * на слова по одному в строку.
+ */
+/*
+ * Дата: слово между двумя чертами.
+ *
+ * Три числа под кегль. Самая длинная дата в этом счёте — «30 Haustmánuðr
+ * í Sumar 1018»: на 22 пикселях ей нужно 245 при 252 доступных, и чертам
+ * не остаётся ничего. На 20 остаётся по одиннадцать на каждую.
+ *
+ * Строка отмерена явно: Norse выше своей строки, и по умолчанию верхушки
+ * букв выходят за коробку. Резать их нечем — overflow здесь нет нарочно,
+ * пусть длинная дата лучше зайдёт в поле столбца, чем окажется срезанной.
+ */
+#nrn-widget[data-skin="loom"] #nrn-date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 0 6px;
+    margin-top: 16px;
+    font-size: 20px;
+    line-height: 1.35;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--nrn-lm-silver);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-date > * { flex: none; }
+
+#nrn-widget[data-skin="loom"] #nrn-date::before,
+#nrn-widget[data-skin="loom"] #nrn-date::after {
+    content: "";
+    /* До нуля: «í Vetr» переводится в «Зимнее полугодие», и на черты
+       места уже не остаётся — пусть уступают они, а не дата. Поля им не
+       нужны, зазоры держит gap самой строки. */
+    flex: 1 1 0;
+    min-width: 0;
+    height: 1px;
+    margin: 0;
+    background: var(--nrn-lm-line);
+}
+
+/*
+ * Календарик — семь голых чисел.
+ *
+ * Ни подписи дней недели сверху, ни полосы под праздником: праздничный
+ * день назван цветом, и этого довольно — день недели всё равно написан
+ * словом строкой ниже.
+ */
+#nrn-widget[data-skin="loom"] #nrn-grid { margin-top: 11px; }
+
+#nrn-widget[data-skin="loom"] .nrn-wd { display: none; }
+
+#nrn-widget[data-skin="loom"] .nrn-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cell {
+    flex: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    opacity: 1;
+    text-align: center;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--nrn-lm-label2);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cell.nrn-dim { color: var(--nrn-lm-dim3); }
+#nrn-widget[data-skin="loom"] .nrn-cell.nrn-feast-day { color: var(--nrn-lm-accent); }
+
+#nrn-widget[data-skin="loom"] .nrn-cell.nrn-today,
+#nrn-widget[data-skin="loom"] .nrn-cell.nrn-feast-day.nrn-today {
+    background: var(--nrn-lm-silver);
+    color: var(--nrn-lm-bg0);
+}
+
+/* Седмица и Луна — одной подписью под календариком: «Frjádagr · vika 48
+   · Fullt tungl». Обёртка .nrn-calfoot затем и заведена (см. index.js). */
+#nrn-widget[data-skin="loom"] .nrn-calfoot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 3px 9px;
+    margin-top: 9px;
+    /*
+     * Место под две строки — всегда.
+     *
+     * Нижний блок столбца прижат к краю, и любое изменение высоты этой
+     * подписи двигало его целиком: щёлкнул по «Fullt tungl», перевод лёг
+     * в одну строку вместо двух — и дата с календариком подпрыгнули на
+     * пятнадцать пикселей. Место отмерено заранее, и прыгать больше нечему.
+     */
+    min-height: calc(2 * 1.4em + 3px);
+    font-size: 13px;
+    letter-spacing: 1.6px;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label2);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-calfoot #nrn-week,
+#nrn-widget[data-skin="loom"] .nrn-calfoot #nrn-moon {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    font-size: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+}
+
+/*
+ * Точки-разделители. Своих узлов под них нет, зато есть знаки полей, и
+ * стоят они ровно там, где нужна точка: перед викой и перед Луной. Знак
+ * гасить и заводить рядом пустой span — двойная работа; проще сделать
+ * точку из него самого.
+ */
+#nrn-widget[data-skin="loom"] .nrn-calfoot .nrn-icon[data-icon="cal-vika"],
+#nrn-widget[data-skin="loom"] .nrn-calfoot #nrn-moon .nrn-icon {
+    display: inline !important;
+    width: auto;
+    height: auto;
+    /* Точке поле ни к чему: зазоры держит gap, а с полем между днём
+       недели и викой зияла дыра в два пробела. */
+    margin: 0;
+    background: none;
+    color: var(--nrn-lm-dot);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-calfoot .nrn-icon[data-icon="cal-vika"]::before,
+#nrn-widget[data-skin="loom"] .nrn-calfoot #nrn-moon .nrn-icon::before {
+    content: "·";
+}
+
+/* Толкование фазы — в облачко по щелчку, а не строкой: в столбце шириной
+   292 оно занимало три строки и топило под собой календарик. */
+#nrn-widget[data-skin="loom"] #nrn-moon > span:not(.nrn-hintable):not(.nrn-icon) {
+    display: none;
+}
+
+/* ------------------------------------------------------------
+ * 3. Подножие левого столбца: погода и место
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] #nrn-weather-text,
+#nrn-widget[data-skin="loom"] #nrn-location-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 17px;
+    letter-spacing: 1.1px;
+    line-height: 1.35;
+    text-transform: uppercase;
+    text-wrap: pretty;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-weather-text {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--nrn-lm-line);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-location-text {
+    margin-top: 16px;
+    padding-bottom: 20px;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-weather-text::before { content: "погода"; }
+#nrn-widget[data-skin="loom"] #nrn-location-text::before { content: "место"; }
+
+#nrn-widget[data-skin="loom"] #nrn-weather-text::before,
+#nrn-widget[data-skin="loom"] #nrn-location-text::before {
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-weather-value {
+    position: static;
+    transform: none;
+    width: auto;
+    max-width: 100%;
+    color: var(--nrn-lm-weather);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-location-value { color: var(--nrn-lm-place); }
+
+/* ------------------------------------------------------------
+ * 4. Книга: три створки
+ *
+ * Заголовки видны всегда, содержимое — у открытой створки. Щелчок по
+ * открытой её закрывает: тогда книга стоит одними заголовками, и это
+ * законное состояние, а не сбой (см. THREAD_TABS в index.js).
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] .nrn-book {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-left: 1px solid var(--nrn-lm-line);
+    /* Корешок: тень от сгиба, гаснущая к четырнадцатому пикселю. */
+    background: linear-gradient(90deg, var(--nrn-lm-spine), rgba(0, 0, 0, 0) 14px);
+    /* Книга целиком не прокручивается: заголовки створок обязаны стоять
+       на месте. Прокручивается открытая створка — см. #nrn-page ниже. */
+    overflow: hidden;
+}
+
+/*
+ * Открытая створка — это #nrn-page, и она же прокручивается.
+ *
+ * Лист нити растворён, поэтому его части становятся детьми страницы, а не
+ * книги. Так у открытой створки есть своя коробка: она тянется на весь
+ * остаток книги, прокручивается внутри себя и не толкает заголовки
+ * соседних створок за нижний край.
+ *
+ * Своё место в книге страница занимает по тому, что открыто: под
+ * заголовком героини, под заголовком {{char}} или в самом низу, если
+ * открыты дети либо не открыто ничего.
+ */
+#nrn-widget[data-skin="loom"] #nrn-page {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    order: 8;
+    flex: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-page::-webkit-scrollbar { width: 0; height: 0; }
+
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="user"],
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="char"] {
+    flex: 1 1 0;
+    /* Воздух под последней строкой: без него текст упирался в заголовок
+       соседней створки и лист обрывался на полуслове. */
+    padding-bottom: 16px;
+    background: var(--nrn-lm-bgopen);
+    box-shadow: inset 3px 0 0 var(--nrn-lm-accent);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="user"] { order: 2; }
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="char"] { order: 4; }
+
+#nrn-widget[data-skin="loom"] #nrn-page-freyja { display: contents; }
+
+/* Порядок в книге. Подножие девятое — ниже всех трёх створок; сюда его
+   перевесил applySkin (см. index.js). */
+#nrn-widget[data-skin="loom"] #nrn-fig-user  { order: 1; }
+#nrn-widget[data-skin="loom"] #nrn-fig-char  { order: 3; }
+#nrn-widget[data-skin="loom"] .nrn-rule-kids { order: 5; }
+#nrn-widget[data-skin="loom"] .nrn-kids-head { order: 6; }
+#nrn-widget[data-skin="loom"] .nrn-children  { order: 7; }
+#nrn-widget[data-skin="loom"] .nrn-foot      { order: 9; }
+
+#nrn-widget[data-skin="loom"] #nrn-fig-user,
+#nrn-widget[data-skin="loom"] #nrn-fig-char,
+#nrn-widget[data-skin="loom"] .nrn-rule-kids,
+#nrn-widget[data-skin="loom"] .nrn-kids-head,
+#nrn-widget[data-skin="loom"] .nrn-children,
+#nrn-widget[data-skin="loom"] .nrn-foot {
+    flex: none;
+}
+
+/* Открытая створка детей тянется и прокручивается так же, как страница. */
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="kids"] ~ .nrn-rule-kids,
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="kids"] ~ .nrn-kids-head,
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="kids"] ~ .nrn-children,
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="user"] ~ #nrn-fig-user,
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="char"] ~ #nrn-fig-char {
+    background: var(--nrn-lm-bgopen);
+    box-shadow: inset 3px 0 0 var(--nrn-lm-accent);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-page[data-tab="kids"] ~ .nrn-children {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/*
+ * Порядок внутри страницы. Виден за раз один набор: сюда попадают части
+ * всех трёх листов, но показан всегда только лист открытой створки.
+ */
+#nrn-widget[data-skin="loom"] #nrn-page-user    { order: 1; }
+#nrn-widget[data-skin="loom"] #nrn-cycle        { order: 3; }
+/* 4 — весть о теле, она названа в 9 вместе со всем прочим о ней. */
+#nrn-widget[data-skin="loom"] #nrn-cycle-cols   { order: 5; }
+#nrn-widget[data-skin="loom"] #nrn-cycle-signs  { order: 6; }
+#nrn-widget[data-skin="loom"] #nrn-draught      { order: 7; }
+#nrn-widget[data-skin="loom"] #nrn-freyja-empty { order: 8; }
+#nrn-widget[data-skin="loom"] #nrn-page-char    { order: 9; }
+
+/*
+ * Ничего в странице не сплющивается.
+ *
+ * Высота панели задана числом, а сколько строк придёт с ходом — не знает
+ * никто: к концу срока одних примет десяток. Без этого правила лишнее не
+ * выталкивается, а размазывается: flex жмёт всех подряд, и лист героини
+ * первым садится в ноль.
+ */
+#nrn-widget[data-skin="loom"] #nrn-page-user,
+#nrn-widget[data-skin="loom"] #nrn-page-char,
+#nrn-widget[data-skin="loom"] .nrn-rule,
+#nrn-widget[data-skin="loom"] #nrn-cycle,
+#nrn-widget[data-skin="loom"] #nrn-happened,
+#nrn-widget[data-skin="loom"] #nrn-cycle-signs,
+#nrn-widget[data-skin="loom"] #nrn-cycle-cols,
+#nrn-widget[data-skin="loom"] #nrn-draught,
+#nrn-widget[data-skin="loom"] #nrn-freyja-empty {
+    flex: none;
+}
+
+/*
+ * Закрытая створка показывает один заголовок.
+ *
+ * !important здесь обязателен: панель показывает эти строки через
+ * jQuery .show(), а это инлайновый display, и правило из файла без
+ * !important он перебивает. Без этого нить Фрейи оставалась на экране
+ * поверх открытой створки {{char}}.
+ */
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) > #nrn-page-user,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) .nrn-rule:not(.nrn-rule-kids),
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) #nrn-cycle,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) #nrn-happened,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) #nrn-cycle-signs,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) #nrn-cycle-cols,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) #nrn-draught,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="user"]) #nrn-freyja-empty,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="char"]) > #nrn-page-char,
+#nrn-widget[data-skin="loom"] #nrn-page:not([data-tab="kids"]) ~ .nrn-children {
+    display: none !important;
+}
+
+/* ------------------------------------------------------------
+ * 5. Заголовки створок
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] .nrn-fig,
+#nrn-widget[data-skin="loom"] .nrn-kids-head {
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+    padding: 13px 20px;
+    background: none;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+/* Черта от имени до правого края — она и держит строку заголовка. */
+#nrn-widget[data-skin="loom"] .nrn-fig::after,
+#nrn-widget[data-skin="loom"] .nrn-kids-head::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--nrn-lm-line2);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-fig-name {
+    flex: none;
+    font-size: var(--nrn-lm-title);
+    letter-spacing: 1.4px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-lm-silver);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-fig-on .nrn-fig-name { color: var(--nrn-lm-name); }
+
+/* Створка детей — того же роста, что и створки людей: это заголовок того
+   же уровня. Что она раздел, а не лицо, сказано цветом, а не кеглем. */
+/* Отступа под «Дети» больше нет: створка эта того же уровня, что и две
+   другие, и заголовок её стоит по той же вертикали. Отступ уводил и весь
+   список детей вправо — слова у них начинались не там, где у всех. */
+#nrn-widget[data-skin="loom"] .nrn-kids-head { padding: 9px 20px; }
+
+#nrn-widget[data-skin="loom"] .nrn-kids-name {
+    flex: none;
+    font-size: var(--nrn-lm-title);
+    letter-spacing: 1.4px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label2);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-fig-on .nrn-kids-name { color: var(--nrn-lm-name); }
+
+/* ------------------------------------------------------------
+ * 6. Створка героини: тело, одежда, нить Фрейи
+ * ------------------------------------------------------------ */
+
+/* Поля листа — каждой части свои: коробки, которая держала бы их разом,
+   после display: contents больше нет. */
+#nrn-widget[data-skin="loom"] #nrn-page-user,
+#nrn-widget[data-skin="loom"] #nrn-page-char,
+#nrn-widget[data-skin="loom"] .nrn-rule:not(.nrn-rule-kids),
+#nrn-widget[data-skin="loom"] #nrn-cycle,
+#nrn-widget[data-skin="loom"] #nrn-cycle-signs,
+#nrn-widget[data-skin="loom"] #nrn-cycle-cols,
+#nrn-widget[data-skin="loom"] #nrn-draught,
+#nrn-widget[data-skin="loom"] #nrn-freyja-empty {
+    min-width: 0;
+    padding: 0 26px 0 20px;
+    overflow: visible;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-leaf {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 0;
+}
+
+/* Тело — выше одежды: сперва что с ней, потом во что одета. В разметке
+   порядок обратный, здесь его правит order, а не перестановка. */
+#nrn-widget[data-skin="loom"] .nrn-chips      { order: 0; }
+#nrn-widget[data-skin="loom"] .nrn-state      { order: 1; }
+#nrn-widget[data-skin="loom"] .nrn-attire     { order: 2; }
+#nrn-widget[data-skin="loom"] .nrn-thought    { order: 3; }
+#nrn-widget[data-skin="loom"] .nrn-leaf-empty { order: 4; }
+
+/* ------------------------------------------------------------
+ * Строка на сетке — один кирпич на всю книгу
+ *
+ * Всё, что говорится парой «ярлык → слово», стоит на одной сетке:
+ * столбец ярлыка отмерен --nrn-lm-labelw, слово забирает остаток. Отсюда
+ * общая вертикаль у примет, рода, дитяти и створок {{user}} и {{char}} —
+ * какая бы разметка ни пришла из index.js.
+ *
+ * Ярлыки у этих строк приходят тремя разными путями — словом из разметки
+ * (род, дитя), знаком поля (приметы) и дописанные здесь (тело, одежда,
+ * мысль) — но столбец у них один, и набраны они одинаково.
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] .nrn-state,
+#nrn-widget[data-skin="loom"] .nrn-attire,
+#nrn-widget[data-skin="loom"] .nrn-thought,
+#nrn-widget[data-skin="loom"] .nrn-happened,
+#nrn-widget[data-skin="loom"] #nrn-draught,
+#nrn-widget[data-skin="loom"] #nrn-cycle-desire .nrn-fact,
+#nrn-widget[data-skin="loom"] #nrn-cycle-kicks .nrn-fact,
+#nrn-widget[data-skin="loom"] #nrn-cycle-extra .nrn-fact,
+#nrn-widget[data-skin="loom"] #nrn-cycle-signs .nrn-fact,
+#nrn-widget[data-skin="loom"] .nrn-cycle-group .nrn-fact,
+#nrn-widget[data-skin="loom"] .nrn-child .nrn-fact {
+    display: grid;
+    grid-template-columns: var(--nrn-lm-labelw) minmax(0, 1fr);
+    column-gap: var(--nrn-lm-gap);
+    align-items: baseline;
+    /* Полей строка себе не назначает: у тех, что стоят прямо на листе
+       (отвар, весть), они свои и заданы полями листа. */
+    margin: 0;
+    border: 0;
+    background: none;
+    font-size: var(--nrn-lm-value);
+    line-height: 1.42;
+    letter-spacing: 0;
+    text-transform: none;
+    text-wrap: pretty;
+    color: var(--nrn-lm-body);
+}
+
+/* Ярлык — единственное, что здесь набрано капсом: он короток, и капс
+   держит его в стороне от слова, не крича. */
+#nrn-widget[data-skin="loom"] .nrn-state::before,
+#nrn-widget[data-skin="loom"] .nrn-attire::before,
+#nrn-widget[data-skin="loom"] .nrn-thought::before,
+#nrn-widget[data-skin="loom"] .nrn-chips::before,
+#nrn-widget[data-skin="loom"] .nrn-happened::before,
+#nrn-widget[data-skin="loom"] #nrn-draught::before,
+#nrn-widget[data-skin="loom"] #nrn-cycle-kicks .nrn-icon,
+#nrn-widget[data-skin="loom"] #nrn-cycle-extra .nrn-icon,
+#nrn-widget[data-skin="loom"] #nrn-cycle-signs .nrn-icon,
+#nrn-widget[data-skin="loom"] #nrn-cycle-desire .nrn-fact-label,
+#nrn-widget[data-skin="loom"] .nrn-cycle-group .nrn-fact-label,
+#nrn-widget[data-skin="loom"] .nrn-child .nrn-fact-label {
+    display: block !important;
+    grid-column: 1;
+    flex: none;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: none;
+    font-family: "Cormorant Unicase", serif;
+    font-size: var(--nrn-lm-label-fs);
+    letter-spacing: 1.6px;
+    line-height: 1.3;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label);
+}
+
+/* Слово — во втором столбце, каким бы узлом оно ни пришло. */
+#nrn-widget[data-skin="loom"] .nrn-fact-value,
+#nrn-widget[data-skin="loom"] #nrn-user-state-text,
+#nrn-widget[data-skin="loom"] #nrn-char-state-text,
+#nrn-widget[data-skin="loom"] #nrn-attire-user-text,
+#nrn-widget[data-skin="loom"] #nrn-attire-char-text,
+#nrn-widget[data-skin="loom"] #nrn-thought-text,
+#nrn-widget[data-skin="loom"] #nrn-happened-text,
+#nrn-widget[data-skin="loom"] #nrn-draught-name,
+#nrn-widget[data-skin="loom"] #nrn-draught-text {
+    grid-column: 2;
+    flex: none;
+    min-width: 0;
+    color: inherit;
+}
+
+/* --- створки {{user}} и {{char}}: тело, одежда, нрав, мысль --- */
+
+/*
+ * Ярлыки дописаны здесь, а не в разметке.
+ *
+ * Строки эти приходят голым текстом — «в шерстяном платье», «устала», —
+ * и без слова над ними читались как поток без начала. Знак поля сказал
+ * бы то же самое, но знаков в этой раскладке нет: вместо картинки слово.
+ */
+#nrn-widget[data-skin="loom"] .nrn-state::before   { content: "тело"; }
+#nrn-widget[data-skin="loom"] .nrn-attire::before  { content: "одежда"; }
+#nrn-widget[data-skin="loom"] .nrn-thought::before { content: "мысль"; }
+#nrn-widget[data-skin="loom"] .nrn-chips::before   { content: "нрав"; }
+
+#nrn-widget[data-skin="loom"] .nrn-state {
+    margin-top: var(--nrn-lm-air);
+    /* Поля снимаем поимённо: в общих правилах блока у строки тела своя
+       врезка с полем в пятнадцать пикселей, и на сетке она сдвигала
+       слово вправо против всех прочих строк. */
+    padding: 0;
+    color: var(--nrn-lm-state);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-attire {
+    margin-top: 14px;
+    line-height: 1.5;
+    color: var(--nrn-lm-body);
+}
+
+/*
+ * Ромб внутри створки снят.
+ *
+ * Черта со ставом — знак смены смыслового уровня, и такая смена в книге
+ * одна: граница между людьми. Нить Фрейи — не другой человек, а та же
+ * героиня, и разделять её от собственной одежды орнаментом значило бы
+ * ставить в карточке вторую границу того же веса. Здесь её держит
+ * воздух и заголовок; ромб остался один — перед детьми.
+ */
+#nrn-widget[data-skin="loom"] .nrn-rule:not(.nrn-rule-kids) { display: none !important; }
+
+/*
+ * Заголовок нити Фрейи: слева имя, справа фаза и счёт круга.
+ *
+ * Имя дописано ярлыком — в разметке его нет, строка начинается сразу с
+ * фазы. Второй раз счёт круга нигде не повторяется: он назван здесь, и
+ * здесь же по нему щёлкают.
+ */
+#nrn-widget[data-skin="loom"] #nrn-cycle {
+    margin-top: var(--nrn-lm-air);
+    padding-top: 0;
+    border: 0;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cycle-head {
+    display: flex;
+    align-items: baseline;
+    /* Фаза со счётом переносятся под имя, а не лезут за край: в узкой
+       колонке «Liggja á sæng · 3/40» длиннее всей строки. */
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: var(--nrn-lm-value);
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--nrn-lm-silver);
+}
+
+/* Заголовок кучки — второй из трёх начертаний. */
+#nrn-widget[data-skin="loom"] .nrn-cycle-head::before {
+    content: "Нить Фрейи";
+    flex: none;
+    margin-right: auto;
+    font-size: var(--nrn-lm-title);
+    letter-spacing: 1.4px;
+    line-height: 1;
+    text-transform: none;
+    color: var(--nrn-lm-name);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cycle-head > span { flex: none; }
+
+/* Счёт круга — тише фазы: фаза называет, счёт уточняет. Тише цветом, а
+   не кеглем: кегль у слов один на всю книгу. */
+#nrn-widget[data-skin="loom"] .nrn-cycle-head > span:not(.nrn-hintable) {
+    font-size: var(--nrn-lm-value);
+    letter-spacing: 1.2px;
+    color: var(--nrn-lm-label2);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cycle-sub {
+    margin-top: 9px;
+    font-size: var(--nrn-lm-value);
+    line-height: 1.48;
+    letter-spacing: 0;
+    text-transform: none;
+    text-wrap: pretty;
+    color: var(--nrn-lm-muted);
+}
+
+/*
+ * Строки нити: ярлык слева столбцом, слово справа.
+ *
+ * У дитяти и примет ярлык в разметке пуст — его смысл нёс знак, а знаки
+ * здесь не рисуются, поэтому ярлык дописан словом. У срока подпись своя,
+ * ей второй ни к чему: она просто встаёт в тот же столбец.
+ */
+#nrn-widget[data-skin="loom"] .nrn-cycle-line,
+#nrn-widget[data-skin="loom"] .nrn-cycle-dim {
+    margin-top: 8px;
+    font-size: inherit;
+}
+
+/* Приметы — по строке на примету, кучкой ниже рода с домом. Черты между
+   ними нет: их к концу срока десяток, и черта была бы третьей линией на
+   одном листе. Держит их воздух. */
+#nrn-widget[data-skin="loom"] #nrn-cycle-signs {
+    display: block;
+    margin-top: var(--nrn-lm-air);
+    padding-top: 0;
+    border: 0;
+    font-size: inherit;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-cycle-kicks .nrn-fact,
+#nrn-widget[data-skin="loom"] #nrn-cycle-extra .nrn-fact,
+#nrn-widget[data-skin="loom"] #nrn-cycle-signs .nrn-fact {
+    margin-top: 5px;
+    color: var(--nrn-lm-muted);
+}
+
+/*
+ * Ярлык строки — из знака поля.
+ *
+ * Знак и так стоит первым в строке и назван по смыслу: sign-breast,
+ * body-due, watch-kicks. Картинку гасим, а на её место ставим слово по
+ * имени знака — так у каждой строки свой ярлык, а не девять «примет»
+ * подряд. Чего в списке нет, то остаётся «приметой»: правило общее стоит
+ * первым, именные ниже перебивают его.
+ *
+ * Как ярлык набран и в каком он столбце — сказано выше, одним правилом
+ * на всю книгу; здесь только слова.
+ */
+#nrn-widget[data-skin="loom"] #nrn-draught::before { content: "отвар"; }
+/* Общий ярлык — через :where(), чтобы он не весил ничего: именные ниже
+   зовутся одним классом и должны перебивать его, а не наоборот. */
+#nrn-widget[data-skin="loom"] :where(#nrn-cycle-signs) .nrn-icon::before { content: "примета"; }
+#nrn-widget[data-skin="loom"] :where(#nrn-cycle-kicks) .nrn-icon::before { content: "дитя"; }
+
+/* Приметы по видам: грудь, сон, дурнота, запахи и прочее — так их и
+   считает body.js, и слово у каждой своё. */
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-breast"]::before       { content: "грудь"; }
+/* Молоко: молозиво до родов и всё кормление после. Без этой строки ярлык
+   падал в общее «примета» — знака sign-milk.svg нет, а ярлык берётся
+   по имени знака, а не по наличию файла. */
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-milk"]::before         { content: "молоко"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-sleep"]::before        { content: "сон"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-nausea"]::before       { content: "дурнота"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-smell"]::before        { content: "запахи"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-belly"]::before        { content: "живот"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-false-hridir"]::before { content: "хридир"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-kicks-night"]::before  { content: "дитя"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-swelling"]::before     { content: "отёки"; }
+/* Три крови, и все разные: тидир по кругу, лохии после родов и кровь,
+   пришедшая не в срок. Стояло два ярлыка «кровь» подряд, а лохии и вовсе
+   не отличались от месячных. */
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-blood"]::before        { content: "тидир"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-lochia"]::before       { content: "лохии"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-odd-blood"]::before    { content: "кровь не в срок"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-ache"]::before         { content: "ломота"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-lettari"]::before      { content: "léttari"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-heat"]::before         { content: "жар"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-hunger"]::before       { content: "голод"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-mood"]::before         { content: "нрав"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-strain"]::before       { content: "тягота"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="sign-weather-toll"]::before { content: "погода"; }
+
+/* Тяга. Ярлык у неё не из знака, а свой: слово Fýsn кликабельно и по
+   щелчку становится «тягой», а `::before` щёлкнуть нельзя. Столбец у
+   него общий — он назван правилом выше. */
+
+/* Строка под нитью без своей подписи — «дитя с кошку · ждать к середине
+   гои». Что это за строка, решает её знак: срок дитяти, кровь не в срок
+   или последнее, чем ещё можно помочь. */
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="body-due"]::before  { content: "срок"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="body-size"]::before { content: "размер"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="child-arms"]::before { content: "на руках"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="child-look"]::before { content: "обличьем"; }
+#nrn-widget[data-skin="loom"] .nrn-icon[data-icon="body-rest"]::before { content: "можно"; }
+
+/* Шевеления дитяти — тем же тёплым цветом, что и праздник: это
+   единственное, о чём здесь тревожатся. */
+#nrn-widget[data-skin="loom"] #nrn-cycle-kicks .nrn-fact-value { color: var(--nrn-lm-accent2); }
+
+#nrn-widget[data-skin="loom"] .nrn-alarm,
+#nrn-widget[data-skin="loom"] .nrn-alarm .nrn-fact-value { color: var(--nrn-lm-accent); }
+
+/* --- род и дом: два столбца --- */
+
+/*
+ * !important здесь обязателен, и это не перестраховка.
+ *
+ * Столбцы прячутся правилом `display: none !important`, когда открыта не та
+ * створка. Показывает их обратно jQuery .show() — а он, увидев, что после
+ * снятия инлайнового стиля элемент всё ещё скрыт таблицей, жёстко ставит
+ * инлайновый `display: block`. Инлайновый блок бьёт наш flex из файла, и
+ * «Дом и род» с «Ношением» встают друг под друга при любой ширине.
+ *
+ * Именно это и выглядело как «столбцы разъехались на широком экране»: порог
+ * @container ни при чём, он до этой строки просто не доходил.
+ */
+#nrn-widget[data-skin="loom"] #nrn-cycle-cols {
+    display: flex !important;
+    gap: 26px;
+    margin-top: 16px;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cycle-col {
+    flex: 1;
+    min-width: 0;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-cycle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-size: inherit;
+}
+
+/* Заголовок кучки — «Дом и род», «Ношение»: то же начертание, что и у
+   ярлыка строки, только тоном светлее. */
+#nrn-widget[data-skin="loom"] .nrn-group-title {
+    display: block;
+    margin-bottom: 3px;
+    padding-bottom: 0;
+    border: 0;
+    opacity: 1;
+    font-size: var(--nrn-lm-label-fs);
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label2);
+}
+
+/* Черта от слова до края столбца снята: внутри карточки линий больше
+   нет вовсе, кучки разделены воздухом. */
+#nrn-widget[data-skin="loom"] .nrn-group-title::after { content: none; }
+
+/* Строки рода и дома стоят на той же сетке, что и всё остальное: свой
+   столбец у них был шире общего (82 и 96), и слова в двух кучках рядом
+   начинались с разных мест. */
+#nrn-widget[data-skin="loom"] .nrn-cycle-group .nrn-fact {
+    color: var(--nrn-lm-muted);
+}
+
+/* --- отвар --- */
+
+#nrn-widget[data-skin="loom"] #nrn-draught {
+    margin-top: var(--nrn-lm-air);
+    padding-top: 0;
+    border: 0;
+    color: var(--nrn-lm-muted);
+}
+
+/* Имя отвара и что с ним — двумя строками в одном столбце: это одно
+   слово о напитке, а не два разных факта. */
+#nrn-widget[data-skin="loom"] #nrn-draught-name {
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--nrn-lm-tag);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-draught-text {
+    color: var(--nrn-lm-muted);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-leaf-empty {
+    margin-top: 12px;
+    padding-bottom: 14px;
+    font-size: var(--nrn-lm-value);
+    color: var(--nrn-lm-label);
+}
+
+/* ------------------------------------------------------------
+ * 7. Створка {{char}}: нрав, тело, одежда, мысль
+ * ------------------------------------------------------------ */
+
+/*
+ * Нрав — облачками, и они единственные не встают на сетку узлами: слов
+ * бывает три, и каждому своя клетка означала бы три строки вместо одной.
+ * Поэтому ярлык здесь висит слева отдельно, а облачка отбиты полем ровно
+ * в тот же столбец и переносятся под самих себя, а не под ярлык.
+ */
+#nrn-widget[data-skin="loom"] .nrn-chips {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 7px;
+    margin-top: var(--nrn-lm-air);
+    padding-left: calc(var(--nrn-lm-labelw) + var(--nrn-lm-gap));
+}
+
+#nrn-widget[data-skin="loom"] .nrn-chips::before {
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: var(--nrn-lm-labelw);
+}
+
+/*
+ * Селектор длиннее, чем хочется, и это не прихоть: облачка нрава набраны
+ * капсом Norse-ом в общих правилах блока, и там у них два класса и атрибут
+ * — перебить их можно только тем же весом.
+ */
+#nrn-widget[data-skin="loom"] .nrn-leaf[data-leaf="char"] .nrn-chip,
+#nrn-widget[data-skin="loom"] .nrn-chip {
+    padding: 3px 11px 4px;
+    border: 0;
+    /* Подложка темнее открытой створки, а не светлее: светлая на этой
+       теме сливалась с самой створкой и облачко переставало быть им. */
+    background: var(--nrn-lm-bg2);
+    color: var(--nrn-lm-tag);
+    font-family: "Alegreya", serif !important;
+    font-weight: 400 !important;
+    font-size: var(--nrn-lm-value);
+    letter-spacing: 0;
+    line-height: 1.35;
+    text-transform: none;
+}
+
+/*
+ * Мысль — единственное, что сказано голосом: кавычки, курсив и свой цвет.
+ * Капса на ней больше нет — это фраза в несколько слов, а не подпись, и
+ * капсом она читалась криком.
+ */
+#nrn-widget[data-skin="loom"] .nrn-thought {
+    margin-top: var(--nrn-lm-air);
+    padding: 0;
+    border: 0;
+    font-family: "Alegreya", serif !important;
+    font-style: italic !important;
+    font-weight: 400 !important;
+    font-size: var(--nrn-lm-value);
+    letter-spacing: 0;
+    line-height: 1.45;
+    text-transform: none;
+    text-wrap: pretty;
+    color: var(--nrn-lm-accent2);
+}
+
+/* Ярлык мысли курсивом не набирают: он подпись, а не голос. */
+#nrn-widget[data-skin="loom"] .nrn-thought::before {
+    font-family: "Cormorant Unicase", serif;
+    font-style: normal;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-thought-text::before { content: "«"; }
+#nrn-widget[data-skin="loom"] #nrn-thought-text::after { content: "»"; }
+
+/* ------------------------------------------------------------
+ * 8. Створка детей
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] .nrn-rule-kids { padding: 9px 22px 0 20px; }
+
+#nrn-widget[data-skin="loom"] .nrn-children {
+    display: flex;
+    flex-direction: column;
+    /* Между детьми — вдвое больше, чем между строками одного дитяти:
+       иначе двойня читается одним сплошным списком. */
+    gap: 20px;
+    padding: 4px 26px 14px 20px;
+    scrollbar-width: none;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-child {
+    display: block;
+    padding: 0;
+    border: 0;
+}
+
+/*
+ * Шапка дитяти — по образцу строки «тело» на листе героини: слово крупно,
+ * ярлыки мелко, черта под всей строкой.
+ *
+ * Имя набрано Norse и втрое крупнее подписей — на него смотрят первым.
+ * Стадия роста стоит сразу за именем, возраст отжат к правому краю: одно
+ * говорит, каков ребёнок, другое — сколько ему.
+ */
+#nrn-widget[data-skin="loom"] .nrn-child-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 2px;
+    border: 0;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-child-name {
+    flex: none;
+    font-size: var(--nrn-lm-title);
+    letter-spacing: 1.3px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-lm-name);
+}
+
+/* Стадия и возраст — ярлыки при имени, и набраны как все ярлыки. */
+#nrn-widget[data-skin="loom"] .nrn-child-stage,
+#nrn-widget[data-skin="loom"] .nrn-child-age {
+    flex: none;
+    font-size: var(--nrn-lm-label-fs);
+    letter-spacing: 1.6px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label2);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-child-age {
+    margin-left: auto;
+    padding-left: 10px;
+    color: var(--nrn-lm-label);
+}
+
+/* Строки дитяти — на общей сетке книги, как и всё остальное. */
+#nrn-widget[data-skin="loom"] .nrn-child .nrn-fact {
+    margin-top: 7px;
+    color: var(--nrn-lm-muted);
+}
+
+/* Нужда — то, ради чего створка и заведена: тёплым цветом, тем же, каким
+   говорит и весть о теле. Кегль у неё общий: важность здесь держит цвет. */
+#nrn-widget[data-skin="loom"] .nrn-child-need .nrn-fact-value {
+    color: var(--nrn-lm-accent2);
+}
+
+/* Как растёт и вехи — тише нужды, но одним голосом между собой. */
+#nrn-widget[data-skin="loom"] .nrn-child-grow .nrn-fact-value,
+#nrn-widget[data-skin="loom"] .nrn-child-mark .nrn-fact-value {
+    color: var(--nrn-lm-muted);
+}
+
+/*
+ * ВЕХИ — одна метка на все.
+ *
+ * Вех у дитяти бывает три, и панель пишет каждой свою строку с подписью
+ * «Веха:». Три одинаковые подписи подряд читались как три разных поля.
+ * Здесь подпись остаётся у первой, у остальных её место пустует — и три
+ * вехи выстраиваются списком под одним словом.
+ *
+ * Слово при этом становится множественным: `:has()` смотрит, есть ли за
+ * этой строкой ещё одна такая же. Текст подписи приходит из разметки, и
+ * подменить его можно только так — кеглем в ноль и своим `::before`.
+ */
+#nrn-widget[data-skin="loom"] .nrn-child-mark + .nrn-child-mark { margin-top: 2px; }
+
+#nrn-widget[data-skin="loom"] .nrn-child-mark ~ .nrn-child-mark .nrn-fact-label {
+    visibility: hidden;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-child-mark:has(~ .nrn-child-mark) .nrn-fact-label {
+    font-size: 0;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-child-mark:has(~ .nrn-child-mark) .nrn-fact-label::before {
+    content: "вехи";
+    font-size: var(--nrn-lm-label-fs);
+}
+
+/* ------------------------------------------------------------
+ * 9. Весть о теле и слово норны
+ *
+ * Две строки, и они о разном.
+ *
+ * ВЕСТЬ (atburðr) — что случилось с телом на этом ходу. Она уехала с
+ * подножия на лист нити: это событие тела, и стоять ему рядом с телом, а
+ * не под всей книгой. В обычный ход события нет, и строки тогда нет
+ * вовсе — так и сказано в промпте. Перевешивает её applySkin.
+ *
+ * СЛОВО НОРНЫ — совет повитухи, и он остался в подножии: он о ходе
+ * целиком, а не об одной створке. Заголовок стоит над словом и посредине,
+ * само слово тоже посредине: это единственное место в панели, где
+ * говорят не о сцене, а читателю.
+ * ------------------------------------------------------------ */
+
+/*
+ * Весть — на подложке, а не в рамке.
+ *
+ * Выделить её надо: это единственная новость хода. Но лишняя черта на
+ * листе, где их и так две, читалась бы третьей перегородкой. Подложка в
+ * полтона забирает строку целиком и не режет лист.
+ */
+#nrn-widget[data-skin="loom"] .nrn-happened {
+    order: 4;
+    margin-top: var(--nrn-lm-air);
+    padding: 9px 26px 10px 20px;
+    background: var(--nrn-lm-bgchip);
+    color: var(--nrn-lm-accent2);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-happened::before { content: "atburðr"; }
+#nrn-widget[data-skin="loom"] .nrn-happened::after { content: none; }
+
+#nrn-widget[data-skin="loom"] .nrn-foot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    /* auto сверху держит подножие у нижнего края и тогда, когда тянуться
+       в книге нечему: все три створки закрыты или открыты дети. Иначе оно
+       поднималось вслед за заголовками и скакало при переключении. */
+    margin: auto 0 0;
+    padding: 12px 22px 14px;
+    border-top: 1px solid var(--nrn-lm-line);
+    background: var(--nrn-lm-bg2);
+    text-align: center;
+}
+
+/*
+ * Слово норны: заголовок сверху, совет под ним, оба посередине.
+ *
+ * Ни таблички, ни рамки, ни звёздочки: подножие уже отделено чертой
+ * сверху, а знак совета был последним рисунком в раскладке, где всё
+ * остальное сказано словом.
+ */
+#nrn-widget[data-skin="loom"] #nrn-advice {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: var(--nrn-lm-value);
+    letter-spacing: 0.2px;
+    line-height: 1.4;
+    text-align: center;
+    text-wrap: pretty;
+    color: var(--nrn-lm-advice);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-advice::before {
+    content: "ORÐ NORNA";
+    position: static;
+    flex: none;
+    padding: 0;
+    background: none;
+    opacity: 1;
+    font-size: var(--nrn-lm-label-fs);
+    letter-spacing: 2.4px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--nrn-lm-label2);
+}
+
+#nrn-widget[data-skin="loom"] #nrn-advice::after { content: none; }
+
+#nrn-widget[data-skin="loom"] #nrn-advice .nrn-advice-icon { display: none !important; }
+
+#nrn-widget[data-skin="loom"] #nrn-advice-text {
+    flex: none;
+    max-width: 100%;
+    min-width: 0;
+    color: inherit;
+}
+
+/* ------------------------------------------------------------
+ * 10. Общее: подсказки, разделители, вегвизир
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="loom"] .nrn-hintable { cursor: pointer; }
+#nrn-widget[data-skin="loom"] .nrn-hint { color: var(--nrn-lm-accent2) !important; }
+
+/* Разделители-ставы (см. buildNorseRule в index.js). */
+#nrn-widget[data-skin="loom"] .nrn-rule {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-rule svg {
+    flex: none;
+    margin: 0 10px;
+    stroke: var(--nrn-lm-line3);
+    fill: none;
+    stroke-width: 1.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-rule::before,
+#nrn-widget[data-skin="loom"] .nrn-rule::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--nrn-lm-line3);
+}
+
+#nrn-widget[data-skin="loom"] .nrn-rule .nrn-rule-eye { stroke: var(--nrn-lm-accent); }
+#nrn-widget[data-skin="loom"] .nrn-rule .nrn-rule-dot {
+    fill: var(--nrn-lm-accent);
+    stroke: none;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-rule-kids .nrn-rule-eye { stroke: var(--nrn-lm-place); }
+#nrn-widget[data-skin="loom"] .nrn-rule-kids .nrn-rule-dot { fill: var(--nrn-lm-place); }
+
+/* Став луча: восемь стоят всегда, светится тот, в чьей эйкте идёт сцена. */
+#nrn-widget[data-skin="loom"] .nrn-ray-stave {
+    fill: none;
+    stroke: var(--nrn-lm-label2);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.52;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="0"] .nrn-vegvisir-ray[data-ray="0"] .nrn-ray-stave,
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="1"] .nrn-vegvisir-ray[data-ray="1"] .nrn-ray-stave,
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="2"] .nrn-vegvisir-ray[data-ray="2"] .nrn-ray-stave,
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="3"] .nrn-vegvisir-ray[data-ray="3"] .nrn-ray-stave,
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="4"] .nrn-vegvisir-ray[data-ray="4"] .nrn-ray-stave,
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="5"] .nrn-vegvisir-ray[data-ray="5"] .nrn-ray-stave,
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="6"] .nrn-vegvisir-ray[data-ray="6"] .nrn-ray-stave,
+#nrn-widget[data-skin="loom"] .nrn-vegvisir[data-eykt="7"] .nrn-vegvisir-ray[data-ray="7"] .nrn-ray-stave {
+    stroke: var(--nrn-lm-accent);
+    stroke-width: 5;
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------
+ * 10a. Строй левого столбца: жир, шаг и воздух
+ *
+ * Мелочи, на которых держится счёт времени: жир на строках балки и
+ * календарика, тесный шаг строк и по несколько пикселей воздуха между
+ * ними. Собраны в одном месте нарочно — правятся они вместе, а стоят в
+ * пяти разных правилах выше.
+ * ------------------------------------------------------------ */
+
+/* Погода, место и счёт времени — жирным по всей балке. */
+#nrn-widget[data-skin="loom"] .nrn-beam-line {
+    font-weight: 700;
+}
+
+/* Имя эйкты и счёт под ним — одна надпись в две строки, шаг у неё тесный. */
+#nrn-widget[data-skin="loom"] #nrn-time-line {
+    line-height: 1.15;
+}
+
+#nrn-widget[data-skin="loom"] #nrn-eykt-num {
+    margin-left: 8px;
+}
+
+/* Строки календарика: седмица, дата, луна, праздник. */
+#nrn-widget[data-skin="loom"] .nrn-cal-line {
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+#nrn-widget[data-skin="loom"] .nrn-sun-line { margin-bottom: 5px; }
+#nrn-widget[data-skin="loom"] #nrn-date { margin-bottom: 4px; }
+#nrn-widget[data-skin="loom"] .nrn-row { margin-bottom: 3px; }
+
+/* Дни недели в полоске делятся поровну и жмутся без остатка. */
+#nrn-widget[data-skin="loom"] .nrn-cell { min-width: 0; }
+
+#nrn-widget[data-skin="loom"] #nrn-weather-text,
+#nrn-widget[data-skin="loom"] #nrn-location-text { min-width: 0; }
+
+/* Квадрат вегвизира: SVG блоком, иначе под ним остаётся полоска
+   строчной базовой линии и шапка становится выше на четыре пикселя. */
+#nrn-widget[data-skin="loom"] .nrn-vegvisir-svg { display: block; }
+
+/* ------------------------------------------------------------
+ * 10b. Род и дом в один столбец — раньше гармошки
+ *
+ * Два столбца делят остаток книги пополам, и на панели в 700 под слово
+ * там остаётся полсотни пикселей: «толкуют» переносится по слогам. До
+ * гармошки (680) ещё далеко, а читать уже нельзя — значит, столбцы надо
+ * складывать раньше, чем ломается всё остальное.
+ * ------------------------------------------------------------ */
+
+@container ncw (max-width: 880px) {
+    #nrn-widget[data-skin="loom"] #nrn-cycle-cols {
+        flex-direction: column;
+        gap: 14px;
+    }
+}
+
+/* ------------------------------------------------------------
+ * 11. Гармошка: та же панель на телефоне и в узкой колонке
+ *
+ * Сделана по макету «NORNIR Mobile Accordion». Два столбца сходятся в
+ * один: сверху шапка со счётом времени, под ней те же три створки, внизу
+ * подножие. Что в какой створке лежит и как они открываются — ровно то
+ * же самое, что и в широкой панели: гармошкой книга была с самого начала
+ * (см. THREAD_TABS в index.js), здесь ей меняют только раскладку. Ни
+ * одной новой вкладки, ни одного нового узла в разметке.
+ *
+ * Меряем контейнерным запросом, а не окном. Виджет живёт в колонке чата:
+ * на широком мониторе с узкой колонкой окно «широкое», а места нет, и
+ * ломалось там заметнее всего.
+ *
+ * Порог 680, и взят он от книги, а не от телефона. Книге рядом со
+ * столбцом в 292 нужно около 390: на меньшем «Отвар из дягиля и покой
+ * до утра» ложится в четыре строки, род с домом в два столбца дают под
+ * «Хорнунг» четыре буквы и перенос, а половина ширины уходит под воздух
+ * в левом столбце. Гармошка на тех же 600 читается лучше — значит,
+ * меняться надо там, а не на границе телефона.
+ * ------------------------------------------------------------ */
+
+@container ncw (max-width: 680px) {
+
+    /*
+     * Сетка шапки — четыре равные доли.
+     *
+     * Их берут парами: вегвизир занимает первую, эйкта с солнцем —
+     * остальные три, погода и место — по две. Долей ровно столько,
+     * чтобы обе пары делились без остатка: при «76px 1fr» погода с
+     * местом вышли бы разной ширины.
+     *
+     * Высоты у панели больше нет: она растёт от створки, а створка
+     * отмерена ниже.
+     */
+    #nrn-widget[data-skin="loom"] .nrn-board {
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: auto;
+        height: auto;
+        aspect-ratio: auto;
+        /* Подложка левого столбца становится подложкой всей шапки:
+           книга ниже красится сама, и делить фон вдоль больше нечем. */
+        background-color: var(--nrn-lm-bg2);
+        background-image:
+            repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 1px, rgba(0, 0, 0, 0) 1px 3px),
+            repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.011) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+    }
+
+    /* Части шапки распрямляются во всю свою долю: в широкой панели они
+       стоят посреди столбца в 292, здесь столбца нет. */
+    #nrn-widget[data-skin="loom"] .nrn-vegvisir,
+    #nrn-widget[data-skin="loom"] #nrn-time-line,
+    #nrn-widget[data-skin="loom"] #nrn-sun,
+    #nrn-widget[data-skin="loom"] #nrn-feast,
+    #nrn-widget[data-skin="loom"] #nrn-date,
+    #nrn-widget[data-skin="loom"] #nrn-grid,
+    #nrn-widget[data-skin="loom"] .nrn-calfoot,
+    #nrn-widget[data-skin="loom"] #nrn-weather-text,
+    #nrn-widget[data-skin="loom"] #nrn-location-text {
+        justify-self: stretch;
+        max-width: none;
+    }
+
+    /* Вегвизир держит два ряда: рядом с ним имя эйкты, под именем солнце. */
+    #nrn-widget[data-skin="loom"] .nrn-vegvisir {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        justify-self: center;
+        align-self: center;
+        width: 64px;
+        height: 64px;
+        margin: 0;
+    }
+
+    /* Эйкта и солнце — по левому краю своей доли, а не по её середине:
+       в узкой панели они читаются строкой от вегвизира, а не столбиком
+       посреди пустого места. */
+    #nrn-widget[data-skin="loom"] #nrn-time-line {
+        grid-column: 2 / -1;
+        grid-row: 1;
+        align-items: flex-start;
+        padding: 16px 18px 0 0;
+        text-align: left;
+    }
+
+    #nrn-widget[data-skin="loom"] #nrn-eykt-name { margin-top: 0; font-size: 22px; }
+    #nrn-widget[data-skin="loom"] #nrn-eykt-num  { margin-top: 3px; font-size: 11px; }
+
+    #nrn-widget[data-skin="loom"] #nrn-sun {
+        grid-column: 2 / -1;
+        grid-row: 2;
+        margin-top: 4px;
+        padding: 0 18px 12px 0;
+        font-size: 12px;
+        text-align: left;
+    }
+
+    #nrn-widget[data-skin="loom"] #nrn-feast {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        margin-top: 0;
+        padding: 0 18px 4px;
+        font-size: 14px;
+    }
+
+    #nrn-widget[data-skin="loom"] #nrn-date {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        margin-top: 10px;
+        padding: 0 18px;
+    }
+
+    #nrn-widget[data-skin="loom"] #nrn-grid {
+        grid-column: 1 / -1;
+        grid-row: 5;
+        margin-top: 8px;
+        padding: 0 18px;
+    }
+
+    /* Число держит свою клетку, а не всю седьмую долю строки: иначе
+       подложка сегодняшнего дня растекается на полсантиметра вширь и
+       перестаёт быть отметкой. */
+    #nrn-widget[data-skin="loom"] .nrn-cell {
+        justify-self: center;
+        width: 34px;
+        font-size: 14px;
+    }
+
+    /*
+     * Место под две строки подписи здесь не бронируется.
+     *
+     * В широкой панели нижний блок столбца прижат к краю, и лишняя
+     * строка подписи двигала дату с календариком вверх — потому там оно
+     * и отмерено заранее. Тут ничто ни к чему не прижато: раскрыл
+     * толкование Луны — книга съехала на строку вниз, и это ровно то,
+     * чего ждёшь. А забронированная пустая строка была бы видна всегда.
+     */
+    #nrn-widget[data-skin="loom"] .nrn-calfoot {
+        grid-column: 1 / -1;
+        grid-row: 6;
+        margin-top: 7px;
+        padding: 0 18px 10px;
+        gap: 3px 7px;
+        min-height: 0;
+        font-size: 11px;
+    }
+
+    /* Погода и место — рядом, по половине шапки, разделены чертой. */
+    #nrn-widget[data-skin="loom"] #nrn-weather-text,
+    #nrn-widget[data-skin="loom"] #nrn-location-text {
+        grid-row: 7;
+        margin: 0;
+        padding: 10px 14px;
+        border-top: 1px solid var(--nrn-lm-line);
+        font-size: 13px;
+        letter-spacing: 0.8px;
+    }
+
+    #nrn-widget[data-skin="loom"] #nrn-weather-text {
+        grid-column: 1 / 3;
+        border-right: 1px solid var(--nrn-lm-line2);
+    }
+
+    #nrn-widget[data-skin="loom"] #nrn-location-text { grid-column: 3 / -1; }
+
+    #nrn-widget[data-skin="loom"] #nrn-weather-text::before,
+    #nrn-widget[data-skin="loom"] #nrn-location-text::before { font-size: 10px; }
+
+    /* Книга — во всю ширину под шапкой. Корешка нет: слева от неё больше
+       ничего не стоит, и тени от сгиба падать неоткуда. */
+    #nrn-widget[data-skin="loom"] .nrn-book {
+        grid-column: 1 / -1;
+        grid-row: 8;
+        border-left: 0;
+        border-top: 1px solid var(--nrn-lm-line);
+        background: var(--nrn-lm-bg1);
+    }
+
+    /*
+     * Открытая створка не тянется, а упирается в потолок.
+     *
+     * В широкой панели высота задана всей панели, и створка забирает
+     * остаток. Здесь высоты нет, расти ей некуда, кроме как вниз, —
+     * и лист нити к концу срока растянул бы её на три экрана. Поэтому у
+     * створки свой потолок, а лишнее листают пальцем внутри неё:
+     * прокрутка у страницы и у детей своя, она заведена в 4.
+     *
+     * 320 взяты из макета. Гармонь на телефоне так и стоит примерно
+     * одного роста, какую створку ни открой.
+     */
+    #nrn-widget[data-skin="loom"] #nrn-page[data-tab="user"],
+    #nrn-widget[data-skin="loom"] #nrn-page[data-tab="char"],
+    #nrn-widget[data-skin="loom"] #nrn-page[data-tab="kids"] ~ .nrn-children {
+        flex: none;
+        max-height: 320px;
+    }
+
+    /* --- заголовки створок --- */
+
+    #nrn-widget[data-skin="loom"] .nrn-fig,
+    #nrn-widget[data-skin="loom"] .nrn-kids-head {
+        gap: 10px;
+        padding: 12px 16px;
+    }
+
+    #nrn-widget[data-skin="loom"] .nrn-kids-head { padding-left: 16px; }
+    #nrn-widget[data-skin="loom"] .nrn-rule-kids { padding: 6px 16px 0; }
+    #nrn-widget[data-skin="loom"] .nrn-fig-name { font-size: 22px; }
+    #nrn-widget[data-skin="loom"] .nrn-kids-name { font-size: 17px; }
+
+    /*
+     * Уголок в конце заголовка — знак того, что створка открывается.
+     *
+     * На широкой панели его нет: там наводят мышь, и заголовок сам
+     * говорит о себе подсветкой. Пальцу наводить нечем, и без уголка
+     * строка с именем читается как надпись, а не как створка.
+     *
+     * Уголок сделан из ::before, потому что ::after занята чертой, а
+     * order ставит его в конец строки — за черту, как в макете. Открытая
+     * створка смотрит уголком вверх; поворачивать его нечем, вращение
+     * снято отсечкой 0 разом со всеми превращениями, да и перерисовка
+     * панели на каждом ходу всё равно не дала бы ему довернуть.
+     */
+    #nrn-widget[data-skin="loom"] .nrn-fig::before,
+    #nrn-widget[data-skin="loom"] .nrn-kids-head::before {
+        content: "▾";
+        order: 1;
+        flex: none;
+        font-size: 11px;
+        line-height: 1;
+        color: var(--nrn-lm-label);
+    }
+
+    #nrn-widget[data-skin="loom"] .nrn-fig-on::before { content: "▴"; }
+
+    /* --- поля листов --- */
+
+    #nrn-widget[data-skin="loom"] #nrn-page-user,
+    #nrn-widget[data-skin="loom"] #nrn-page-char,
+    #nrn-widget[data-skin="loom"] .nrn-rule:not(.nrn-rule-kids),
+    #nrn-widget[data-skin="loom"] #nrn-cycle,
+    #nrn-widget[data-skin="loom"] #nrn-cycle-signs,
+    #nrn-widget[data-skin="loom"] #nrn-cycle-cols,
+    #nrn-widget[data-skin="loom"] #nrn-draught,
+    #nrn-widget[data-skin="loom"] #nrn-freyja-empty {
+        padding: 0 16px;
+    }
+
+    #nrn-widget[data-skin="loom"] .nrn-children { padding: 0 16px 12px; }
+
+    /*
+     * Кегль листа — на ступень ниже, и вся ступень задана числами наверху.
+     *
+     * Размеры сняты с макета шириной в 700; на 390 те же буквы переносят
+     * каждую вторую строку. Правится это в одном месте: три кегля и
+     * ширина столбца ярлыков — переменными, а не по правилу на строку.
+     */
+    #nrn-widget[data-skin="loom"] {
+        --nrn-lm-labelw: 66px;
+        --nrn-lm-gap: 10px;
+        --nrn-lm-title: 19px;
+        --nrn-lm-label-fs: 10px;
+        --nrn-lm-value: 16px;
+        --nrn-lm-air: 16px;
+    }
+
+    #nrn-widget[data-skin="loom"] .nrn-cycle-head { font-size: 15px; }
+    #nrn-widget[data-skin="loom"] .nrn-cycle-head > span:not(.nrn-hintable) { font-size: 15px; }
+    #nrn-widget[data-skin="loom"] .nrn-group-title { font-size: 10px; }
+
+    /* Род и дом — друг под другом: два столбца в такой ширине оставляют
+       под «Хорнунг» четыре буквы и перенос. */
+    #nrn-widget[data-skin="loom"] #nrn-cycle-cols {
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 14px;
+    }
+
+    #nrn-widget[data-skin="loom"] .nrn-child-stage,
+    #nrn-widget[data-skin="loom"] .nrn-child-age { letter-spacing: 1.4px; }
+
+    /* Весть — по полям листа, они здесь свои. */
+    #nrn-widget[data-skin="loom"] .nrn-happened { padding: 8px 16px 9px; }
+
+    #nrn-widget[data-skin="loom"] .nrn-foot { gap: 5px; padding: 10px 16px 12px; }
+
+    /* Воздух между строками времени (10a) на телефоне вдвое тише: там
+       эти три пикселя стоят целой строки. */
+    #nrn-widget[data-skin="loom"] #nrn-eykt-num { margin-left: 3px; }
+    #nrn-widget[data-skin="loom"] .nrn-sun-line { margin-bottom: 2px; }
+    #nrn-widget[data-skin="loom"] #nrn-date { margin-bottom: 2px; }
+    #nrn-widget[data-skin="loom"] .nrn-row { margin-bottom: 1px; }
+}
+
+/* ============================================================
+ * 12. ТЕМА «НИТИ: ТЬМА»
+ *
+ * Одна палитра на всю раскладку — та же, что у «Дома и его нитей», но
+ * своей копией: правка цвета здесь старую не задевает, и наоборот.
+ *
+ * Первым идёт набор ролей раскладки (--nrn-lm-*), за ним общие имена
+ * (--nrn-*): ими красятся знаки, подсказки и окно справочника, и без них
+ * блок наполовину остался бы в цветах запасного набора.
+ * ============================================================ */
+
+/* Тьма — уголь и старое серебро, свеча в углу */
+.nrn-themed[data-theme="loom-dark"] {
+    --nrn-lm-bg0: #0a0a0c;
+    --nrn-lm-bg1: #101013;
+    --nrn-lm-bg2: #0d0d10;
+    --nrn-lm-bgopen: #15151a;
+    --nrn-lm-bgchip: #17171d;
+    --nrn-lm-line: #2a2a31;
+    --nrn-lm-line2: #1f1f25;
+    --nrn-lm-line3: #26262e;
+    --nrn-lm-name: #e6e9ee;
+    --nrn-lm-silver: #c3c8d0;
+    --nrn-lm-body: #d8d2c3;
+    --nrn-lm-muted: #a8a294;
+    --nrn-lm-dim: #9c968a;
+    --nrn-lm-dim2: #8a8578;
+    --nrn-lm-dim3: #43464d;
+    --nrn-lm-label2: #7d828c;
+    --nrn-lm-label: #5f636c;
+    --nrn-lm-dot: #3a3b45;
+    --nrn-lm-accent: #b5443c;
+    --nrn-lm-accent2: #c96a4a;
+    --nrn-lm-tag: #d2c7ae;
+    --nrn-lm-state: #8fa3b8;
+    --nrn-lm-weather: #a8b6c9;
+    --nrn-lm-place: #c4b694;
+    --nrn-lm-advice: #e0d3b4;
+    --nrn-lm-sun: #7d92a6;
+    --nrn-lm-spine: rgba(0, 0, 0, 0.55);
+
+    --nrn-bg: #101013;
+    --nrn-bg-raised: #0d0d10;
+    --nrn-bg-open: #15151a;
+    --nrn-bg-hover: #15151a;
+    --nrn-border: #2a2a31;
+    --nrn-border-soft: #1f1f25;
+    --nrn-text: #d8d2c3;
+    --nrn-text-bright: #e6e9ee;
+    --nrn-text-dim: #5f636c;
+    --nrn-text-muted: #a8a294;
+    --nrn-text-soft: #9c968a;
+    --nrn-text-panel: #c4b694;
+    --nrn-text-weather: #a8b6c9;
+    --nrn-text-day: #c3c8d0;
+    --nrn-accent: #b5443c;
+    --nrn-accent-contrast: #101013;
+    --nrn-chip-text: #d2c7ae;
+    --nrn-chip-bg: #17171d;
+    --nrn-chip-border: #3a3b45;
+    --nrn-feast: #c96a4a;
+}

@@ -1519,9 +1519,9 @@ function buildPage(def, state, prefs, extras) {
  *   isOn(id), toggle(id), bodyTracking(), holidays()
  * @returns {HTMLElement} Корневой элемент для Popup
  */
-export function buildReference(state, theme = "default", prefs, onSetDate = null, cycle = null, look = null, notify = null) {
+export function buildReference(state, theme = "thread-dark", prefs, onSetDate = null, cycle = null, look = null, notify = null) {
     const root = h("div", "nrn-timatal nrn-themed");
-    root.setAttribute("data-theme", theme || "default");
+    root.setAttribute("data-theme", theme || "thread-dark");
 
     const extras = { look, notify, onSetDate, cycle };
 
