@@ -2930,10 +2930,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 #nrn-widget[data-skin="thread"] .nrn-state::before {
     content: "тело";
-    flex: none;
-    font-size: 11px;
-    letter-spacing: 1.8px;
-    line-height: 1;
     color: var(--nrn-th-label);
 }
 
@@ -2964,9 +2960,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  */
 #nrn-widget[data-skin="thread"] .nrn-attire::before {
     content: "одежда";
-    font-size: 11px;
-    letter-spacing: 1.8px;
-    line-height: 1;
     /* Капс — как у ярлыка тела: тот берёт его от своей строки, набранной
        капсом целиком, а одежда пишется прозой, и ярлыку его надо назвать. */
     text-transform: uppercase;
@@ -3117,6 +3110,43 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     width: auto;
 }
 
+/*
+ * ОДИН КЕГЛЬ НА ВСЕ ПОДПИСИ И НА ВСЕ СЛОВА ПРИ НИХ.
+ *
+ * Мерка взята с одежды: подпись 11, слово 19. Прежде подписи стояли на
+ * десяти, а слова на семнадцати — и рядом с одеждой каждая строка листа
+ * выглядела на полступени мельче без всякой на то причины.
+ *
+ * Строки, набранные капсом, сюда не входят: у капса свой рост, и «тело»
+ * с вестью о теле остаются при своих кеглях. Заголовки, мысль, настроение
+ * и слова о круге — тоже: у них нет подписи, а значит и мерки этой.
+ */
+#nrn-widget[data-skin="thread"] .nrn-state::before,
+#nrn-widget[data-skin="thread"] .nrn-attire::before,
+#nrn-widget[data-skin="thread"] .nrn-happened::before,
+#nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact-label,
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-draught::before,
+#nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact-label,
+#nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label {
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    line-height: 1.2;
+}
+
+#nrn-widget[data-skin="thread"] .nrn-attire,
+#nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact,
+#nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact,
+#nrn-widget[data-skin="thread"] .nrn-child .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-draught {
+    font-size: 19px;
+}
+
 /* Слово — во второй, каким бы узлом оно ни пришло. */
 #nrn-widget[data-skin="thread"] .nrn-state .nrn-fact-value,
 #nrn-widget[data-skin="thread"] .nrn-attire .nrn-fact-value,
@@ -3149,9 +3179,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     margin: 0;
     background: none;
     font-family: "Cormorant Unicase", serif;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    line-height: 1.2;
     text-transform: uppercase;
     color: var(--nrn-th-label);
 }
@@ -3198,9 +3225,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact-label {
     margin: 0;
     font-family: "Cormorant Unicase", serif;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    line-height: 1.2;
     text-transform: uppercase;
     color: var(--nrn-th-label);
 }
@@ -3287,7 +3311,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact {
-    font-size: 17px;
     line-height: 1.36;
     letter-spacing: 0;
     text-transform: none;
@@ -3297,9 +3320,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact-label {
     font-family: "Cormorant Unicase", serif;
-    font-size: 10px;
-    letter-spacing: 1.4px;
-    line-height: 1.2;
     text-transform: uppercase;
     color: var(--nrn-th-label);
 }
@@ -3445,7 +3465,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 /* Строки дитяти — на той же сетке, что и лист героини. */
 #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact {
     margin-top: 7px;
-    font-size: 17px;
     line-height: 1.42;
     letter-spacing: 0;
     text-transform: none;
@@ -3456,9 +3475,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label {
     margin: 0;
     font-family: "Cormorant Unicase", serif;
-    font-size: 10px;
-    letter-spacing: 1.4px;
-    line-height: 1.2;
     text-transform: uppercase;
     color: var(--nrn-th-label);
 }
@@ -3559,10 +3575,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 #nrn-widget[data-skin="thread"] .nrn-happened::before {
     content: "atburðr";
-    flex: none;
-    font-size: 11px;
-    letter-spacing: 1.7px;
-    line-height: 1;
     color: var(--nrn-th-label);
 }
 
@@ -4002,8 +4014,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
      * мысль крупнее приметы.
      */
     #nrn-widget[data-skin="thread"] .nrn-state { font-size: 17px; }
-    #nrn-widget[data-skin="thread"] .nrn-state::before { font-size: 10px; }
-    #nrn-widget[data-skin="thread"] .nrn-attire { font-size: 17px; }
     #nrn-widget[data-skin="thread"] .nrn-chip { font-size: 16px; }
     #nrn-widget[data-skin="thread"] .nrn-thought { font-size: 19px; }
     #nrn-widget[data-skin="thread"] .nrn-leaf-empty { font-size: 15px; }
@@ -4013,18 +4023,26 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     #nrn-widget[data-skin="thread"] .nrn-cycle-head::before { font-size: 20px; }
     #nrn-widget[data-skin="thread"] .nrn-cycle-sub { font-size: 16px; }
 
+    /*
+     * Мерка та же, что и на панели, только на ступень ниже: подпись и
+     * слово при ней — одним кеглем на всю книгу. Слово берётся от одежды,
+     * она здесь 17.
+     */
+    #nrn-widget[data-skin="thread"] .nrn-attire,
+    #nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact,
     #nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact,
     #nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-fact,
     #nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact,
     #nrn-widget[data-skin="thread"] #nrn-draught,
-    #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact {
-        font-size: 15px;
+    #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact,
+    #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact {
+        font-size: 17px;
     }
 
     /* Столбец ярлыков — уже: на 390 пикселях восемьдесят восемь забирали
        четверть строки. Правится одним числом на всю панель. */
     #nrn-widget[data-skin="thread"] {
-        --nrn-th-labelw: 66px;
+        --nrn-th-labelw: 72px;
         --nrn-th-labelgap: 10px;
     }
 
@@ -4042,8 +4060,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     #nrn-widget[data-skin="thread"] .nrn-child-name { font-size: 19px; }
     #nrn-widget[data-skin="thread"] .nrn-child-stage,
     #nrn-widget[data-skin="thread"] .nrn-child-age { font-size: 10px; letter-spacing: 1.4px; }
-    #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact { font-size: 15px; }
-
     /* Дети на телефоне — воздуха меньше, чем на широкой панели, но всё же
        вдвое против строк одного дитяти. */
     #nrn-widget[data-skin="thread"] .nrn-children { gap: 24px; }
