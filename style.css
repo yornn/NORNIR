@@ -2308,6 +2308,21 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     --nrn-th-col: 292px;
     --nrn-th-pad: 20px;
     --nrn-th-h: 665px;
+
+    /*
+     * ОДНА СЕТКА НА ВСЕ СТРОКИ С ЯРЛЫКОМ.
+     *
+     * Столбец ярлыка отмерен числом, слово забирает остаток — и слова
+     * выстроены по одной вертикали в любой створке и любой кучке. Прежде
+     * столбцов было четыре: 74 у примет, 82 у рода, 96 у дома, а у тела
+     * с одеждой его не было вовсе, и слово начиналось сразу за подписью.
+     *
+     * Сетка эта — только там, где ярлык есть. Мысль, настроение и слова
+     * о круге стоят без подписи, во всю ширину листа: столбец под ярлык
+     * им нечем заполнить, и отбивать их вправо не за что.
+     */
+    --nrn-th-labelw: 88px;
+    --nrn-th-labelgap: 11px;
     color: var(--nrn-th-body);
 }
 
@@ -2949,10 +2964,12 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  */
 #nrn-widget[data-skin="thread"] .nrn-attire::before {
     content: "одежда";
-    flex: none;
     font-size: 11px;
     letter-spacing: 1.8px;
     line-height: 1;
+    /* Капс — как у ярлыка тела: тот берёт его от своей строки, набранной
+       капсом целиком, а одежда пишется прозой, и ярлыку его надо назвать. */
+    text-transform: uppercase;
     color: var(--nrn-th-label);
 }
 
@@ -3040,9 +3057,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-fact,
 #nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact,
 #nrn-widget[data-skin="thread"] #nrn-draught {
-    display: flex;
-    align-items: baseline;
-    gap: 11px;
     margin-top: 4px;
     font-size: 17px;
     line-height: 1.42;
@@ -3050,6 +3064,71 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     text-transform: none;
     text-wrap: pretty;
     color: var(--nrn-th-dim);
+}
+
+/* ------------------------------------------------------------
+ * Строка с ярлыком — на общей сетке
+ *
+ * Всё, у чего есть подпись, встаёт на два столбца: ярлык слева, слово
+ * справа. Ярлыки приходят тремя путями — словом из разметки (род, дитя),
+ * знаком поля (приметы, отвар) и дописанные стилями (тело, одежда,
+ * весть), — но столбец у них один на всю книгу.
+ *
+ * Начертания правило не трогает: у ярлыков и слов они остались свои, как
+ * и были. Здесь только раскладка.
+ * ------------------------------------------------------------ */
+
+#nrn-widget[data-skin="thread"] .nrn-state,
+#nrn-widget[data-skin="thread"] .nrn-attire,
+#nrn-widget[data-skin="thread"] .nrn-happened,
+#nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-fact,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact,
+#nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact,
+#nrn-widget[data-skin="thread"] .nrn-child .nrn-fact {
+    display: grid;
+    grid-template-columns: var(--nrn-th-labelw) minmax(0, 1fr);
+    column-gap: var(--nrn-th-labelgap);
+    align-items: baseline;
+}
+
+/* У отвара столбца три: ярлык, имя питья и что с ним. Имя и состояние —
+   одна речь о напитке, и разносить их по строкам незачем. */
+#nrn-widget[data-skin="thread"] #nrn-draught {
+    display: grid;
+    grid-template-columns: var(--nrn-th-labelw) auto minmax(0, 1fr);
+    column-gap: var(--nrn-th-labelgap);
+    align-items: baseline;
+}
+
+/* Ярлык — в первый столбец; ширину держит сетка, а не он сам. */
+#nrn-widget[data-skin="thread"] .nrn-state::before,
+#nrn-widget[data-skin="thread"] .nrn-attire::before,
+#nrn-widget[data-skin="thread"] .nrn-happened::before,
+#nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact-label,
+#nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-icon,
+#nrn-widget[data-skin="thread"] #nrn-draught::before,
+#nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact-label,
+#nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label {
+    grid-column: 1;
+    width: auto;
+}
+
+/* Слово — во второй, каким бы узлом оно ни пришло. */
+#nrn-widget[data-skin="thread"] .nrn-state .nrn-fact-value,
+#nrn-widget[data-skin="thread"] .nrn-attire .nrn-fact-value,
+#nrn-widget[data-skin="thread"] .nrn-fact-value,
+#nrn-widget[data-skin="thread"] #nrn-user-state-text,
+#nrn-widget[data-skin="thread"] #nrn-char-state-text,
+#nrn-widget[data-skin="thread"] #nrn-attire-user-text,
+#nrn-widget[data-skin="thread"] #nrn-attire-char-text,
+#nrn-widget[data-skin="thread"] #nrn-happened-text {
+    grid-column: 2;
+    flex: none;
+    min-width: 0;
 }
 
 /*
@@ -3066,8 +3145,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-icon,
 #nrn-widget[data-skin="thread"] #nrn-draught::before {
     display: block !important;
-    flex: none;
-    width: 74px;
     height: auto;
     margin: 0;
     background: none;
@@ -3115,13 +3192,10 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 
 /*
  * Тяга. Ярлык у неё не из знака, а свой: слово Fýsn кликабельно и по щелчку
- * становится «тягой», а `::before` щёлкнуть нельзя. Поэтому здесь повторена
- * раскладка ярлыка-из-знака — тот же столбец в 74px и тот же шрифт, — чтобы
- * строка встала в ряд с приметами, а не выбилась из него.
+ * становится «тягой», а `::before` щёлкнуть нельзя. Поэтому здесь повторено
+ * начертание ярлыка-из-знака — столбец у них общий.
  */
 #nrn-widget[data-skin="thread"] #nrn-cycle-desire .nrn-fact-label {
-    flex: none;
-    width: 74px;
     margin: 0;
     font-family: "Cormorant Unicase", serif;
     font-size: 10px;
@@ -3213,9 +3287,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact {
-    display: flex;
-    align-items: baseline;
-    gap: 11px;
     font-size: 17px;
     line-height: 1.36;
     letter-spacing: 0;
@@ -3225,10 +3296,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact-label {
-    flex: none;
-    /* В макете столбец 74; здесь 82, потому что панель пишет подписи с
-       двоеточием («Фадерни:»), и на 74 «дитя будет:» переносилось. */
-    width: 82px;
     font-family: "Cormorant Unicase", serif;
     font-size: 10px;
     letter-spacing: 1.4px;
@@ -3237,8 +3304,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     color: var(--nrn-th-label);
 }
 
-/* В доме подписи длиннее — «льосмодир», «женщин в доме». */
-#nrn-widget[data-skin="thread"] #nrn-cycle-house .nrn-fact-label { width: 96px; }
 
 /* --- отвар --- */
 
@@ -3318,9 +3383,10 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 #nrn-widget[data-skin="thread"] .nrn-children {
     display: flex;
     flex-direction: column;
-    /* Между детьми — вдвое больше, чем между строками одного дитяти:
-       иначе двойня читается одним сплошным списком. */
-    gap: 20px;
+    /* Между детьми — вчетверо больше, чем между строками одного дитяти:
+       у двойни и тройни строки одинаковы («нужно», «растёт»), и на
+       двадцати пикселях список читался сплошной стеной. */
+    gap: 34px;
     padding: 4px 26px 14px 34px;
     scrollbar-width: none;
 }
@@ -3376,11 +3442,8 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     color: var(--nrn-th-label);
 }
 
-/* Строки дитяти — тот же столбец подписей, что и на листе героини. */
+/* Строки дитяти — на той же сетке, что и лист героини. */
 #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact {
-    display: flex;
-    align-items: baseline;
-    gap: 11px;
     margin-top: 7px;
     font-size: 17px;
     line-height: 1.42;
@@ -3391,8 +3454,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 }
 
 #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label {
-    flex: none;
-    width: 74px;
     margin: 0;
     font-family: "Cormorant Unicase", serif;
     font-size: 10px;
@@ -3407,13 +3468,19 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     color: var(--nrn-th-accent2);
 }
 
-/* Как растёт — прозой и тише прочего: это описание, а не новость. */
+/*
+ * Как растёт — прозой и тише прочего: это описание, а не новость. Тише
+ * цветом: кегль у слов в створке один, а 13 пикселей общих правил блока
+ * делали из описания сноску.
+ */
 #nrn-widget[data-skin="thread"] .nrn-child-grow .nrn-fact-value {
+    font-size: inherit;
     color: var(--nrn-th-dim);
 }
 
 /* Веха — новость на три дня, потом уходит. */
 #nrn-widget[data-skin="thread"] .nrn-child-mark .nrn-fact-value {
+    font-size: inherit;
     color: var(--nrn-th-dim2);
 }
 
@@ -3474,9 +3541,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
  */
 #nrn-widget[data-skin="thread"] .nrn-happened {
     order: 4;
-    display: flex;
-    align-items: baseline;
-    gap: 11px;
     margin-top: 14px;
     padding: 9px 26px 10px 20px;
     /* Подложка — тот же цвет, что и полоса открытой створки, только в
@@ -3678,13 +3742,6 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 /* Квадрат вегвизира: SVG блоком, иначе под ним остаётся полоска
    строчной базовой линии и шапка становится выше на четыре пикселя. */
 #nrn-widget[data-skin="thread"] .nrn-vegvisir-svg { display: block; }
-
-/* Одежда — ярлык и фраза в строку, теми же зазорами, что и у тела (19.6). */
-#nrn-widget[data-skin="thread"] .nrn-attire {
-    display: flex;
-    align-items: baseline;
-    gap: 11px;
-}
 
 /* ------------------------------------------------------------
  * 19.11. Гармошка: та же панель на телефоне и в узкой колонке
@@ -3961,21 +4018,18 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     #nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-fact,
     #nrn-widget[data-skin="thread"] #nrn-draught,
     #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact {
-        gap: 10px;
         font-size: 15px;
     }
 
-    /* Столбец ярлыков — уже: на 390 пикселях 74 забирали пятую часть
-       строки, а длиннее «погоды» в этом списке ничего нет. */
-    #nrn-widget[data-skin="thread"] #nrn-cycle-kicks .nrn-icon,
-    #nrn-widget[data-skin="thread"] #nrn-cycle-extra .nrn-icon,
-    #nrn-widget[data-skin="thread"] #nrn-cycle-signs .nrn-icon,
-    #nrn-widget[data-skin="thread"] #nrn-draught::before { width: 64px; }
+    /* Столбец ярлыков — уже: на 390 пикселях восемьдесят восемь забирали
+       четверть строки. Правится одним числом на всю панель. */
+    #nrn-widget[data-skin="thread"] {
+        --nrn-th-labelw: 66px;
+        --nrn-th-labelgap: 10px;
+    }
 
     #nrn-widget[data-skin="thread"] #nrn-draught-name { font-size: 14px; }
     #nrn-widget[data-skin="thread"] .nrn-group-title { font-size: 10px; }
-    #nrn-widget[data-skin="thread"] .nrn-cycle-group .nrn-fact-label { width: 68px; }
-    #nrn-widget[data-skin="thread"] #nrn-cycle-house .nrn-fact-label { width: 78px; }
 
     /* Род и дом — друг под другом: два столбца в такой ширине оставляют
        под «Хорнунг» четыре буквы и перенос. */
@@ -3988,8 +4042,11 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     #nrn-widget[data-skin="thread"] .nrn-child-name { font-size: 19px; }
     #nrn-widget[data-skin="thread"] .nrn-child-stage,
     #nrn-widget[data-skin="thread"] .nrn-child-age { font-size: 10px; letter-spacing: 1.4px; }
-    #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact { gap: 10px; font-size: 15px; }
-    #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact-label { width: 68px; }
+    #nrn-widget[data-skin="thread"] .nrn-child .nrn-fact { font-size: 15px; }
+
+    /* Дети на телефоне — воздуха меньше, чем на широкой панели, но всё же
+       вдвое против строк одного дитяти. */
+    #nrn-widget[data-skin="thread"] .nrn-children { gap: 24px; }
 
     /*
      * Подножие и весть на телефоне.

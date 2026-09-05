@@ -1995,7 +1995,10 @@ function icon(name, extraClass) {
  */
 function factRow(iconName, label, value, hint) {
     const row = $("<div>", { "class": "nrn-fact" }).append(icon(iconName));
-    if (label) row.append($("<span>", { "class": "nrn-fact-label", text: `${label}:` }));
+    /* Без двоеточия: подпись стоит своим столбцом, и двоеточие в нём —
+       знак препинания посреди пустого места. Те подписи, что панель
+       дописывает стилями («тело», «одежда», приметы), его и не носили. */
+    if (label) row.append($("<span>", { "class": "nrn-fact-label", text: label }));
     row.append(hint
         ? hintSpan(`fact-${label ?? iconName}`, value, hint).addClass("nrn-fact-value")
         : $("<span>", { "class": "nrn-fact-value", text: value }));
@@ -2478,14 +2481,14 @@ function renderCycle() {
     if (s.guess) {
         kin.push($("<div>", { "class": "nrn-fact" }).append(
             icon("body-divination"),
-            $("<span>", { "class": "nrn-fact-label", text: "Толкуют:" }),
-            hintSpan("cycleGuess", s.guess, s.guessHint),
+            $("<span>", { "class": "nrn-fact-label", text: "Толкуют" }),
+            hintSpan("cycleGuess", s.guess, s.guessHint).addClass("nrn-fact-value"),
         ));
     } else if (s.omen) {
         kin.push($("<div>", { "class": "nrn-fact" }).append(
             icon("body-divination"),
-            $("<span>", { "class": "nrn-fact-label", text: "Примета:" }),
-            hintSpan("cycleOmen", s.omen, s.omenHint),
+            $("<span>", { "class": "nrn-fact-label", text: "Примета" }),
+            hintSpan("cycleOmen", s.omen, s.omenHint).addClass("nrn-fact-value"),
         ));
     }
     /*

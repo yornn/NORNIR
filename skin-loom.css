@@ -1300,9 +1300,12 @@
     color: var(--nrn-lm-accent2);
 }
 
-/* Как растёт и вехи — тише нужды, но одним голосом между собой. */
+/* Как растёт и вехи — тише нужды, но одним голосом между собой. Кегль
+   у них общий: 13 пикселей из общих правил блока делали из описания
+   сноску. */
 #nrn-widget[data-skin="loom"] .nrn-child-grow .nrn-fact-value,
 #nrn-widget[data-skin="loom"] .nrn-child-mark .nrn-fact-value {
+    font-size: inherit;
     color: var(--nrn-lm-muted);
 }
 
