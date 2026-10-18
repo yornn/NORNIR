@@ -83,15 +83,13 @@ import {
 import {
     chatHasRawMarkers,
     cycleAnchor,
-    herbAnchor,
-    labourAnchor,
     pregnancyAnchor,
     readChat,
     setSceneDate,
     syncWholeChat,
 } from "./chat-state.js";
 
-import { CYCLE_DEFAULT, DIVINATION_ACCURACY, SCENE_SIGN_KINDS, bodyTruth, bodyView, pregnancyTerm, signField } from "./body.js";
+import { CYCLE_DEFAULT, bodyView, pregnancyTerm } from "./body.js";
 
 import { DEFAULT_TIERS, HOLIDAY_TIERS, holidayView, markWeek } from "./holidays.js";
 
@@ -139,10 +137,6 @@ const defaultSettings = {
     notify: false,
     notifyKinds: [...DEFAULT_NOTICES],
     bodyTracking: false,
-    bodyDebug: false,
-    herbDeath: false,
-    divinationAccuracy: 0.6,
-    conceptionChances: null,
     debugKeepMarkers: false,
 };
 
@@ -160,7 +154,7 @@ function settings() {
  *
  * Два потока, и они идут в разные стороны:
  *
- *   вниз  — <norse_time>, <norse_body>, <norse_child>, <norse_scene>:
+ *   вниз  — <norse_time>, <norse_body>, <norse_scene>:
  *           панель рассказывает модели, что есть. Ничего не спрашивает.
  *   вверх — <norse_calendar>: модель отдаёт панели то, что показала сцена.
  *
@@ -171,8 +165,13 @@ function settings() {
  *
  * Что уходит вниз, решает одно правило: показываем то, что героиня знает
  * о себе сама, плюс то, что видно окружающим. Числа счёта — день цикла, часть
- * ношения, день зачатия — не показываем никогда: в этом веке их взять
- * неоткуда, и модель принимается считать вслух.
+ * ношения — не показываем никогда: в этом веке их взять неоткуда, и модель
+ * принимается считать вслух.
+ *
+ * О теле вниз идёт одна строка, и то не всегда: идёт кровь или героиня носит
+ * (body.js, bodyView). Женская линия прежде была втрое больше этого промпта —
+ * зачатие, приметы, роды, дитя — и мешала ролевой больше, чем помогала.
+ * Та версия лежит в ветке testik.
  *
  * ── Маркер на тему ───────────────────────────────────────────────────────
  *
@@ -208,9 +207,8 @@ function settings() {
  * поля. Копий теперь две: правила со стрелкой и один заполненный пример.
  *
  * Обязательность живёт в заголовке блока («every reply» / «only when …»),
- * порядок маркеров в ответе совпадает с порядком блоков, а пример собирается
- * по тому же состоянию, что и сами блоки, — иначе он показывал бы ответ без
- * полей, которые тут же требуются каждый ход.
+ * порядок маркеров в ответе совпадает с порядком блоков, а пример показывает
+ * ровно те темы, что требуются каждый ход.
  *
  * ── Рамки полей ──────────────────────────────────────────────────────────
  *
@@ -223,9 +221,6 @@ function settings() {
  * Инструкции — по-английски, значения — по-русски, и сказано это один раз,
  * в шапке. Английские инструкции плотнее и не подмешиваются в русскую прозу;
  * значения обязаны быть русскими, потому что едут прямо в панель.
- *
- * Исключение — список событий тела и четыре слова о положении дитяти: это
- * не свободный текст, а опознавательные слова, которые ищет парсер.
  *
  * ── История, чтобы не ходить по кругу ────────────────────────────────────
  *
@@ -262,10 +257,10 @@ const BLOCK_HEADER = [
     "",
     /* Главная строка всей перестройки. Любое число, посчитанное моделью,
        она считает вслух в рассуждениях — и в каждом свайпе по-своему. */
-    "Report what the scene shows. Never work anything out: days, dates, counts, terms and the child's age are the panel's own reckoning, and it hands them to you in <norse_time>, <norse_body> and <norse_child>.",
+    "Report what the scene shows. Never work anything out: days, dates and counts are the panel's own reckoning, and it hands them to you in <norse_time>.",
     /* Прежний абсолютный запрет накрывал и те поля, которые без домысла
        не заполнить вовсе. Разводим их явно. */
-    "Three fields are yours to judge rather than observe — thought, desire and advice — and one is yours to reason from law, not from arithmetic: rank. Everything else is reporting.",
+    "Two fields are yours to judge rather than observe — thought and advice. Everything else is reporting.",
     "",
     "[HOW TO WRITE THE VALUES — every field, every topic]",
     "Language: Russian. Plain words and punctuation, no HTML, no angle brackets, no markup. Topic names and field names stay exactly as written here, in Latin letters.",
@@ -342,33 +337,6 @@ const BLOCK_ADVICE = [
     "",
 ];
 
-/*
- * Тяга — единственное поле женской линии, которое спрашивается КАЖДЫЙ ход.
- *
- * Всё прочее в этой линии либо считает панель, либо приносит событие. Тягу же
- * не вывести ни из чего: она не про лоно, а про саму героиню. Лоно панель
- * считает по дню цикла и отдаёт вниз приметой `heat`; хочет ли женщина —
- * дело сцены.
- *
- * Отсюда две оговорки в тексте. Первая — «сколько, а не к кому»: направление
- * желания панель не показывает и показывать не будет, это дело прозы, и
- * героиня может хотеть кого угодно. Вторая — «в любом состоянии»: без неё поле
- * пропадало бы ровно тогда, когда панель показывает беременность, а женщины
- * носят и хотят одновременно.
- */
-const BLOCK_FREYJA = [
-    "[FREYJA — every reply]",
-    "desire — how much {{user}} wants closeness right now. One to three words, your own.",
-    "Judge it from the scene and from her body together. <norse_body> tells you what her womb is doing, and that tilts her — it does not decide her. Weariness, grief, fear, a quarrel or a child under her heart all weigh more than the reckoning does.",
-    /* «Сколько, а не к кому» — не стыдливость, а разделение работ: направление
-       желания панель не показывает и показывать не будет, это дело прозы.
-       Заодно снимается предположение, кого героиня хочет: оно не наше. */
-    "Say how much she wants, never toward whom or of what kind: the panel shows the measure, the prose shows the rest.",
-    "This field is there in every state — bleeding, carrying, newly delivered, or an ordinary day.",
-    "→ NRN FREYJA | desire: <how much she wants, 1-3 words>",
-    "",
-];
-
 /* Пропуск времени — своя тема, а не второе поле в TIME: поле условное,
    а стояло среди обязательных, и заполнялось в обычный ход. */
 const BLOCK_SKIP = [
@@ -389,331 +357,6 @@ const BLOCK_SKIP = [
  */
 
 /*
- * События тела — событие, а не состояние.
- *
- * Полный статус каждый ход («фертильность, либидо, самочувствие») модели
- * неоткуда взять, и она его сочиняет: в соседних свайпах на один и тот же день
- * выходило «Высокая», «Норма» и «low». Событие же она видит в сцене.
- *
- * Сюжетные оговорки — про то, кто и когда узнаёт о дитяти, — живут
- * в <norse_body>. Они правила сцены, а не определения поля, и внутри тега
- * трекера читались как ещё одно поле для заполнения.
- */
-const BLOCK_BODY = [
-    "[BODY — only when something happens to {{user}}'s body]",
-    "body — what happened, in these words exactly:",
-    "  bleeding began · bleeding ended · bleeding out of season",
-    "  seed spilled · seed withheld",
-    /* «дитя бьётся» и «дитя затихло» здесь не для красоты: без них счётчик
-       тишины было не от чего вести, и вся тревога о дитяти оставалась кодом,
-       до которого нельзя добраться. */
-    "  child stirred · child kicking · child gone quiet",
-    "  labour began · gave birth · miscarried",
-    "  child at the breast · weaned · knew herself with child · conceived · sought a reading",
-    "  went hungry · fell sick · travelled hard · sick with worry",
-    /* Тяготы. Панель по ним считает угрозу утробе — поэтому слова нужны
-       точные: догадка по вольному описанию стоила бы ребёнка. */
-    "  lifted heavy · strained herself · took a fall · was beaten · took to bed",
-    "  child born dead",
-    /* Вехи первых двух лет. Возраст и нужды дитяти панель считает сама. */
-    "  first tooth · child walked · child spoke",
-    "  child fell sick · child recovered · child died",
-    /*
-     * Три кровяных слова — единственная группа в списке, где выбор решает
-     * не событие, а его смысл, и до сих пор она стояла без единой строки
-     * разбора. Цена ошибки здесь несимметрична: «bleeding began» ставит
-     * якорь цикла на сегодня (chat-state.js, applyBodyEvents), а «bleeding
-     * out of season» якоря не двигает вовсе. Модель выбирала по звучанию —
-     * и при кровотечении на сносях писала то слово, которое сбрасывает счёт.
-     *
-     * Разбор стоит после списка, а не в нём: список читается как набор
-     * сигналов, и три пояснённые строки посреди восьми голых сломали бы
-     * его вид. Охрана в коде — отдельно, промптом такое не закрывают.
-     */
-    /*
-     * Вторая дверь к тому же броску, и до сих пор неподписанная.
-     *
-     * `seed spilled` уходит в tryConceive() ровно так же, как маркер BED
-     * (chat-state.js, applyBodyEvents), а `seed withheld` — туда же, только
-     * меньшим шансом. То есть область у этих двух слов та же, что у темы BED,
-     * и сказать об этом надо здесь: в списке они стоят голыми, и модель,
-     * не написавшая BED, напишет их.
-     */
-    "Two of those words are the BED topic in another form: seed spilled and seed withheld reach the panel the same way the BED marker does. The same scope holds — {{user}}, in this scene, and the one act that can get her with child. Seed spent anywhere else is not one of these words.",
-    "Three of those words touch the same thing and mean different things. Read them before you choose:",
-    "  bleeding began — her tíðir have come in their own time, and the count of her cycle starts anew from this day. Only when she carries no child.",
-    "  bleeding out of season — blood at a time that is not hers: while she carries, between her cycles, after a blow or a fall. It begins no cycle and moves no reckoning.",
-    "  bleeding ended — the bleeding she was already having has stopped.",
-    /*
-     * Круг цикла панель ведёт сама и сбиться не может: cycleDay() (body.js)
-     * считает по модулю от якоря, а lateLine объявляет задержку только при
-     * дитяти или при сбое. Отсюда следствие, до сих пор нигде не сказанное:
-     * когда якорь однажды поставлен, сообщение о крови в срок движку
-     * не нужно вовсе.
-     *
-     * А вред от него есть. Панель показывает «Кровь идёт» все дни 1–5;
-     * модель доходит до этого в прозе на третий и пишет bleeding began —
-     * якорь прыгает на сегодня, и двадцативосьмидневный круг стал
-     * тридцатидневным. Ошибка копится каждый круг, а с ней уезжают
-     * овуляция, окно зачатия и весь отбор примет по дню цикла.
-     */
-    "The count of her cycle is the panel's own, and it does not need to be told that the blood came when it was due — the reckoning already stands on that day. Report bleeding began only when the scene brought it at a time the count did not look for it: after a long delay, after the women's draught, when it comes back to her after childbirth. On an ordinary month say nothing; the day is already right, and a word laid down beside it moves the whole reckoning off.",
-    "Take the words from the list and no others: this topic is a set of signals, not a description. What it felt like belongs in the prose. Two things in one scene: separate them with \"; \".",
-    "Nothing happened — no marker, and that is the ordinary turn. The panel counts the days itself.",
-    /* Та же оговорка о сомнении, что и в BLOCK_BED, и по той же причине:
-       здесь цена ошибки — тоже дитя. Стояла она до сих пор только
-       в signsBlock(), где ошибка стоит одной строки в панели. */
-    "When you are unsure whether the scene held one of these, leave it out. What the panel was never told leaves its reckoning where it stands; what it is told by mistake moves her body.",
-    "→ NRN BODY | body: <words from the list above>",
-    "",
-];
-
-/*
- * Близость — своя тема со своей условной шапкой, а не поле среди тела.
- *
- * Была она полем среди определений тела, и значение в шаблоне стояло готовым:
- * «sex: да». Во всём промпте это была единственная строка с ответом вместо
- * <плейсхолдера> — и модель его списывала: «да» приезжало каждый ход,
- * в том числе в сценах, где близости не было и быть не могло, а панель
- * послушно кидала на зачатие.
- *
- * Область действия темы — «с кем» и «когда» — до сих пор не была задана
- * вовсе. У BODY она стоит прямо в шапке («{{user}}'s body»), у BED не стояло
- * ни там, ни в правилах. А усадьба полна народу, и сага наполовину состоит
- * из пересказов: чужая брачная ночь, воспоминание о прошлом лете, сон, байка
- * у очага — всё это модель описывает, и на всё это ставила маркер. Дальше
- * поле `sex` из снимка превращается в бросок на зачатие (chat-state.js,
- * applyBodyEvents), и разобрать по маркеру пересказ и сцену движок не может
- * никак.
- *
- * Поэтому здесь три правила подряд и все три — про то, СТОИТ ЛИ писать тему,
- * а не что в неё класть. Оговорка о сомнении названа последней нарочно: она
- * решает те случаи, которые первые два не разобрали.
- */
-const BLOCK_BED = [
-    "[BED — only when this scene held the one act that can get her with child, and {{user}} was in it]",
-    /*
-     * Что считается — единственное, чего у темы не было, и на этом она
-     * и сломалась в живой ролевой: героиня понесла от куннилингуса.
-     *
-     * Слово «coupling» модель прочла широко, поставила sex: yes, а дальше
-     * движку уже всё равно: seedWithheld тоже кидает кубик, только меньшим
-     * шансом. То есть починка одного `internal` эту дыру НЕ закрывает —
-     * закрывает её область самого `sex`.
-     *
-     * Названо прямо и телесно, без обиняков. Промпту это не в новинку:
-     * «seed spilled inside» стоит тут с самого начала, а иносказание в этом
-     * поле стоит ребёнка.
-     */
-    "What this topic is: his member inside her, in the place where a child is got. That and nothing else.",
-    "Mouth on her, hands, thighs, between the breasts, spending on her skin or her belly, anything taken in any other way — none of it goes here, however far the scene went and however plainly it was written. It was not nothing; it simply cannot start a child, and this topic exists for one reason only. Nothing happened here that the panel needs — no marker at all, and that is the ordinary turn.",
-    "This topic is about {{user}} and no one else. Other people coupling — across the hall, in a tale told at the fire, in something she remembers or dreams — is not hers and gets no marker.",
-    "It has to happen in this scene, in the hours the prose just showed: not remembered, not intended, not feared, not spoken of.",
-    "When you are unsure, leave the marker out. A coupling the panel never heard of leaves its reckoning where it stands; one it is told of by mistake can start a child, and only a hand at the panel undoes that.",
-    "sex — yes, and no other value. The marker exists because that act happened, so writing it at all is the answer. Take it from what the prose showed, never from the shape of the marker.",
-    /*
-     * Поле обязательное, и это приходится сказать вслух: BLOCK_HEADER выше
-     * разрешает опускать поля, которым нечего сообщить, — а `internal`
-     * из-под этого правила надо вывести поимённо. parseYesNo() отдаёт null
-     * и на «unknown», и на отсутствующее поле, а null ниже по течению
-     * читается как seedSpilled. То есть молчание здесь стоит ровно столько
-     * же, сколько «внутрь», и промпт до сих пор сам это молчание разрешал.
-     */
-    "internal — whether he spent inside her and left it there, rather than pulling out first. One word. Never without sex, and never left out when sex is there: the rule above about leaving out a field with nothing to report does not reach this one.",
-    /*
-     * Цена «unknown» названа, а не выправлена, и движок тут считает верно.
-     *
-     * «Seed withheld» — намеренное действие, чей-то поступок в сцене.
-     * «Unknown» — умолчание, а умолчание в этом веке означает «внутрь».
-     * Третий шанс посередине был бы догадкой, внесённой в главный бросок, —
-     * ровно против того принципа, на котором стоит закрытый список событий
-     * в parser.js: движок разбирает названное, а не додумывает среднее.
-     */
-    "Only «no» is a withholding, because a withholding is something a person did. When it is not clear, write unknown — and the panel will reckon as if it went inside. A doubt is not a safeguard, and neither is a blank.",
-    "→ NRN BED | sex: yes | internal: <yes / no / unknown>",
-    "",
-];
-
-/*
- * Темы, которые появляются только к месту.
- *
- * Готовность к родам нужна на последней части ношения, правовой слой — когда
- * о дитяти уже знают, имя — пока дитя не наречено. Спрашивать их с первого дня
- * игры значило бы держать в ответе четыре пустых маркера каждый ход.
- */
-/*
- * От дозора родов осталось одно поле.
- *
- * Женщин в доме, обереги и наготове убраны: они занимали в панели половину
- * листа, а говорили мало, и ни во что, кроме самих себя, не шли.
- *
- * Имени в правиле больше нет, и это не мелочь. Стояло «Арнхейд, полдня пути»
- * — в правиле и ещё раз в примере, — и модель раз за разом присылала Арнхейд
- * в чат, где такой женщины не было вовсе. Образец с именем читается как ответ,
- * а не как форма.
- */
-const BLOCK_BIRTH = [
-    "[BIRTH — every reply while the birth is near]",
-    "midwife — who will take the child when the time comes, and how far off they are. A name and a distance, two to five words. Take the name from the story: someone who is actually in it. Nobody within reach is an answer of its own.",
-    "→ NRN BIRTH | midwife: <name and distance>",
-    "",
-];
-
-/*
- * Утроба — две заготовки, отданные сцене.
- *
- * Размер считался по части срока: девять слов на девять частей. Внутри одной
- * беременности лестница не повторялась, но между беременностями шла ровно та
- * же — ячменное зерно с ноготком запоминаются с первого раза. То же и с
- * приметой срока: ряд по три слова на часть, и он стоял месяц.
- *
- * Приём тот же, что и у нужды дитяти: панель говорит, какая часть срока идёт,
- * сцена подбирает слова, а молчит сцена — панель берёт свою заготовку. Ничего
- * из счёта сюда не отдано: велико ли дитя, решает по-прежнему срок.
- *
- * Тема условная и стоит только при известном ношении. Пока о дитяти не знают,
- * её в промпте нет вовсе: спросить у сцены, с чем сравнить дитя, значило бы
- * сказать, что дитя есть, — а весь скрытый слой держится на обратном.
- *
- * Оговорка про меру не из вежливости. Без неё приезжают сантиметры и грецкие
- * орехи: модель по умолчанию меряет плод тем, чем меряют его нынешние
- * приложения для беременных.
- */
-const BLOCK_WOMB = [
-    "[WOMB — every reply while the child is known]",
-    "size — how big the child is now, said by comparison. Two to five words. Measure by the hand and by what is in this house: a grain, a nail, a finger, a palm, a span, a forearm, a loaf, a cat's head, a wound skein of yarn. Nothing that had to wait for a later age, and nothing from another land — no inches, no fruit nobody here has seen.",
-    "sign — what shows on her and what she feels of it, in this scene. Three to six words. What another person in the room could see, or what she notices herself: the belt, the gait, the breath on the stairs, the child moving under a hand.",
-    "→ NRN WOMB | size: <what it is like> | sign: <what shows>",
-    "",
-];
-
-/*
- * Род спрашивается, пока дитя в утробе, и только пока.
- *
- * Стоял блок при `known || born` — то есть и весь год после родов, — и модель
- * послушно писала фадерни, ранг и имя каждый ход. Решено это однажды, в час
- * рождения, и больше не меняется: признают дитя, и по закону рождается дитя.
- * После родов род застывает в самом дитяти (bornChildren) и показывается
- * у него же, а у матери исчезает вместе с блоком.
- *
- * Имя сюда добавлено нарочно. Прежде его спрашивал только childBlock, у уже
- * рождённого, — а имя часто выбирают заранее. Названное до родов доедет до
- * дитяти само: `childName` лежит в TOLD_FIELDS, и nameChildren() приложит
- * его к новорождённому, не спрашивая второй раз.
- */
-const BLOCK_KIN = [
-    "[KIN — every reply while the child is carried and known]",
-    "faderni — whether the father has acknowledged the child. One word: признано / не признано / оспорено.",
-    "rank — what the child will be born as, by the law of this age. One word of the four: скирборинн (born in wedlock), фриллуборинн (of a concubine), тюборинн (of a bondwoman, and a bondman himself), хорнунг (of a free woman out of wedlock).",
-    "name — the name they have settled on for the child, if they have settled on one. Until they have, write exactly «не выбрано». Twins: both names, separated by \"; \".",
-    "→ NRN KIN | faderni: <one word> | rank: <one of those four> | name: <the name, or не выбрано>",
-    "",
-];
-
-/*
- * Имя спрашиваем, пока дитя без имени, а не «после родов»: послеродовое
- * кончается, когда дитя отняли от груди, а безымянным оно может остаться
- * и дольше — и тогда спросить имя было бы уже негде.
- */
-/**
- * Дитя — тема, которой почти не было.
- *
- * У неё стояло одно поле, имя, и то лишь пока дитя не наречено. Всё остальное
- * панель считала сама: возраст, стадию и нужду по возрасту, эйкте и дню недели.
- * Оттого после родов плашка дитяти и выглядела пустой — живого ребёнка в ней
- * не было, был счёт дней.
- *
- * Три поля добавлены к имени, и все три — то, чего из календаря не выведешь:
- * на чьих руках оно сейчас, на кого похоже и чего просит. Нужда при этом
- * не отменяет счёт, а перебивает его словами сцены — как и приметы тела;
- * молчит сцена, панель берёт своё.
- *
- * Двойню маркер различить не умеет: он один на всех. Поэтому в промпте прямо
- * сказано говорить о младшем, а панель к младшему слова и прикладывает.
- */
-function childBlock(unnamed, twins, weanable) {
-    return [
-        "[CHILD — every reply while there is a child under two]",
-        ...(twins ? ["More than one of them: speak of the youngest, and of that one only."] : []),
-        "arms — who is holding the child right now, or where it lies. Two to five words. If nobody has it, say where it is.",
-        "look — who the child takes after, and what the household remarks on. Three to six words. Say it once and keep it: faces do not change from hour to hour.",
-        "need — what the child wants right now, from THIS scene. Three to six words. Crying, feeding, sleeping, reaching, quiet and content. What it does, not what it feels.",
-        /* Как растёт. Подсказка стадии стоит месяцами — «Ползает и всё тянет
-           в рот» держится сто восемьдесят дней подряд. Возраст и стадию
-           по-прежнему считает панель, сцена подбирает только слова. */
-        "growing — what it can do now that it could not before. Three to six words. What the household has noticed: holding its head, reaching, sitting, crawling, pulling itself up, the first sounds. Not its age, not how long it has been so — the panel keeps that count.",
-        ...(unnamed
-            /* «не наречён» — не образец, а служебное слово: по нему
-               chat-state.js отличает «имени ещё нет» от настоящего имени
-               и не записывает заглушку ребёнку в имя. Потому оно и осталось
-               русским, как и прочие опознавательные слова. */
-            ? ["name — the name given at the water-sprinkling. While none has been given, write exactly «не наречён». Twins: both names, separated by \"; \"."]
-            : []),
-        /*
-         * Отнятие от груди — единственная веха первых двух лет, которой
-         * в промпте не было, при том что первый зуб, первый шаг и первое
-         * слово спрашиваются. А снималось кормление только этим событием:
-         * в ролевой, где дитя росло, а модель до слова не додумалась,
-         * героиня оставалась при кормлении до конца чата. Срок в tryConceive()
-         * теперь вытянет и без него, но событие всё равно её, а не дитяти:
-         * nursingEnd ставит lastBleed на сегодня, то есть возвращает цикл.
-         *
-         * Спрашиваем только у ходунка (`gangbarn`, 450+ дней): у младенца
-         * это шум, а подсказка стадии там уже и стоит — «Скоро отнимут
-         * от груди». Считаем по младшему: кормление в движке одно, и заведено
-         * оно последними родами, так что отнятие старшего его не кончает.
-         */
-        ...(weanable
-            ? ["When the child is taken off the breast for good, that is a turn in her body as much as in the child's: say so in the BODY topic, and the panel takes up the count of her cycle again."]
-            : []),
-        unnamed
-            ? "→ NRN CHILD | arms: <who holds it> | look: <who it takes after> | need: <what it wants> | growing: <what it can do now> | name: <the name, or не наречён>"
-            : "→ NRN CHILD | arms: <who holds it> | look: <who it takes after> | need: <what it wants> | growing: <what it can do now>",
-        "",
-    ];
-}
-
-/**
- * Приметы — единственный блок, который собирается по сегодняшнему дню.
- *
- * Какие виды сегодня звучат, решает счёт: `termSigns` и `cycleSigns` отбирают
- * их по части срока и дню цикла. Поэтому у модели спрашиваются ровно те, что
- * поспели, — и спрашиваются поимённо, со своей мерой у каждого.
- *
- * Так решается то, из-за чего всё и затевалось. Раньше слова к приметам брались
- * из пула по шесть штук на вид: через две недели игры пул был весь виден, и
- * панель твердила одно и то же. Хуже того, слова не имели отношения к сцене —
- * героиня всю ночь мёрзла в лодке, а панель писала «спит крепко, встаёт
- * до света», потому что по дню цикла положено.
- *
- * Пул при этом никуда не делся: сцена промолчала — панель берёт своё слово.
- * Пустой панели не бывает.
- */
-function signsBlock(view) {
-    const kinds = (view?.signs ?? [])
-        .map((sign) => sign.kind)
-        .filter((kind, i, all) => SCENE_SIGN_KINDS[kind] && all.indexOf(kind) === i);
-    if (!kinds.length) return [];
-
-    /* Виды называем один раз — именами полей. Прежде строка перечисляла их
-       по-русски («кровь, ломота, грудь»), а ниже те же виды шли по-английски
-       именами полей: один и тот же список дважды, разными словами. */
-    const named = kinds.join(", ");
-    return [
-        "[SIGNS — every reply]",
-        `Today her body speaks through these and no others: ${named}. They are hers to feel, not to explain — she need not know why any of them is happening.`,
-        "Give each one from THIS scene, in three to six words: what the body is doing, plainly. Not what she thinks of it, not what caused it, not what it means. If this scene gave a reason — a cold night, a hard road, a fright — let the words show it.",
-        "",
-        ...kinds.map((kind) => `${signField(kind)} — ${SCENE_SIGN_KINDS[kind].about}.`),
-        "",
-        `→ NRN SIGNS | ${kinds.map((kind) => `${signField(kind)}: <…>`).join(" | ")}`,
-        "",
-        "A field you leave out keeps the panel's own word for it, and that is no failure — leave out what this scene had nothing to say about. Never add a field that is not in the list above: what her body says today is the panel's reckoning, not yours.",
-        "",
-    ];
-}
-
-/*
  * Заполненный пример.
  *
  * Он единственный на весь промпт, и он остаётся: схема с <плейсхолдерами>
@@ -723,135 +366,39 @@ function signsBlock(view) {
  * Зато примеры ИЗ ПРАВИЛ убраны все до единого. Разница между ними такая:
  * образец в конце показывает, как выглядит заполненный ответ целиком, а
  * образец внутри правила читается как ответ на само правило — и списывается.
- * Стоило это Арнхейд, которая приезжала в каждый чат, где о ней слыхом
- * не слыхивали.
  *
  * Регистр общий: всё со строчной, кроме имён. Иначе панель показывает вперемешку
  * «Мокрый снег» и «продрог» — заглавная буква приезжает не из смысла, а из того,
  * с чего начиналась строка примера.
  *
- * Повитуха в примере названа «нет» нарочно: это настоящее значение, оно
- * показывает форму — и не подсовывает имени, которое можно списать.
+ * Пример — ровно обычный ход: шесть тем, которые пишутся каждый раз. Второго
+ * примера не ставим: лишний образец модель репетирует целиком.
  */
-const EXAMPLE_BIRTH = "<!-- NRN BIRTH | midwife: нет -->";
-const EXAMPLE_KIN = "<!-- NRN KIN | faderni: признано | rank: скирборинн | name: не выбрано -->";
-/* Слова примера намеренно не из рядов body.js: образец, слово в слово
-   совпавший с заготовкой, модель списывает охотнее, чем пишет своё. */
-const EXAMPLE_WOMB = "<!-- NRN WOMB | size: с материн кулак | sign: пояс переставлен, дышит чаще -->";
-const EXAMPLE_CHILD = "<!-- NRN CHILD | arms: у матери на руках | look: отцовы брови, материн рот | need: тычется, грудь ищет | growing: держит голову, тянется к косе | name: Хельга -->";
-const EXAMPLE_CHILD_NAMED = "<!-- NRN CHILD | arms: у матери на руках | look: отцовы брови, материн рот | need: тычется, грудь ищет | growing: держит голову, тянется к косе -->";
-const EXAMPLE_FREYJA = "<!-- NRN FREYJA | desire: не до того -->";
-
-/* Обязательные — они же весь обычный ход. */
-const EXAMPLE_BASE = [
+const BLOCK_EXAMPLE = [
+    "EXAMPLE (the end of an ordinary reply):",
+    "…и он опустил точильный камень, не отводя от неё взгляда.",
+    "",
     "<!-- NRN TIME | eykt: хадеги -->",
     "<!-- NRN PLACE | weather: мокрый снег, порывистый северный ветер | location: побережье фьорда, старая пристань -->",
     "<!-- NRN DRESS | user: шерстяное платье, меховой плащ | char: волчьи шкуры, льняная рубаха -->",
     "<!-- NRN MIND | mood: задумчивый, усталый | thought: она снова смотрит так, будто знает больше -->",
     "<!-- NRN FLESH | char: продрог, ломит плечо | user: устала, ноги сбиты -->",
     "<!-- NRN COUNSEL | advice: отвар из дягиля и покой до утра -->",
+    "",
+    /* Без этой строки пример читается как полный список: раз в образце нет
+       SKIP, значит его не бывает вовсе. */
+    "Nothing skipped ahead in that scene, so there is no SKIP marker — that is the ordinary turn, not an omission.",
+    "",
 ];
 
 /**
- * Единственный пример — и он обязан совпадать с тем, что сейчас требуется.
+ * Требования трекера — одним куском.
  *
- * Схема с <плейсхолдерами> показывает форму, но ни одного значения, и тогда
- * модель сочиняет их в рассуждениях. Поэтому пример заполненный.
- *
- * Собирается по состоянию, и это не украшательство. Пример был константой,
- * а темы BIRTH, KIN и CHILD помечены «every reply while …». Выходило, что
- * единственный образец в промпте показывал ответ БЕЗ маркеров, которые тут же
- * требовались каждый ход, — а заполненный образец весит больше инструкции.
- *
- * Второго примера не ставим: лишний образец модель репетирует целиком.
- */
-function exampleBlock({ withBody, signKinds, nearBirth, known, born, carrying, hasKids, unnamed }) {
-    const signs = signKinds.length
-        ? [`<!-- NRN SIGNS | ${signKinds.map((kind) => `${signField(kind)}: ${SCENE_SIGN_EXAMPLES[kind] ?? "…"}`).join(" | ")} -->`]
-        : [];
-    return [
-        "EXAMPLE (the end of an ordinary reply):",
-        "…и он опустил точильный камень, не отводя от неё взгляда.",
-        "",
-        ...EXAMPLE_BASE,
-        ...(withBody ? [EXAMPLE_FREYJA] : []),
-        ...signs,
-        ...(nearBirth ? [EXAMPLE_BIRTH] : []),
-        ...(carrying ? [EXAMPLE_WOMB] : []),
-        ...(known ? [EXAMPLE_KIN] : []),
-        ...(hasKids ? [unnamed ? EXAMPLE_CHILD : EXAMPLE_CHILD_NAMED] : []),
-        "",
-        /* Без этой строки пример читается как полный список: раз в образце нет
-           SKIP и BODY, значит их не бывает вовсе. */
-        withBody
-            ? "Nothing skipped ahead and nothing happened to her body in that scene, so there is no SKIP, no BODY and no BED marker — that is the ordinary turn, not an omission."
-            : "Nothing skipped ahead in that scene, so there is no SKIP marker — that is the ordinary turn, not an omission.",
-        "",
-    ];
-}
-
-/* Слова для примера примет — по одному на вид. Не из пула body.js нарочно:
-   образец, слово в слово совпавший с заготовкой, модель списывает охотнее,
-   чем пишет своё. */
-const SCENE_SIGN_EXAMPLES = {
-    breast: "налилась, рубаха жмёт",
-    sleep: "не спала, слушала ветер",
-    nausea: "мутило с утра, к полудню отпустило",
-    smell: "дым в горле стоит",
-    hunger: "ела наспех, не наелась",
-    mood: "молчит, огрызается на всякое слово",
-    ache: "поясницу ломит с ночи",
-    swelling: "башмаки жмут к вечеру",
-    heat: "тяжело внизу, влажно",
-    blood: "идёт полно, тряпицу меняла дважды",
-    belly: "несёт низко, пояс не сходится",
-    lettari: "дышать легче, ходить тяжелее",
-    milk: "на чужой плач отозвалось, потекло",
-    lochia: "к вечеру опять пошла, тряпицу меняла",
-    "false-hridir": "живот каменел трижды, отпустило",
-    "kicks-night": "било под ребро всю ночь",
-    strain: "поясница не держит, за ведром нагнуться беда",
-    "weather-toll": "в духоте отекли щиколотки",
-    "odd-blood": "мазнуло бурым, к утру перестало",
-};
-
-/**
- * Промпт собирается на каждый запрос, а не один раз при загрузке: женская
- * линия включается настройкой, а приметы меняются от дня к дню.
+ * Собирается на каждый запрос, хотя от состояния больше не зависит: так
+ * buildPrompt() остаётся единственной точкой сборки, и порядок частей виден
+ * в одном месте.
  */
 function promptHead() {
-    const withBody = settings().bodyTracking;
-    const view = withBody ? bodySummary() : null;
-
-    /* Готовность к родам — только на последней части, правовой слой — когда
-       о дитяти уже знают, имя — пока дитя не наречено. */
-    /* Готовность нужна и при угрозе: роды раньше срока — тем более повод
-       спросить, есть ли повитуха и греется ли вода. */
-    /* Повитуха задана автором — спрашивать её у сцены незачем, и темы BIRTH
-       в промпте нет вовсе. Имя при этом всё равно доедет до модели: оно уходит
-       вниз, справкой в <norse_body>. */
-    const nearBirth = (view?.state === "pregnant_known" || view?.state === "threat")
-        && view.stage?.id === "falli"
-        && !manualMidwife();
-    const known = view?.state === "pregnant_known" || view?.state === "threat";
-    /* Утроба — только при известном ношении, и без угрозы: в беде панель
-       показывает одно, и спрашивать в тот ход, с чем сравнить дитя, дико.
-       Скрытый срок сюда не попадает вовсе — тема выдала бы дитя с головой. */
-    const carrying = view?.state === "pregnant_known";
-    const born = view?.state === "postpartum";
-    /* Имя спрашиваем, пока есть ненаречённое дитя, — это переживает и конец
-       послеродового, и новую беременность матери. Прочие поля темы идут,
-       пока дитя вообще есть: имя однажды сказано, а на руках оно каждый день. */
-    const kids = view?.children ?? [];
-    const unnamed = kids.some((kid) => !kid.named);
-    /* Младший идёт первым — childrenView() отдаёт слова сцены именно ему. */
-    const weanable = kids[0]?.stage?.id === "gangbarn";
-
-    const signs = withBody ? signsBlock(view) : [];
-    const signKinds = (view?.signs ?? [])
-        .map((sign) => sign.kind)
-        .filter((kind, i, all) => SCENE_SIGN_KINDS[kind] && all.indexOf(kind) === i);
-
     return [
         ...BLOCK_HEADER,
         ...BLOCK_TIME,
@@ -860,18 +407,8 @@ function promptHead() {
         ...BLOCK_MIND,
         ...BLOCK_FLESH,
         ...BLOCK_ADVICE,
-        ...(withBody ? BLOCK_FREYJA : []),
-        ...signs,
         ...BLOCK_SKIP,
-        ...(withBody ? [...BLOCK_BODY, ...BLOCK_BED] : []),
-        ...(nearBirth ? BLOCK_BIRTH : []),
-        ...(carrying ? BLOCK_WOMB : []),
-        ...(known ? BLOCK_KIN : []),
-        ...(kids.length ? childBlock(unnamed, kids.length > 1, weanable) : []),
-        ...exampleBlock({
-            withBody, signKinds: withBody ? signKinds : [],
-            nearBirth, known, born, carrying, hasKids: kids.length > 0, unnamed,
-        }),
+        ...BLOCK_EXAMPLE,
         ...BLOCK_CLOSE,
     ].join("\n");
 }
@@ -939,10 +476,6 @@ function sceneContext() {
     for (const [label, value] of [
         ["погода", s.weather], ["место", s.location], ["настроение {{char}}", s.charMood],
         ["одежда {{user}}", s.userAttire], ["одежда {{char}}", s.charAttire],
-        /* Тяга переносится наравне с настроением: «вчера было не до того» —
-           такая же точка отсчёта, как вчерашняя погода, и без неё героиня
-           каждый ход начинала бы хотеть с чистого листа. */
-        ["тяга {{user}}", s.desire],
     ]) {
         if (value) carried.push(`${label} — ${value}`);
     }
@@ -1014,21 +547,18 @@ function timeContext() {
          * на дворе третьи сутки Йоля, — и писала будний вечер у очага в тот
          * день, когда усадьба должна стоять на ушах. Считает праздник панель,
          * как и всё прочее: у модели его не спрашиваем.
+         *
+         * Одно имя и день праздника, без пояснения и без советов, как его
+         * играть: что это за праздник, модель знает и так, а пояснение
+         * стоило абзаца на каждый ход. Соседние праздники тех же суток
+         * остаются панели — в промпт идёт главный.
          */
         const feast = holidaySummary();
         if (feast) {
             const which = feast.days > 1
                 ? ` This is day ${feast.day} of ${feast.days}${feast.first ? ", the first" : feast.last ? ", the last" : ""}.`
                 : "";
-            const along = feast.others.length
-                ? ` The same days carry ${feast.others.map((o) => o.norse).join(" and ")} — kept alongside it, not instead of it.`
-                : "";
-            out.push(
-                "",
-                `A feast stands on this day: ${feast.norse} — ${feast.ru}.${which}${along}`,
-                feast.gloss,
-                "Let it show in the scene as people of the time would live it — in the work that stops, the food, the drink, the guests, what is owed and what is forbidden. Do not announce it as a label.",
-            );
+            out.push("", `A feast stands on this day: ${feast.norse} — ${feast.ru}.${which}`);
         }
     } else {
         out.push(
@@ -1082,37 +612,6 @@ function holidaySummary() {
  */
 const META_BODY = "nornirManualBody";
 
-/*
- * Повитуха — имя, заданное автором, а не выдуманное моделью.
- *
- * Модель раз за разом присылала Арнхейд: имя стояло в промпте образцом, и
- * образец списывался. Но и без образца спрашивать это у сцены неправильно —
- * кто примет дитя, решает не сцена, а расклад ролевой. У героини может быть
- * своя служанка, которая с ней с первой главы; про неё модель угадать не может.
- *
- * Живёт рядом с датой начала и ручной записью о теле — в метаданных чата,
- * а не в настройках расширения: повитуха у каждой ролевой своя.
- *
- * Пусто — спрашиваем у сцены, как и раньше. Заполнено — тема BIRTH из промпта
- * уходит целиком, а имя едет вниз справкой.
- */
-const META_MIDWIFE = "nornirMidwife";
-
-function manualMidwife() {
-    const name = getContext()?.chatMetadata?.[META_MIDWIFE];
-    return typeof name === "string" && name.trim() ? name.trim() : null;
-}
-
-function setManualMidwife(name) {
-    const context = getContext();
-    if (typeof context?.updateChatMetadata !== "function") return false;
-    const value = typeof name === "string" ? name.trim() : "";
-    context.updateChatMetadata({ [META_MIDWIFE]: value });
-    context.saveMetadataDebounced?.();
-    forgetChat();
-    return true;
-}
-
 function manualBody() {
     return getContext()?.chatMetadata?.[META_BODY] ?? null;
 }
@@ -1130,8 +629,6 @@ function setManualBody(record) {
 function readOptions() {
     return {
         keepMarker: settings().debugKeepMarkers,
-        chatId: getContext()?.chatId,
-        chances: settings().conceptionChances,
         manualBody: manualBody(),
     };
 }
@@ -1168,7 +665,7 @@ function readState() {
  * Сводка по телу на текущий день, либо null.
  *
  * Считается один раз на такт и кладётся рядом с прочитанным чатом: её просят
- * и промпт, и три места в отрисовке.
+ * и промпт, и отрисовка, и Tímatal.
  */
 function bodySummary() {
     if (!settings().bodyTracking) return null;
@@ -1176,40 +673,7 @@ function bodySummary() {
     if (read.view !== undefined) return read.view;
 
     const date = sceneDate();
-    read.view = date && read.body
-        ? bodyView(read.body, date, {
-            accuracy: settings().divinationAccuracy ?? DIVINATION_ACCURACY,
-            debug: settings().bodyDebug,
-            /* Погоду панель и так знает из маркера — приметы по жаре и морозу
-               считаются даром. Раньше сюда её просто забывали передать, и вся
-               ветка weatherToll() не работала ни разу. */
-            weather: read.state?.weather ?? null,
-            /* Слова примет от сцены — из того же снимка, что и погода.
-               Какие виды сегодня звучат, решает счёт; слова приходят отсюда,
-               а если их нет, панель берёт свою заготовку. */
-            sceneSigns: read.state?.signs ?? null,
-            /* Дитя из сцены: на чьих руках, на кого похоже, что ему нужно.
-               Возраст и стадию по-прежнему считает панель. */
-            sceneChild: {
-                arms: read.state?.childArms ?? null,
-                look: read.told?.childLook ?? read.state?.childLook ?? null,
-                need: read.state?.childNeed ?? null,
-                growing: read.state?.childGrowing ?? null,
-            },
-            /* Утроба из сцены: с чем сравнить дитя и что видно по матери.
-               Часть срока по-прежнему считает панель — отсюда только слова,
-               и молчит сцена, остаётся заготовка. */
-            sceneWomb: {
-                size: read.state?.wombSize ?? null,
-                sign: read.state?.wombSign ?? null,
-            },
-            /* Время суток и день недели — для нужд дитяти: ночью оно спит,
-               а в лаугардаг его моют. Календарь это и так знает, спрашивать
-               у модели незачем. */
-            eykt: read.state?.hour != null ? eyktForHour(read.state.hour) : null,
-            weekday: weekdayOf(date.year, date.month, date.day),
-        })
-        : null;
+    read.view = date && read.body ? bodyView(read.body, date) : null;
     return read.view;
 }
 
@@ -1224,20 +688,17 @@ function bodyPhrase() {
  * Возвращаем null только когда отслеживание выключено настройкой: тогда блока
  * в справочнике нет, потому что нет и самого счёта.
  *
- * А вот без даты сцены блок теперь остаётся. Раньше его тут же не было —
- * и на новом чате Утроба просто отсутствовала, без единого слова о том,
- * почему: выключена она, сломалась или не бывает вовсе. Считать без даты
- * действительно не от чего, поэтому наружу едет `today: null`, а справочник
- * по нему гасит кнопки и говорит, чего не хватает.
+ * А вот без даты сцены блок остаётся. Считать без неё действительно не от
+ * чего, поэтому наружу едет `today: null`, а справочник по нему гасит кнопки
+ * и говорит, чего не хватает.
  */
 function cycleControls(repaint = () => {}) {
     if (!settings().bodyTracking) return null;
     const today = sceneDate();
-
     const body = readState().body;
 
     /* Записали — сразу перерисовали панель и пересобрали инжект. Без второго
-       модель до следующего хода жила бы со старой строкой состояния. */
+       модель до следующего хода жила бы со старой строкой о теле. */
     const done = (record) => {
         if (!record || !setManualBody(record)) return false;
         refresh();
@@ -1253,55 +714,15 @@ function cycleControls(repaint = () => {}) {
     return {
         view: bodySummary(),
         length: CYCLE_DEFAULT,
-        /* Повитуха: имя из метаданных чата, пустое — значит спрашиваем сцену. */
-        midwife: manualMidwife(),
-        onSetMidwife: (name) => {
-            if (!setManualMidwife(name)) return false;
-            refresh();
-            injectPrompt();
-            repaint();
-            return true;
-        },
         pregnant: !!body?.pregnancy,
-        /* Форточка правды. Считается здесь, а не в справочнике: справочник
-           рисует, а знать, какая у гадания точность и где лежит состояние, —
-           не его дело. Наружу из окна эти строки не уходят никуда: ни в промпт,
-           ни в инфоблок, ни в маркер. */
-        truth: bodyTruth(body, today, {
-            accuracy: settings().divinationAccuracy ?? DIVINATION_ACCURACY,
-        }),
         /* Поля формы заполняем текущим положением дел: открыла Tímatal —
            видишь то же, что в панели, и правишь от него, а не с нуля. */
         today,
         part: carried ? Math.min(carried.part, 9) : null,
-        known: !!body?.pregnancy?.knownSince,
-        father: body?.pregnancy?.father ?? null,
         conceived: body?.pregnancy?.conceived ?? null,
-        births: body?.pregnancy?.births ?? 1,
-        /* Пол показываем как выбор только если он у всех одинаков: смешанную
-           двойню одним списком не выразить, и врать про неё не станем. */
-        sex: sameSex(body?.pregnancy),
         onSetDay: (day) => done(cycleAnchor(today, day)),
-        onSetPregnancy: (setup) => done(pregnancyAnchor(today, setup, body?.pregnancy ?? null, {
-            chatId: getContext()?.chatId,
-        })),
-        /* Призыв Фригг доступен, только когда есть кого рожать. */
-        canSummon: !!body?.pregnancy && !body.pregnancy.labour,
-        onSummonFrigg: () => done(labourAnchor(today, body?.pregnancy ?? null)),
-        /* Женское питьё — всегда: героиня не знает, есть ли кого прерывать,
-           и кнопка, доступная только беременным, выдала бы ей это с головой. */
-        onDrinkHerb: () => done(herbAnchor(today, body, {
-            chatId: getContext()?.chatId,
-            death: !!settings().herbDeath,
-        })),
+        onSetPregnancy: (setup) => done(pregnancyAnchor(today, setup)),
     };
-}
-
-/** Общий пол всех детей, либо null — если разный или неизвестен. */
-function sameSex(pregnancy) {
-    const sexes = pregnancy?.sexes ?? (pregnancy?.sex ? [pregnancy.sex] : null);
-    if (!sexes?.length) return null;
-    return sexes.every((s) => s === sexes[0]) ? sexes[0] : null;
 }
 
 /**
@@ -1369,7 +790,7 @@ function reckoningLine(s) {
  * заполненных полей.
  */
 function buildPrompt() {
-    return timeContext() + bodyContext() + childContext() + sceneContext() + promptHead();
+    return timeContext() + bodyContext() + sceneContext() + promptHead();
 }
 
 /**
@@ -1384,195 +805,21 @@ function buildPrompt() {
  * читается как поля для заполнения, а не как факты сцены. Восьмая луна — это
  * не поле, это то, что видит каждый встречный.
  *
- * ── Приметы ──────────────────────────────────────────────────────────────
- *
- * Главное здесь новое. Грудь, сон, дурнота, запахи, голод, нрав, жар лона —
- * всё это панель считала для себя и модели не показывала ни строкой. Довод
- * был такой: модель тела не наблюдает, а сочиняет, и в соседних свайпах
- * выходит разное. Довод верен ровно наполовину. Он верен, когда у модели
- * СПРАШИВАЮТ состояние: тогда она его и правда выдумывает. Но здесь ей ничего
- * не спрашивают — ей рассказывают, а считает по-прежнему панель, и в соседних
- * свайпах приезжает одно и то же.
- *
- * Цена молчания была видна в ролевой: героиня на третий день крови бодро шла
- * за дровами, потому что модель не знала, что её ломит. Панель знала и молчала.
- *
- * Что показываем, решает одно правило: то, что героиня знает о себе сама,
- * плюс то, что видно окружающим. Приметы — как раз первое: тело их чувствует,
- * не зная причины, и потому они безопасны даже под скрытым слоем, пока
- * беременность не признана. Числа счёта не показываем никогда (см. cyclePhrase
- * и pregnancyPhrase в body.js — оттуда убраны «день 3 из 28» и «ношение 5
- * из 9»): в этом веке их взять неоткуда, и модель принимается считать вслух.
- *
- * `hidden` сюда не идёт и не пойдёт: это отладочная форточка правды, и в ней
- * лежит ровно то, чего не знает сама героиня.
+ * Строка здесь одна, и то не всегда: идёт кровь или героиня носит. Приметы,
+ * фазы и пояснения остались панели — модели они мешали больше, чем помогали.
+ * Упомянуть кровь или живот к слову сцена может сама; требовать этого блок
+ * не станет.
  */
 function bodyContext() {
     const phrase = bodyPhrase();
     if (!phrase) return "";
-
-    const view = bodySummary();
-    const out = [
+    return [
         "<norse_body>",
         "This is what {{user}}'s body is doing. It is not a form to fill in and nothing here is asked of you — it is what she carries into the scene, the way anyone knows their own body on waking.",
         phrase,
-    ];
-
-    /*
-     * Приметы — одной строкой, их же словами.
-     *
-     * Отдельная оговорка про «не списывай» стоит не из вежливости: строки эти
-     * литературные, и без запрета модель вставляет их в прозу дословно. Панели
-     * от этого ни холодно ни жарко, а вот читателю видно, что героиня второй
-     * день думает одной и той же фразой.
-     */
-    const signs = (view?.signs ?? []).map((sign) => sign.text).filter(Boolean);
-    if (signs.length) {
-        out.push(
-            `Сегодня тело говорит так: ${signs.join("; ")}.`,
-            "She feels these herself, and she need not know why. Let them tell in how she moves, what she reaches for, what she snaps at and what she cannot face — but do not announce them, do not have her explain them, and do not lift these words into your prose. They are the panel's shorthand; the scene is yours to write.",
-        );
-    }
-
-    /*
-     * Скрытый слой. Пока о дитяти не знают, о нём не знает НИКТО — и это
-     * правило сцены, а не определение поля, поэтому оно живёт здесь, а не
-     * в [BODY]: внутри тега трекера его читали как ещё одно поле.
-     *
-     * Состояния перечислены поимённо, а не через «кроме известных». Раньше
-     * этот текст стоял безусловно, и после родов модель всё ещё получала
-     * «никто не знает о дитяти» — рядом со строкой «она недавно родила,
-     * и в доме это знают все». А при потере он противоречил бы прямо: там
-     * блок говорит, что это уже случилось и отыгрывать назад нельзя.
-     */
-    if (["cycling", "late", "pregnant_unknown"].includes(view?.state)) {
-        out.push(
-            "Only the narrator knows the state of her womb. The people around her do not know there is a child and do not speak of it until she says so herself. Sickness in the morning, weakness, a turn against certain smells — those can be noticed, and they will be read as illness, weariness or ill-wishing, never as a child.",
-            "A late bleeding proves nothing on its own: hunger brings it, so does the road, so does worry. Until the line above names a term, leave the guessing to her — she may wonder, doubt and wave it away, but no one confirms it for her.",
-        );
-    }
-
-    /*
-     * О поле дитяти в доме не знает никто, пока не сходят к гадающему.
-     *
-     * По образцу скрытого слоя выше: это правило сцены, а не поле для
-     * заполнения, и просить тут нечего — слово «sought a reading» лежит
-     * в списке событий, и модель возьмёт его, когда сцена туда сходит.
-     *
-     * Строка стоит ровно в тот промежуток, когда живот уже толкуют, а
-     * приговора ещё нет: `omen` в виде и означает «примета есть, похода
-     * не было». После похода она уходит — тогда пол уже назван вслух.
-     */
-    if (view?.omen) {
-        out.push("Whether it is a son or a daughter, nobody knows. The belly is read and argued over in the house — that is the omen named above — but reading a belly is not the same as being told. Only someone who tells such things can say the word: a völva, a wise woman, whoever is sent for in this place. Until she goes to one, no one in the scene names the child's sex, and neither do you.");
-    }
-
-    /* За кем пошлют, когда придёт время. Имя задано автором в Tímatal —
-       значит это уговор ролевой, а не догадка сцены, и модель обязана его
-       знать заранее, а не выдумывать в час родов. */
-    const midwife = manualMidwife();
-    if (midwife && (view?.state === "pregnant_known" || view?.state === "threat")) {
-        out.push(`Когда придёт время рожать, пошлют за ней: ${midwife}. Это уговорено заранее, и в доме об этом знают.`);
-    }
-
-    /* Заметное со стороны называем прямо: иначе персонажи ведут себя так,
-       будто перед ними прежняя женщина. */
-    if (view?.state === "pregnant_known") {
-        out.push("Это видно всякому, кто на неё смотрит, и все вокруг это давно заметили. Тело тяжелеет, походка меняется, прежняя одежда не сходится.");
-    } else if (view?.state === "postpartum") {
-        out.push("Она недавно родила, и в доме это знают все.");
-    }
-
-    /*
-     * Три случая, где мягкой справки мало.
-     *
-     * Обычно этот блок только рассказывает, а решает сцена. Но схватки, угроза
-     * и свежая потеря — это то, что уже случилось с телом, и обходить их сцена
-     * не вправе: иначе панель показывает роды, а в прозе героиня идёт за
-     * дровами. Поэтому здесь блок говорит прямо, что происходит СЕЙЧАС.
-     */
-    if (view?.labour) {
-        out.push(view.labour.days <= 0
-            ? "СХВАТКИ НАЧАЛИСЬ ПРЯМО СЕЙЧАС, в этой самой сцене. Что бы ни происходило вокруг — боль пришла, воды близко, дитя идёт. Это уже случилось: не «может начаться», а началось. Пиши эту сцену от того, что роды идут."
-            : "Роды идут. Она рожает, и всё остальное подождёт.");
-        out.push("Когда дитя родится, поставь в маркере BODY «родила». Если родилось мёртвым — «дитя родилось мёртвым».");
-    } else if (view?.state === "threat") {
-        out.push(view.title === "Утроба в беде"
-            ? "УТРОБА В БЕДЕ ПРЯМО СЕЙЧАС. Тянет низ живота, мажет кровью — это происходит в этой сцене, а не грозит когда-нибудь. Дитя может не удержаться."
-            : "СХВАТКИ ИДУТ РАНЬШЕ СРОКА, прямо в этой сцене. Утроба каменеет часто и больно.");
-        out.push("Если героиня ляжет пластом и не встанет — поставь в маркере BODY «легла пластом». Это единственное, чем тут можно помочь, и помогает оно не всегда.");
-    } else if (view?.state === "loss") {
-        out.push("Это случилось только что и по-настоящему. Не отыгрывай назад, не смягчай и не оставляй дитя живым.");
-    }
-
-    /*
-     * Отвар. Модели даётся только то, что видит сама героиня и дом вокруг:
-     * какую траву пила, откуда взяла и что с ней теперь.
-     *
-     * Чего НЕ даётся — было ли что прерывать. Об этом не знает и она сама:
-     * на малом сроке о дитяти не знают, знают, что кровь не приходит. Связывать
-     * питьё с беременностью в сцене нельзя никому.
-     */
-    if (view?.draught) out.push(...draughtLines(view.draught));
-
-    out.push("</norse_body>", "");
-    return out.join("\n");
-}
-
-/**
- * Строки об отваре для модели.
- *
- * В день приёма — сам факт: что выпила и что это была за трава. Дальше —
- * только откат, потому что пить она больше не пьёт, а мутит её по-прежнему.
- *
- * Источник отвара нарочно не назван. Кухня, старуха, торговка, соседка —
- * это выбирает сцена по тому, кто у неё под рукой; движку тут решать нечего.
- */
-function draughtLines(draught) {
-    const out = [];
-    if (draught.age === 0) {
-        out.push(`{{user}} выпила женское питьё — отвар, возвращающий кровь: ${draught.herb.say}. Это случилось в этой сцене.`);
-        out.push("Такой отвар в этом веке берут у той, кто под рукой: у стряпух, у старухи, у заезжей торговки. Кто дал его — реши по сцене.");
-        out.push("Никто не говорит вслух о дитяти и не связывает питьё с ним. Это трава, возвращающая тидир, — так о ней и думают, и так о ней и говорят.");
-    } else {
-        out.push(`{{user}} пила женское питьё ${draught.age} ${draught.age === 1 ? "день" : "дня"} назад.`);
-    }
-
-    out.push(`Тело отвечает: ${draught.status} ${draught.hint}`);
-    if (draught.lingering) {
-        out.push("Отвар давно выпит, а тело не отпускает. Это видно всем в доме.");
-    }
-    if (draught.fatal) {
-        out.push("ЭТОТ ОТВАР ЕЁ УБИВАЕТ. Отрава взяла своё: жар не спадает, судороги идут одна за другой, силы уходят. Спасти её нечем — этого не умеют. Пиши это как есть.");
-    }
-    return out;
-}
-
-/**
- * Что с дитятей — отдельной справкой, рядом со временем и телом.
- *
- * По той же причине, по которой отсюда уехали дата и тело: внутри блока
- * трекера всё читается как поле для заполнения, а возраст дитяти и его нужда —
- * не поля, а обстановка сцены. Модель их не сообщает, она их видит.
- *
- * Возраст и нужду считает панель. У модели спрашиваются только вехи — зубок,
- * первые шаги, первое слово, хворь, — потому что их из календаря не выведешь.
- */
-function childContext() {
-    const kids = bodySummary()?.children;
-    if (!kids?.length) return "";
-
-    const out = ["<norse_child>"];
-    for (const kid of kids) {
-        out.push(`${kid.title}, ${kid.age}. ${kid.stage.hint} Сейчас: ${kid.need}.`);
-        for (const mark of kid.marks) out.push(mark + ".");
-    }
-    out.push(
-        "Дитя не говорит и не рассуждает: оно кричит, тянется, засыпает. Взрослые понимают его по крику и по тому, как оно берёт грудь.",
-        "</norse_child>",
+        "</norse_body>",
         "",
-    );
-    return out.join("\n");
+    ].join("\n");
 }
 
 /**
@@ -1663,20 +910,6 @@ const EMPTY_STATE = {
     weather: null, location: null, userAttire: null,
     charMood: null, charAttire: null, thought: null,
     charState: null, userState: null, advice: null,
-    /* Тяга. Поля тут не было, а строку панель рисует по `state.desire` —
-       значит в чате без единого снимка «тяга» держалась бы на экране от
-       прошлой истории. Тот же случай, что и со строкой «что было» ниже. */
-    desire: null,
-    midwife: null,
-    faderni: null, childRank: null, childName: null,
-    /* Что случилось с телом в этой сцене — список опознанных событий.
-       Раньше поля тут не было, и строка «что было» держалась бы от прошлой
-       истории: снимок обязан сбрасывать всё, что панель читает. */
-    body: null,
-    /* Слова сцены к заготовкам панели. Читает их bodySummary(), и значит
-       сбрасывать их обязан тот же эталон: без этого размер дитяти от прошлой
-       беременности стоял бы в чате, где снимка нет вовсе. */
-    wombSize: null, wombSign: null, childGrowing: null,
 };
 
 /** Кэш отрисовки: копия снимка, который сейчас на экране. */
@@ -1789,9 +1022,6 @@ function readAndRender() {
     const read = readState();
 
     Object.assign(state, EMPTY_STATE, read.state ?? {});
-    /* Сказанное однажды приезжает не из снимка, а из общего счёта: модель
-       называет имя дитяти один раз, а панель обязана помнить его дальше. */
-    Object.assign(state, read.told ?? {});
 
     /* Дату показываем и до первого маркера: пользователь выставил её в Tímatal
        и вправе сразу видеть, что она принялась. */
@@ -2006,47 +1236,6 @@ function factRow(iconName, label, value, hint) {
 }
 
 /**
- * Чем дитя будет по закону этого века.
- *
- * Слова приходят от модели: их четыре, и они перечислены в блоке промпта
- * BLOCK_LEGAL. Здесь только перевод для подсказки — «хорнунг» само по себе
- * не говорит ничего даже тому, кто писал расширение.
- */
-const CHILD_RANKS = {
-    "скирборинн": "Рождён в браке — наследует по закону",
-    "фриллуборинн": "Рождён от наложницы — признан, но не наравне с законными",
-    "тюборинн": "Рождён от рабыни — и сам раб",
-    "хорнунг": "Рождён от свободной женщины вне брака",
-};
-
-/** Подсказка к рангу дитяти, если слово узнано. */
-function childRankHint(value) {
-    return CHILD_RANKS[String(value ?? "").trim().toLowerCase()] ?? null;
-}
-
-/**
- * Род — чьё дитя и кем оно будет в роду.
- *
- * Отец, признание отцовства, ранг и имя — один вопрос, а не четыре. Раньше
- * отец стоял в панели пятой строкой, а фадерни с рангом — двенадцатой, между
- * оберегами и греющейся водой, хотя в этом веке именно они и решали судьбу
- * ребёнка: признанный сын наследует, непризнанный не наследует ничего.
- */
-const KIN_FIELDS = [
-    ["watch-faderni", "Фадерни", "faderni"],
-    ["watch-rank", "Дитя будет", "childRank"],
-    ["watch-name", "Имя", "childName"],
-];
-
-/** Кучка фактов под своим заголовком. Пустую не рисуем вовсе. */
-function fillGroup(selector, title, rows) {
-    const box = el(selector).empty();
-    if (!rows.length) { box.hide(); return false; }
-    box.append($("<div>", { "class": "nrn-group-title", text: title }), ...rows).show();
-    return true;
-}
-
-/**
  * Праздник — строкой над календариком.
  *
  * Стоит именно там, где на него смотрят: прямо над неделей, в которой он
@@ -2199,11 +1388,11 @@ function renderAll() {
     if (!showTime && !showDate && !showDetails) {
         // Чистим содержимое, а не только прячем: иначе прошлая сцена остаётся
         // в DOM и попадает в текст сообщения при копировании или озвучке.
-        el("#nrn-eykt-name, #nrn-week, #nrn-date, #nrn-moon, #nrn-feast, #nrn-grid, #nrn-mood-chips, #nrn-children, #nrn-draught-name").empty();
+        el("#nrn-eykt-name, #nrn-week, #nrn-date, #nrn-moon, #nrn-feast, #nrn-grid, #nrn-mood-chips").empty();
         el("#nrn-sun, #nrn-eykt-num, #nrn-weather-value, #nrn-location-value").text("");
         const arc = el("#nrn-weather-text").find("textPath")[0];
         if (arc) arc.textContent = "";
-        el("#nrn-attire-user-text, #nrn-attire-char-text, #nrn-thought-text, #nrn-cycle-text, #nrn-cycle-status, #nrn-cycle-desire, #nrn-cycle-kicks, #nrn-cycle-extra, #nrn-cycle-kin, #nrn-cycle-house, #nrn-cycle-signs, #nrn-cycle-debug, #nrn-char-state-text, #nrn-user-state-text, #nrn-advice-text").text("");
+        el("#nrn-attire-user-text, #nrn-attire-char-text, #nrn-thought-text, #nrn-cycle-text, #nrn-cycle-status, #nrn-cycle-extra, #nrn-char-state-text, #nrn-user-state-text, #nrn-advice-text").text("");
         el("#nrn-beam, #nrn-wood, #nrn-book").hide();
         el("#nrn-grid").addClass("nrn-hidden");
         /* Текст ставим заново, а не только показываем: showFailure() пишет
@@ -2341,83 +1530,27 @@ function textRow(rowSelector, textSelector, value) {
     }
 }
 
-/*
- * Что случилось с телом — теми же словами, какими это назвала модель.
- *
- * Промпт даёт закрытый список: парсер узнаёт слова и складывает их в
- * `state.body` опознанными кличками. Обратно в слова — здесь: панель
- * показывает читателю то, что произошло в сцене, а не кличку из кода.
- * Порядок в строке — порядок в сцене, его расставил разбор.
- */
-const BODY_EVENT_WORDS = {
-    seedSpilled: "семя пролилось",
-    seedWithheld: "семя не пролилось",
-    bleedStart: "кровь пришла",
-    bleedEnd: "кровь кончилась",
-    oddBleeding: "кровь не в срок",
-    conceived: "понесла",
-    realized: "поняла, что тяжела",
-    quickened: "дитя шевельнулось",
-    divined: "гадала о дитяти",
-    kick: "дитя бьётся",
-    quiet: "дитя затихло",
-    labour: "схватки начались",
-    birth: "родила",
-    lost: "выкидыш",
-    stillborn: "дитя родилось мёртвым",
-    nursingStart: "дитя у груди",
-    nursingEnd: "отняли от груди",
-    hungr: "голодала",
-    sott: "хворала",
-    ferd: "была в дороге",
-    ugg: "извелась",
-    heavy: "подняла тяжёлое",
-    strained: "надорвалась",
-    fell: "упала",
-    beaten: "побили",
-    rest: "легла пластом",
-    childTooth: "зубок прорезался",
-    childWalks: "дитя пошло",
-    childSpeaks: "дитя заговорило",
-    childSick: "дитя занемогло",
-    childWell: "дитя поправилось",
-    childDied: "дитя померло",
-};
-
-/**
- * Строка «что было» — в подножии книги, рядом со словом повитухи.
- *
- * Видна только в раскладке «Дом и его нити»: в двух других подножия нет,
- * и события тела там читаются по самой нити. Сцена без событий — обычный
- * ход, и строки тогда нет вовсе.
- */
-function renderHappened() {
-    const words = (state.body ?? [])
-        .map((id) => BODY_EVENT_WORDS[id])
-        .filter(Boolean);
-    textRow("#nrn-happened", "#nrn-happened-text", words.join(" · ") || null);
-}
-
 /**
  * Совет — то, что сказала бы знающая женщина этого века.
  *
  * Пишет его модель: она одна видит, что героиня прямо сейчас рубит дрова.
- * Наше дело — подстраховка: если строки нет, берём слово повитухи по стадии,
- * чтобы совет был всегда, как и просили.
  */
 function renderAdvice() {
-    textRow("#nrn-advice", "#nrn-advice-text", state.advice || bodySummary()?.advice || null);
+    textRow("#nrn-advice", "#nrn-advice-text", state.advice || null);
 }
 
+/**
+ * Нить Фрейи — напоминалка: где героиня в счёте цикла или ношения.
+ *
+ * Две строки и ещё одна при ношении: фаза со счётом, слова о ней и когда
+ * ждать. Обе первые кликабельны — по клику пояснение. Что показывать, решено
+ * в bodyView(): здесь только раскладка, иначе панель и промпт разъедутся.
+ */
 function renderCycle() {
     const row = el("#nrn-cycle");
     const s = bodySummary();
-    if (!s) { row.hide(); el("#nrn-cycle-cols").hide(); return; }
+    if (!s) { row.hide(); return; }
 
-    /* Две обязательные строки: где мы в счёте и что с телом. Обе кликабельны.
-       Ещё две необязательные — приметы и гадание — появляются только когда
-       героиня знает о дитяти. Что показывать, решено в bodyView(): здесь
-       только раскладка, иначе панель и промпт разъедутся. */
     el("#nrn-cycle-text").empty().append(
         icon(s.icon),
         hintSpan("cyclePhase", s.title, s.titleHint),
@@ -2425,225 +1558,10 @@ function renderCycle() {
     );
     el("#nrn-cycle-status").empty().append(hintSpan("cycleStatus", s.status, s.statusHint));
 
-    /*
-     * Тяга — то единственное в нити, чего панель не считает и не может.
-     *
-     * Лоно она считает: по дню цикла известно, отворилось оно или нет, и это
-     * примета вида `heat`. А хочет ли героиня — счётом не выводится вовсе.
-     * Беременная, хворая, в горе, в ссоре или просто уставшая женщина хочет
-     * не по календарю; и хотеть она может кого угодно, о чём панели знать
-     * тем более неоткуда. Поэтому строку пишет модель, а не таблица.
-     *
-     * Ярлык — Fýsn, по щелчку «тяга»: тем же приёмом, что и фазы цикла.
-     * Знака у строки нет намеренно — в «нитях» ярлык рисует CSS по знаку, и
-     * знак со словом стояли бы двумя ярлыками подряд (см. léttari в body.js).
-     */
-    const desire = el("#nrn-cycle-desire").empty();
-    if (state.desire) {
-        desire.append($("<div>", { "class": "nrn-fact" }).append(
-            hintSpan("desire", "Fýsn", "тяга").addClass("nrn-fact-label"),
-            $("<span>", { "class": "nrn-fact-value", text: state.desire }),
-        )).show();
-    } else {
-        desire.hide();
-    }
-
-    /* Шевеления — во всю ширину, сразу под словами о теле. Тревога висит на
-       самой строке, а не на соседях: раньше затишье дитяти красило заодно и
-       обереги, и имя, и число женщин в доме — восемь строк кричали об одном,
-       и кричать переставало быть заметным. */
-    const kicks = el("#nrn-cycle-kicks").empty();
-    if (s.kicks) {
-        kicks.append(
-            factRow("watch-kicks", null, s.kicks.text).toggleClass("nrn-alarm", !!s.kicks.alarm),
-        ).show();
-    } else {
-        kicks.hide();
-    }
-
     const extra = el("#nrn-cycle-extra").empty();
     if (s.extra) extra.append(factRow(s.extraIcon, null, s.extra)).show(); else extra.hide();
 
-    /* Носит ли она сейчас. От этого зависят обе плашки: и род, и ношение —
-       про дитя в утробе, и после родов им обеим стоять пустыми. */
-    const carrying = s.state === "pregnant_unknown" || s.state === "pregnant_known"
-        || s.state === "threat";
-
-    /* Род. Отец и гадание — двумя строками, не одной: признание отцовства
-       это правовой факт, а толкование живота — присказка повитухи, и
-       подсказка «гадание, а не знание» относится только ко второму. */
-    const kin = [];
-    if (s.father) kin.push(factRow("body-father", "Отец", s.father));
-    /* Одна строка в двух состояниях, а не две подряд: примета живота уходит,
-       как только приговор назван, — иначе одно и то же поверье стояло бы
-       в панели дважды. «Толкуют» теперь и правда значит, что кто-то толковал:
-       до похода к гадающему строка говорит «Примета». */
-    if (s.guess) {
-        kin.push($("<div>", { "class": "nrn-fact" }).append(
-            icon("body-divination"),
-            $("<span>", { "class": "nrn-fact-label", text: "Толкуют" }),
-            hintSpan("cycleGuess", s.guess, s.guessHint).addClass("nrn-fact-value"),
-        ));
-    } else if (s.omen) {
-        kin.push($("<div>", { "class": "nrn-fact" }).append(
-            icon("body-divination"),
-            $("<span>", { "class": "nrn-fact-label", text: "Примета" }),
-            hintSpan("cycleOmen", s.omen, s.omenHint).addClass("nrn-fact-value"),
-        ));
-    }
-    /*
-     * Род — только пока дитя в утробе.
-     *
-     * Стояло без условия, и фадерни со скирборинном висели у матери весь год
-     * после родов, а имя — третьей строкой, хотя оно уже написано в «детях».
-     * Решено это однажды, в час рождения; дальше род застыл в самом дитяти
-     * и показывается у него.
-     *
-     * Имя тут показываем и пустым: пока родители его не выбрали, строка
-     * говорит об этом прямо. Это не заглушка, а положение дел — до наречения
-     * имени нет, и в доме об этом знают.
-     */
-    if (carrying) {
-        for (const [iconName, label, key] of KIN_FIELDS) {
-            const value = state[key] ?? (key === "childName" ? "не выбрано" : null);
-            if (!value) continue;
-            /* Ранг дитяти — единственное поле рода, которое само по себе не
-               читается: «хорнунг» ничего не говорит, пока не щёлкнешь. */
-            kin.push(factRow(iconName, label, value,
-                key === "childRank" ? childRankHint(value) : null));
-        }
-    }
-    const hasKin = fillGroup("#nrn-cycle-kin", "Дом и род", kin);
-
-    /* Ношение: сперва счёт (срок и размер — их знает панель), потом дом
-       (повитуха — её знает сцена или Tímatal). Порядок от общего к частному:
-       когда ждать, каково дитя, кто примет. */
-    const carry = [];
-    if (s.due) carry.push(factRow("body-due", "Срок", s.due));
-    if (s.size) carry.push(factRow("body-size", "Размер", s.size));
-    /*
-     * Повитуха — только пока носит.
-     *
-     * Стояла безусловно, и «Льосмодир: Забава» висела в панели через год
-     * после родов. Льосмодир принимает роды и ходит за родильницей первые
-     * дни — дальше она в доме не нужна, и спрашивать её незачем ни панели,
-     * ни промпту. Понадобится — вернётся с новым ношением.
-     *
-     * Заданная автором главнее сказанной сценой: это уговор ролевой,
-     * а сцена могла просто не вспомнить о нём в этом ходу.
-     */
-    const midwife = carrying ? (manualMidwife() ?? state.midwife) : null;
-    if (midwife) carry.push(factRow("watch-midwife", "Льосмодир", midwife));
-    const hasHouse = fillGroup("#nrn-cycle-house", "Ношение", carry);
-
-    /* Приметы — по строке на примету, каждая со своим знаком. Вид приметы
-       считает bodyView(): что грудь, что дурнота, что кровь — знать это
-       раскладке неоткуда. Своим столбцом напротив рода и дома: к девятой
-       части их набирается десяток, и в общем потоке они топили всё под собой. */
-    const signs = el("#nrn-cycle-signs").empty();
-    if (s.signs?.length) {
-        for (const sign of s.signs) signs.append(factRow(`sign-${sign.kind}`, null, sign.text));
-        signs.show();
-    } else {
-        signs.hide();
-    }
-
-    el("#nrn-cycle-cols").toggle(hasKin || hasHouse);
-
-    const debug = el("#nrn-cycle-debug").empty();
-    if (s.hidden?.length) debug.append(plainSpan(s.hidden.join(" · "))).show(); else debug.hide();
-
     row.show();
-}
-
-/**
- * Плашка про дитя — под сводкой об утробе, своей строкой на каждого.
- *
- * Отдельно от матери нарочно: она может уже снова носить, а первенцу всё так
- * же нужна грудь. Показываем только то, что видно с одного взгляда — имя,
- * возраст и что дитяти нужно сейчас.
- */
-/**
- * Плашка отвара — под сводкой об утробе, рядом с дитятей.
- *
- * Показывает только то, что чувствует героиня. Подействовал отвар или
- * прерывать было нечего — этого здесь нет и не будет: она бы и сама
- * не различила.
- */
-function renderDraught() {
-    const row = el("#nrn-draught");
-    const d = bodySummary()?.draught;
-    if (!d) { row.hide(); return; }
-
-    el("#nrn-draught-name").empty().append(
-        hintSpan("draught", d.title, `${d.herb.ru} · ${d.toll.ru} откат`),
-    );
-    const text = el("#nrn-draught-text").text(d.status);
-    text.toggleClass("nrn-alarm", d.fatal || d.toll.id === "dire");
-    row.show();
-}
-
-function renderChildren() {
-    const box = el("#nrn-children").empty();
-    const head = el("#nrn-kids-head");
-    const kids = bodySummary()?.children;
-    if (!kids?.length) { box.hide(); head.hide(); return; }
-
-    head.show();
-
-    for (const kid of kids) {
-        const line = $("<div>", { "class": "nrn-child" });
-        /*
-         * Шапка дитяти: имя, стадия роста, возраст.
-         *
-         * Имя щёлкать больше нельзя, и стадия за ним не прячется. Раньше
-         * «Ползунок» показывался только по нажатию на имя — то есть не
-         * показывался вовсе: щёлкать по имени ребёнка никому не приходит
-         * в голову. Теперь оба слова стоят рядом с именем и читаются
-         * сразу: стадия слева, возраст справа, как заголовок створки.
-         */
-        line.append($("<div>", { "class": "nrn-child-head" }).append(
-            icon("child", "nrn-child-icon"),
-            $("<span>", { "class": "nrn-child-name", text: kid.title }),
-            $("<span>", { "class": "nrn-child-stage", text: kid.stage.ru }),
-            $("<span>", { "class": "nrn-child-age", text: kid.age }),
-        ));
-
-        /* Дальше — строки «подпись: слово», ровно как на листе героини:
-           узкий столбец подписи слева, слово во всю оставшуюся ширину.
-           Нужда первой: ради неё плашка и заведена. */
-        if (kid.need) {
-            const need = factRow("child-need", "Нужно", kid.need).addClass("nrn-child-need");
-            if (kid.alarm) need.addClass("nrn-alarm");
-            line.append(need);
-        }
-        /* Как растёт — слова стадии, а если сцена сказала своё, то её.
-           Строка длинная, и потому идёт следом за нуждой, а не в шапке. */
-        if (kid.stage.hint) line.append(factRow("child-grow", "Растёт", kid.stage.hint).addClass("nrn-child-grow"));
-        /* На руках и на кого похоже — из сцены, и потому под нуждой:
-           нужда о том, что сейчас, а эти две — о том, как оно есть. */
-        if (kid.arms) line.append(factRow("child-arms", "На руках", kid.arms));
-        if (kid.look) line.append(factRow("child-look", "Обличьем", kid.look));
-        /*
-         * Род — здесь, у самого дитяти, и здесь он застыл.
-         *
-         * У матери он стоял до конца чата, а решается однажды и не о ней:
-         * признают дитя, и по закону рождается дитя. У двойни поля свои
-         * у каждого, хотя обычно совпадают, — плашка на каждого своя.
-         *
-         * Стоят они ниже руки и обличья нарочно: те две про сегодняшний день,
-         * а эти две — про то, что было решено раз и навсегда.
-         */
-        if (kid.faderni) line.append(factRow("watch-faderni", "Фадерни", kid.faderni));
-        if (kid.rank) {
-            line.append(factRow("watch-rank", "По закону", kid.rank, childRankHint(kid.rank)));
-        }
-        for (const mark of kid.marks) {
-            line.append(factRow("child-mark", "Веха", mark).addClass("nrn-child-mark"));
-        }
-        box.append(line);
-    }
-    box.show();
 }
 
 /**
@@ -2694,12 +1612,9 @@ function renderExtraFields() {
 
     /* --- лист нити Фрейи --- */
     renderCycle();
-    renderDraught();
-    renderHappened();
     renderAdvice();
-    renderChildren();
     const hasBody = !!bodySummary();
-    const hasAdvice = !!(state.advice || bodySummary()?.advice);
+    const hasAdvice = !!state.advice;
     leafEmpty("#nrn-freyja-empty", hasBody || hasAdvice,
         settings().bodyTracking ? "Счёт тела ещё не начат." : "Счёт тела выключен в настройках.");
 
@@ -2748,11 +1663,13 @@ const TABS = ["user", "freyja", "char"];
  * В раскладке «Дом и его нити» разделов свои три, и это не те же три.
  *
  * Нить Фрейи там не отдельная вкладка: она идёт внутри вкладки героини,
- * под её одеждой, — а вот дети становятся третьей створкой, потому что на
- * узкой книге им иначе не хватает места. И все три можно закрыть разом:
- * пустая строка — законное состояние, а не сбой.
+ * под её одеждой. И обе можно закрыть разом: пустая строка — законное
+ * состояние, а не сбой.
+ *
+ * Третьей створкой здесь стояли дети; их сняли вместе со всей линией
+ * дитяти, и выбор «kids», оставшийся в настройках, сводится к героине.
  */
-const THREAD_TABS = ["user", "char", "kids", ""];
+const THREAD_TABS = ["user", "char", ""];
 
 function tabsForSkin() {
     return currentSkin() === "thread" ? THREAD_TABS : TABS;
@@ -2963,21 +1880,11 @@ function figureButton(tab, id, label) {
 /**
  * Акцентный разделитель в духе исландских ставов.
  *
- * Ставится только там, где нужен акцент: перед нитью Фрейи и перед детьми.
+ * Ставится только там, где нужен акцент: перед нитью Фрейи.
  * Обычные черты остаются чертами — иначе акцент перестаёт быть акцентом.
- *
- * variant: "" — стрелы и ромб, "kids" — три ромба.
  */
-function buildNorseRule(variant = "") {
-    const kids = variant === "kids";
-    const glyph = kids
-        ? `<path d="M6 8 H30" />
-           <path d="M42 3 L50 8 L42 13 L34 8 Z" />
-           <path class="nrn-rule-eye" d="M66 1 L74 8 L66 15 L58 8 Z" />
-           <circle class="nrn-rule-dot" cx="66" cy="8" r="1.3" />
-           <path d="M90 3 L98 8 L90 13 L82 8 Z" />
-           <path d="M102 8 H126" />`
-        : `<path d="M2 4 A4 4 0 0 1 2 12" />
+function buildNorseRule() {
+    const glyph = `<path d="M2 4 A4 4 0 0 1 2 12" />
            <path d="M8 8 H30" />
            <path d="M22 4 L18 8 L22 12" />
            <path d="M30 4 V12" />
@@ -2989,12 +1896,8 @@ function buildNorseRule(variant = "") {
            <path d="M110 4 L114 8 L110 12" />
            <path d="M102 8 H124" />
            <path d="M130 4 A4 4 0 0 0 130 12" />`;
-
-    /* Детская черта уже взрослой: три ромба против стрел и крючьев, и
-       глиф ей отмерен по макету — 118 против 132. */
-    const width = kids ? 118 : 132;
-    return $("<div>", { "class": `nrn-rule${kids ? " nrn-rule-kids" : ""}`, "aria-hidden": "true" })
-        .html(`<svg width="${width}" height="16" viewBox="0 0 132 16">${glyph}</svg>`);
+    return $("<div>", { "class": "nrn-rule", "aria-hidden": "true" })
+        .html(`<svg width="132" height="16" viewBox="0 0 132 16">${glyph}</svg>`);
 }
 
 /** Создаёт DOM-структуру виджета (detached — вставит mountWidget). */
@@ -3072,7 +1975,7 @@ function buildWidget() {
              * Книга — разворот из трёх створок.
              *
              * На странице вся сводка, а рядом с ней то, чем её
-             * переключают: створки {{user}} и {{char}}, нить Фрейи и дети.
+             * переключают: створки {{user}} и {{char}} и нить Фрейи.
              */
             $("<div>", { id: "nrn-book", "class": "nrn-book" }).append(
 
@@ -3090,73 +1993,18 @@ function buildWidget() {
                             $("<div>", { id: "nrn-user-empty", "class": "nrn-leaf-empty" }),
                         ),
 
-                        /* Нить Фрейи — то, ради чего расширение и писалось.
-                           Отвар и слово повитухи живут здесь же: они про
-                           утробу, и на чужом листе им делать нечего. */
-                        /*
-                         * Лист нити разложен по смыслу, а не по тому, откуда
-                         * какое поле пришло.
-                         *
-                         * Раньше «Отец» стоял пятой строкой, а признание
-                         * отцовства, ранг дитяти и имя — двенадцатой, хотя это
-                         * один и тот же вопрос: чей ребёнок и кем он будет в
-                         * роду. Теперь род собран в одну кучку, дом и
-                         * приготовления — в другую, а приметы, которых к концу
-                         * срока набирается десяток, стоят своим столбцом
-                         * напротив: так лист выходит вдвое короче.
-                         */
+                        /* Нить Фрейи — напоминалка о цикле и сроке. Слово
+                           норны живёт здесь же: в разметке это последнее
+                           слово листа, а на место его ставит applySkin. */
                         $("<div>", { id: "nrn-page-freyja", "class": "nrn-leaf", "data-leaf": "freyja" }).append(
                             buildNorseRule(),
                             $("<div>", { id: "nrn-cycle", "class": "nrn-cycle" }).append(
-                                /* Фаза со счётом — заголовок листа, слова о теле
+                                /* Фаза со счётом — заголовок листа, слова о ней
                                    под ним подзаголовком. */
                                 $("<div>", { id: "nrn-cycle-text", "class": "nrn-cycle-head" }),
                                 $("<div>", { id: "nrn-cycle-status", "class": "nrn-cycle-sub" }),
-                                /* Тяга — единственная строка нити, которая
-                                   стоит здесь ВСЕГДА: и под дитятей, и после
-                                   родов, и в обычный день. Всё прочее в этом
-                                   углу приходит и уходит по состоянию. */
-                                $("<div>", { id: "nrn-cycle-desire", "class": "nrn-cycle-line nrn-cycle-dim" }),
-                                /* Шевеления — во всю ширину и сразу под словами
-                                   о теле: затишье дитяти единственное, о чём
-                                   здесь тревожатся, и прятать его в столбец
-                                   значило бы обменять тревогу на стройность. */
-                                $("<div>", { id: "nrn-cycle-kicks", "class": "nrn-cycle-line nrn-cycle-dim" }),
-                                /* Срок и размер дитяти — часть заголовка: это
-                                   тот же счёт, что и «Ношение: 6/9», только
-                                   словами. */
+                                /* Когда ждать — только при ношении. */
                                 $("<div>", { id: "nrn-cycle-extra", "class": "nrn-cycle-dim" }),
-                            ),
-                            /* Род и дом — двумя столбцами сразу под сроком:
-                               это короткие «подпись: значение», и они дают
-                               обзор быстрее длинных примет. */
-                            $("<div>", { id: "nrn-cycle-cols", "class": "nrn-cycle-cols" }).append(
-                                $("<div>", { "class": "nrn-cycle-col" }).append(
-                                    $("<div>", { id: "nrn-cycle-kin", "class": "nrn-cycle-group" }),
-                                ),
-                                $("<div>", { "class": "nrn-cycle-col" }).append(
-                                    $("<div>", { id: "nrn-cycle-house", "class": "nrn-cycle-group" }),
-                                ),
-                            ),
-                            /* Приметы — под ними и во всю ширину листа: к концу
-                               срока их десяток, и целыми фразами они ложатся
-                               лучше в широкую строку, чем в узкий столбец. */
-                            $("<div>", { id: "nrn-cycle-signs", "class": "nrn-cycle-dim" }),
-                            $("<div>", { id: "nrn-cycle-debug", "class": "nrn-cycle-line nrn-cycle-debug" }),
-                            $("<div>", { id: "nrn-draught", "class": "nrn-draught" }).append(
-                                icon("draught", "nrn-draught-icon"),
-                                $("<span>", { id: "nrn-draught-name" }),
-                                $("<span>", { id: "nrn-draught-text", "class": "nrn-draught-text" }),
-                            ),
-                            /*
-                             * Весть о теле: что случилось с ним на этом ходу.
-                             *
-                             * Стоит на листе нити, рядом с самим телом. В
-                             * обычный ход события нет, и строки тогда нет
-                             * вовсе — так и сказано в промпте.
-                             */
-                            $("<div>", { id: "nrn-happened", "class": "nrn-happened" }).append(
-                                $("<span>", { id: "nrn-happened-text" }),
                             ),
                             /*
                              * Подножие: слово норны.
@@ -3202,22 +2050,6 @@ function buildWidget() {
                 figureButton("freyja", "nrn-fig-freyja", "Нить Фрейи"),
                 figureButton("char", "nrn-fig-char", "{{char}}"),
 
-                /* Дети вписаны в саму книгу, под фигурками, и видны на любой
-                   странице: дитя не перестаёт просить есть оттого, что
-                   смотрят на {{char}}. */
-                buildNorseRule("kids"),
-                /* Третий раздел книги в «нитях»: у детей своя створка, и
-                   открывается она так же, как героиня и {{char}}. В двух
-                   других раскладках заголовка нет — там дети видны всегда. */
-                $("<button>", {
-                    id: "nrn-kids-head",
-                    "class": "nrn-kids-head",
-                    type: "button",
-                    "data-tab": "kids",
-                }).append(
-                    $("<span>", { "class": "nrn-kids-name", text: "Дети" }),
-                ),
-                $("<div>", { id: "nrn-children", "class": "nrn-children" }),
             ),
 
             $("<div>", { id: "nrn-stub", text: `ᚱ ${t`Waiting for the infoblock…`}` }),
@@ -3941,6 +2773,11 @@ function loadSettings() {
        Теперь она всегда 28, а забытая тридцатка давала ровный оборот на
        таймскипе в три месяца — цикл возвращался на тот же день. */
     delete extension_settings[extensionName].cycleLength;
+    /* Женскую линию урезали до счёта цикла и срока: отладка скрытого слоя,
+       смерть от отвара, точность гадания и шансы зачатия больше ни к чему. */
+    for (const key of ["bodyDebug", "herbDeath", "divinationAccuracy", "conceptionChances"]) {
+        delete extension_settings[extensionName][key];
+    }
 }
 
 function bindCheckbox(selector, key, onChange) {
@@ -4043,8 +2880,6 @@ function bindSettings() {
     });
 
     bindCheckbox("#nrn_body", "bodyTracking", () => { injectPrompt(); refresh(); });
-    bindCheckbox("#nrn_body_debug", "bodyDebug", () => refresh());
-    bindCheckbox("#nrn_herb_death", "herbDeath", () => { injectPrompt(); refresh(); });
 
     /* Раскладки и темы здесь нет: оформление живёт в Tímatal, рядом с
        полем правки CSS — см. раздел 7a. */

@@ -272,8 +272,8 @@ function view(state, title, extra = {}) {
 
 {
     /* Ношение ведёт другой вид: «cycle» о нём молчать обязан. */
-    const a = snap({ year: 998, month: 2, day: 7, hour: 12 }, { view: view("pregnant_known", "Kviðr") });
-    const b = snap({ year: 998, month: 2, day: 8, hour: 12 }, { view: view("pregnant_known", "Falli", { count: "Ношение: 9/9" }) });
+    const a = snap({ year: 998, month: 2, day: 7, hour: 12 }, { view: view("pregnant", "Kviknat") });
+    const b = snap({ year: 998, month: 2, day: 8, hour: 12 }, { view: view("pregnant", "Komin at falli", { count: "Ношение: 9/9" }) });
 
     eq("цикл о ношении молчит", noticesBetween(a, b, ["cycle"]).length, 0);
     const out = noticesBetween(a, b, ["body"]);
@@ -281,149 +281,52 @@ function view(state, title, extra = {}) {
     ok("со счётом срока", out[0].text.includes("Ношение: 9/9"), out[0].text);
 }
 
-{
-    /* Схватки при той же стадии — новость, и метка обязана её заметить. */
-    const a = snap({ year: 998, month: 2, day: 7, hour: 12 }, { view: view("pregnant_known", "Falli") });
-    const b = snap({ year: 998, month: 2, day: 7, hour: 15 },
-        { view: view("pregnant_known", "Falli", { labour: { days: 0, summoned: false } }) });
-    eq("начало схваток замечено", noticesBetween(a, b, ["body"]).length, 1);
-}
-
-{
-    const a = snap({ year: 998, month: 2, day: 7, hour: 12 }, { view: view("pregnant_known", "Kviðr") });
-    const b = snap({ year: 998, month: 2, day: 8, hour: 12 }, { view: view("threat", "Hætta") });
-    const out = noticesBetween(a, b, ["body"]);
-    eq("угроза замечена", out.length, 1);
-    eq("и подана тревогой", out[0].level, "warning");
-}
-
-{
-    /* Шевеление: важна перемена, а не ежедневная строка. «Тихо два дня» и
-       «тихо три дня» — одна и та же новость, сказанная дважды. */
-    const carrying = (kicks) => view("pregnant_known", "Kviðr", { kicks });
-    const a = snap({ year: 998, month: 2, day: 7, hour: 12 }, { view: carrying(null) });
-    const b = snap({ year: 998, month: 2, day: 8, hour: 12 },
-        { view: carrying({ days: 0, text: "Дитя бьётся крепко", alarm: false }) });
-    const c = snap({ year: 998, month: 2, day: 10, hour: 12 },
-        { view: carrying({ days: 2, text: "Дитя тихо 2 дня", alarm: true }) });
-    const d = snap({ year: 998, month: 2, day: 11, hour: 12 },
-        { view: carrying({ days: 3, text: "Дитя тихо 3 дня", alarm: true }) });
-
-    eq("первое шевеление названо", noticesBetween(a, b, ["body"]).length, 1);
-    const quiet = noticesBetween(b, c, ["body"]);
-    eq("затишье названо", quiet.length, 1);
-    eq("и подано тревогой", quiet[0].level, "warning");
-    eq("но не повторяется каждый день", noticesBetween(c, d, ["body"]).length, 0);
-}
-
-{
-    /* Отвар пьют и не нося дитя — новость идёт при любой главной метке. */
-    const draught = { id: "bjollujurt", title: "Bjöllujurt", status: "Кровь идёт, тело ломает.", lingering: false };
-    const a = snap({ year: 998, month: 2, day: 7, hour: 12 }, { view: view("cycling", "Tíðir") });
-    const b = snap({ year: 998, month: 2, day: 7, hour: 15 }, { view: view("cycling", "Tíðir", { draught }) });
-    const out = noticesBetween(a, b, ["body"]);
-    eq("отвар замечен и при счёте цикла", out.length, 1);
-    eq("под своим именем", out[0].title, "Bjöllujurt");
-    eq("и только один раз", noticesBetween(b, b, ["body"]).length, 0);
-
-    const after = snap({ year: 998, month: 2, day: 20, hour: 12 },
-        { view: view("cycling", "Tíðir", { draught: { ...draught, lingering: true, status: "Утроба не примет семени." } }) });
-    eq("перемена отката тоже названа", noticesBetween(b, after, ["body"]).length, 1);
-}
-
 /* ============================================================
- * Скрытая беременность
+ * Счёт насквозь
  *
- * Самое важное место во всём модуле. Зачатие лежит в данных с первого дня,
- * а героиня о нём не знает — и уведомления обязаны не знать тоже. Здесь
- * счёт настоящий, через bodyView: подделанной сводкой эту проверку не
- * сделать, вся суть в том, ЧТО именно тело отдаёт наружу в эти недели.
+ * Здесь сводка настоящая, через bodyView: подделанной этого не проверить,
+ * вся суть в том, сколько раз за круг и за срок меняется метка.
  * ============================================================ */
 
-/* Виды про утробу: день, Луна и поворот года здесь только мешали бы —
-   они идут своим чередом и к скрытому сроку отношения не имеют. */
+/* Виды про утробу: день, Луна и поворот года здесь только мешали бы. */
 const WOMB = ["cycle", "body"];
 
-group("Скрытая беременность");
+group("Счёт насквозь");
 
-{
-    const lastBleed = { year: 1015, month: 2, day: 24 };
-    const conceived = { year: 1015, month: 3, day: 12 };
-    const knownAt = addDays(conceived.year, conceived.month, conceived.day, 45);
-
-    const bodyOn = (i) => (i < 0
-        ? { lastBleed }
-        : {
-            lastBleed,
-            pregnancy: {
-                conceived,
-                knownSince: i >= 45 ? knownAt : null,
-                father: null, births: 1, seed: "s",
-            },
-        });
-
-    const at = (i) => addDays(conceived.year, conceived.month, conceived.day, i);
-    const snapAt = (i) => {
-        const today = at(i);
-        return watchSnapshot({
-            scene: { ...today, hour: 12 },
-            view: bodyView(bodyOn(i), today, { accuracy: 0.6 }),
-        });
-    };
-
-    /* Прогон от последних дней цикла до того дня, когда она узнала. */
-    let prev = snapAt(-2);
+/** Все уведомления о теле за `days` суток, начиная с `from`. */
+function heardOver(body, from, days) {
+    const at = (i) => addDays(from.year, from.month, from.day, i);
+    const snapAt = (i) => watchSnapshot({ scene: { ...at(i), hour: 12 }, view: bodyView(body, at(i)) });
+    let prev = snapAt(0);
     const heard = [];
-    for (let i = -1; i <= 45; i++) {
+    for (let i = 1; i <= days; i++) {
         const next = snapAt(i);
         for (const note of noticesBetween(prev, next, WOMB)) heard.push({ day: i, note });
         prev = next;
     }
-
-    const onConception = heard.filter((x) => x.day === 0);
-    eq("в день зачатия — тишина", onConception.length, 0);
-
-    const delays = heard.filter((x) => x.note.title === "Tíðir");
-    eq("о задержке сказано ровно один раз", delays.length, 1);
-    ok("и не в день зачатия, а когда срок прошёл", delays[0].day >= 7,
-        `сказано на день ${delays[0]?.day}`);
-    ok("без единого слова о причине",
-        !/дит|берем|зача|нош/i.test(delays[0].note.text + delays[0].note.title),
-        delays[0].note.text);
-
-    const known = heard.filter((x) => x.day === 45);
-    eq("день, когда узнала, назван", known.length, 1);
-    ok("и назван ношением", /Ношение/.test(known[0].note.text), known[0].note.text);
-
-    /* Между задержкой и знанием тело меняется каждый день — приметы, счёт
-       дней, — но новостью это не является. Раньше здесь сыпалось по
-       уведомлению в сутки: заголовком скрытого состояния служит счётчик. */
-    eq("за все недели скрытого срока — два уведомления", heard.length, 2);
+    return heard;
 }
 
 {
-    /* Названный сбой — та же задержка, но причина героине известна, и она
-       названа. Число дней при этом такое же: по длине строки не должно быть
-       видно, есть у задержки причина или нет. */
-    const lastBleed = { year: 1015, month: 2, day: 24 };
-    const body = { lastBleed, disruption: { id: "hungr", at: { year: 1015, month: 3, day: 4 } } };
+    /* Один круг от первого дня крови: четыре фазы — четыре смены, и
+       последняя из них — снова кровь. */
+    const lastBleed = { year: 1015, month: 2, day: 1 };
+    const heard = heardOver({ lastBleed }, lastBleed, 28);
+    eq("за круг — четыре уведомления", heard.length, 4);
+    ok("все под видом цикла", heard.every((x) => x.note.kind === "cycle"));
+    eq("последнее — снова Tíðir", heard.at(-1)?.note.title, "Tíðir");
+}
 
-    let prev = null;
-    const heard = [];
-    for (let i = 0; i <= 40; i++) {
-        const today = addDays(lastBleed.year, lastBleed.month, lastBleed.day, i);
-        const next = watchSnapshot({
-            scene: { ...today, hour: 12 },
-            view: bodyView(body, today, { accuracy: 0.6 }),
-        });
-        for (const note of noticesBetween(prev, next, WOMB)) heard.push({ day: i, note });
-        prev = next;
-    }
-
-    const upset = heard.filter((x) => x.note.title === "Hungr");
-    eq("о сбое сказано один раз", upset.length, 1);
-    ok("со счётом дней, как и у задержки без причины",
-        /Кровь не приходила/.test(upset[0].note.text), upset[0].note.text);
+{
+    /* Срок целиком: три стадии — две смены. Месяц ношения стадией не
+       является и новостью тоже. */
+    const conceived = { year: 1015, month: 2, day: 1 };
+    const body = { lastBleed: conceived, pregnancy: { conceived } };
+    const heard = heardOver(body, conceived, 280);
+    eq("за срок — два уведомления", heard.length, 2);
+    ok("оба под видом ношения", heard.every((x) => x.note.kind === "body"));
+    eq("сперва ожило", heard[0]?.note.title, "Kviknat");
+    eq("потом подошёл срок", heard[1]?.note.title, "Komin at falli");
 }
 
 /* ============================================================

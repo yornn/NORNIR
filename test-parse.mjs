@@ -19,9 +19,7 @@
 
 import {
     parseUrd,
-    parseBodyEvents,
     parsePassed,
-    TOLD_FIELDS,
     hasUrd,
     stripUrd,
     isPlaceholder,
@@ -562,14 +560,7 @@ const NRN_FULL = [
     "<!-- NRN MIND | mood: задумчивый | thought: Она знает больше, чем говорит. -->",
     "<!-- NRN FLESH | char: продрог, ломит плечо | user: устала, ноги сбиты -->",
     "<!-- NRN COUNSEL | advice: Отвар и покой до утра -->",
-    "<!-- NRN FREYJA | desire: не до того -->",
-    "<!-- NRN SIGNS | breast: соски саднит | sleep: не спала, слушала ветер -->",
-    "<!-- NRN BODY | body: кровь пришла -->",
-    "<!-- NRN BED | sex: да | internal: нет -->",
     "<!-- NRN SKIP | passed: три дня -->",
-    "<!-- NRN BIRTH | midwife: Арнхейд, полдня пути -->",
-    "<!-- NRN KIN | faderni: признано | rank: скирборинн -->",
-    "<!-- NRN CHILD | name: Хельга -->",
 ].join("\n");
 
 const full = parseUrd(NRN_FULL);
@@ -586,65 +577,40 @@ check("тело: char/user → charState/userState", [full.charState, full.userS
 check("настроение и мысль — из MIND", [full.charMood, full.thought],
     ["задумчивый", "Она знает больше, чем говорит."]);
 check("совет — из COUNSEL", full.advice, "Отвар и покой до утра");
-check("тяга — из FREYJA", full.desire, "не до того");
-check("событие тела разобрано", full.body, ["bleedStart"]);
-check("близость разобрана", [full.sex, full.internal], [true, false]);
-/* Промпт просит yes / no / unknown — по-английски, как и всё остальное в нём.
-   Разбор принимает оба языка: старые чаты полны русского «да». */
-check("да и yes значат одно",
-    [parseUrd("<!-- NRN BED | sex: yes | internal: no -->").sex,
-     parseUrd("<!-- NRN BED | sex: yes | internal: no -->").internal,
-     parseUrd("<!-- NRN BED | sex: да | internal: нет -->").sex,
-     parseUrd("<!-- NRN BED | sex: да | internal: нет -->").internal],
-    [true, false, true, false]);
-check("unknown и неизвестно — обе пустота, а не «нет»",
-    [parseUrd("<!-- NRN BED | sex: yes | internal: unknown -->").internal,
-     parseUrd("<!-- NRN BED | sex: да | internal: неизвестно -->").internal],
-    [null, null]);
 check("таймскип разобран", full.passed, 3);
-check("дозор родов разобран", full.midwife, "Арнхейд, полдня пути");
-
-/* Слова сцены поверх заготовок панели. Поле, которого нет в карте тем,
-   takeTopic() выбрасывает молча — а молчаливая потеря поля и есть худший
-   исход: в панели просто стоит заготовка, и понять, почему, неоткуда. */
-check("утроба разобрана",
-    [parseUrd("<!-- NRN WOMB | size: с материн кулак | sign: пояс переставлен -->").wombSize,
-     parseUrd("<!-- NRN WOMB | size: с материн кулак | sign: пояс переставлен -->").wombSign],
-    ["с материн кулак", "пояс переставлен"]);
-check("рост дитяти разобран",
-    parseUrd("<!-- NRN CHILD | growing: держит голову -->").childGrowing, "держит голову");
-/* Молоко — вид послеродового набора. Без строки в карте тем поле уезжало бы
-   в никуда, а пул примет в body.js о карте не знает. */
-check("молоко доезжает до примет",
-    parseUrd("<!-- NRN SIGNS | milk: подтекло на крик -->").signs.milk, "подтекло на крик");
-/* Женщин в доме, обереги и наготове убраны отовсюду: в панели они занимали
-   половину листа, а говорили мало. Поля, которых нет в таблице тем,
-   пропускаются молча — как и всякая незнакомая тема. */
-check("убранные поля не разбираются",
-    Object.keys(parseUrd("<!-- NRN BIRTH | midwife: нет | women: три | charms: молот | gear: пелёнки -->"))
-        .filter((k) => ["women", "charms", "gear"].includes(k)), []);
-check("род: rank → childRank", [full.faderni, full.childRank], ["признано", "скирборинн"]);
-check("дитя: name → childName", full.childName, "Хельга");
-check("приметы приезжают словарём по видам", full.signs,
-    { breast: "соски саднит", sleep: "не спала, слушала ветер" });
 
 /* Проза не должна нести на себе ни одного маркера. */
 check("вся проза остаётся чистой", stripUrd(NRN_FULL), "Проза сцены.");
 
-/* Тема без маркера — обычный ход, а не отказ разбора. Ровно ради этого
-   формат и переделывался: отсутствие маркера само по себе есть ответ. */
-const ordinary = parseUrd("<!-- NRN TIME | eykt: моргун -->\n<!-- NRN FREYJA | desire: тянет к нему -->");
-check("темы, которых нет, остаются пустыми",
-    [ordinary.sex, ordinary.passed, ordinary.midwife, ordinary.body], [null, null, null, null]);
-check("а те, что есть, разобраны", [ordinary.hour, ordinary.desire], [7, "тянет к нему"]);
-
-/* «Нрав» внутри SIGNS зовётся mood — так же, как настроение {{char}} в MIND.
-   Разбор идёт по темам, поэтому одно имя ведёт в два разных поля. */
-const bothMoods = parseUrd("<!-- NRN MIND | mood: весел -->\n<!-- NRN SIGNS | mood: молчит, огрызается -->");
-check("mood в MIND — настроение", bothMoods.charMood, "весел");
-check("mood в SIGNS — нрав", bothMoods.signs.mood, "молчит, огрызается");
-check("temper — псевдоним нрава",
-    parseUrd("<!-- NRN SIGNS | temper: тиха -->").signs.mood, "тиха");
+/*
+ * Снятые темы женской линии.
+ *
+ * Модель их больше не пишет, но старые чаты полны таких маркеров, а модель
+ * по привычке может выписать их ещё раз-другой. Тема узнаётся и вырезается,
+ * а данных из неё не берётся ни поля.
+ */
+const RETIRED = [
+    "<!-- NRN FREYJA | desire: не до того -->",
+    "<!-- NRN SIGNS | breast: соски саднит | sleep: не спала -->",
+    "<!-- NRN BODY | body: кровь пришла -->",
+    "<!-- NRN BED | sex: да | internal: нет -->",
+    "<!-- NRN BIRTH | midwife: Арнхейд, полдня пути -->",
+    "<!-- NRN KIN | faderni: признано | rank: скирборинн -->",
+    "<!-- NRN WOMB | size: с материн кулак | sign: пояс переставлен -->",
+    "<!-- NRN CHILD | name: Хельга | need: спит у огня -->",
+];
+const withRetired = parseUrd(["Проза.", "<!-- NRN TIME | eykt: моргун -->", ...RETIRED].join("\n"));
+check("снятые темы не дают полей",
+    Object.keys(withRetired).filter((k) => !["year", "month", "day", "hour", "minute", "weather", "location",
+        "userAttire", "charMood", "charAttire", "thought", "passed", "charState", "userState", "advice"].includes(k)),
+    []);
+check("а живые рядом с ними разобраны", withRetired.hour, 7);
+check("снятые темы вырезаются из прозы",
+    stripUrd(["Проза.", ...RETIRED].join("\n")), "Проза.");
+/* Ответ, где уцелела одна снятая тема, — маркер, но пустой. Его надо узнать,
+   иначе он так и остался бы висеть в тексте. */
+check("снятую тему видит hasUrd", hasUrd("Проза.\n<!-- NRN BODY | body: кровь пришла -->"), true);
+check("одна снятая тема — пустой разбор", parseUrd("<!-- NRN BED | sex: да -->"), null);
 
 /* Оборванная генерация: маркер начался, но `-->` не успел. */
 const torn = parseUrd("Проза.\n\n<!-- NRN PLACE | weather: Морось | location: брод");
@@ -670,42 +636,7 @@ check("hasUrd видит обе формы",
     [hasUrd("<!-- NRN TIME | eykt: отта -->"), hasUrd("<!-- [URD:\neykt: отта\n] -->"), hasUrd("просто текст")],
     [true, true, false]);
 
-console.log("\n=== События тела по-английски ===");
-
-/*
- * Промпт просит английские слова: опознавательный токен модель повторяет
- * точнее на языке, на котором к ней обращаются. Русские написания остаются —
- * старые чаты полны «кровь пришла», и читаться они обязаны дальше.
- */
-const ev = (text) => parseBodyEvents(text);
-
-check("англ. и рус. дают одно событие",
-    [ev("bleeding began"), ev("кровь пришла")], [["bleedStart"], ["bleedStart"]]);
-check("оба языка в одном маркере",
-    ev("bleeding ended; понесла"), ["bleedEnd", "conceived"]);
-
-/* Две ловушки, которых в русском списке не было. */
-check("«child fell sick» не зажигает хворь матери", ev("child fell sick"), ["childSick"]);
-check("а «fell sick» — зажигает", ev("fell sick"), ["sott"]);
-/* Мертворождение — тоже роды, и русское «дитя родилось мёртвым» всегда
-   зажигало оба события разом. Английское обязано вести себя так же. */
-check("«child born dead» — и роды, и мертворождение",
-    ev("child born dead"), ["birth", "stillborn"]);
-check("как и по-русски", ev("дитя родилось мёртвым"), ["birth", "stillborn"]);
-
-check("все английские слова из промпта разбираются",
-    [
-        "bleeding began", "bleeding ended", "bleeding out of season",
-        "seed spilled", "seed withheld",
-        "child stirred", "child kicking", "child gone quiet",
-        "labour began", "gave birth", "miscarried",
-        "child at the breast", "weaned", "knew herself with child", "conceived",
-        "went hungry", "fell sick", "travelled hard", "sick with worry",
-        "lifted heavy", "strained herself", "took a fall", "was beaten", "took to bed",
-        "child born dead",
-        "first tooth", "child walked", "child spoke",
-        "child fell sick", "child recovered", "child died",
-    ].filter((w) => !ev(w)), []);
+console.log("\n=== Таймскип ===");
 
 /*
  * Таймскип был последним полем, где у модели просили русское. Английские
@@ -722,25 +653,6 @@ check("половинка считается на обоих",
 /* Единицу не узнали — молчим: ошибочный скачок уводит календарь на месяцы,
    а пропущенный правится в Tímatal. */
 check("незнакомая единица — молчание", parsePassed("a fortnight"), null);
-
-console.log("\n=== Дитя из сцены ===");
-
-/*
- * У темы CHILD было одно поле, имя, — оттого плашка дитяти после родов
- * и выглядела пустой: возраст и нужду считала таблица, а живого ребёнка
- * в панели не было вовсе.
- */
-const kid = parseUrd("<!-- NRN CHILD | arms: у матери на руках | look: отцовы брови | need: тычется, грудь ищет | name: Хельга -->");
-check("на руках, обличьем, нужда и имя",
-    [kid.childArms, kid.childLook, kid.childNeed, kid.childName],
-    ["у матери на руках", "отцовы брови", "тычется, грудь ищет", "Хельга"]);
-/* Обличье говорится однажды и живёт дальше: лицо не меняется от хода к ходу. */
-check("обличье — из сказанного однажды", TOLD_FIELDS.includes("childLook"), true);
-check("а на руках и нужда — нет",
-    TOLD_FIELDS.some((f) => f === "childArms" || f === "childNeed"), false);
-/* Одни поля дитяти — тоже сцена: такой ответ терять незачем. */
-check("одно дитя без прочего не пустой разбор",
-    parseUrd("<!-- NRN CHILD | need: спит у огня -->")?.childNeed, "спит у огня");
 
 /* ============================================================
  * 5. SUMMARY

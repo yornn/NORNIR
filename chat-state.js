@@ -25,7 +25,6 @@
  */
 
 import {
-    TOLD_FIELDS,
     addDays,
     eyktForHour,
     hasDate,
@@ -36,29 +35,6 @@ import {
     serialToDate,
     stripUrd,
 } from "./parser.js";
-
-import {
-    CHILD_WATCH_DAYS,
-    CYCLE_DEFAULT,
-    NURSING_CHANCE,
-    STRAINS,
-    bloodBack,
-    TERM_DAYS,
-    THREAT_DAYS,
-    cycleSummary,
-    herbBarren,
-    pickHerb,
-    postpartumStage,
-    pregnancyTerm,
-    rollBirths,
-    rollConception,
-    rollSex,
-    rollSexes,
-    rollHerb,
-    rollStillbirth,
-    rollThreat,
-    strainLoad,
-} from "./body.js";
 
 /* ============================================================
  * 1. KEYS & STAMPS
@@ -259,7 +235,7 @@ function stripMarker(msg, keepMarker) {
  * 3. LOOKUP
  *
  * Наружу торчит ОДНА функция — readChat(). Всё, что выводится из истории —
- * снимок сцены, дата, тело, сказанное однажды, — считается за один вызов
+ * снимок сцены, дата и тело, — считается за один вызов
  * и одним набором настроек.
  *
  * Так было не всегда, и разница стоила дорого. Раньше вызывающий брал дату
@@ -279,16 +255,16 @@ function stripMarker(msg, keepMarker) {
  * Сначала скан с конца до первого сообщения {{char}} со снимком — по дороге
  * сообщения лениво синхронизируются, так подхватывается чат, в котором маркеры
  * ещё не разобраны. Потом один проход вперёд, который
- * раскладывает даты, ведёт тело и собирает сказанное однажды.
+ * раскладывает даты и ведёт счёт тела.
  *
  * @param {Array} chat Массив сообщений
  * @param {{year:number, month:number|"AUK", day:number}|null} startDate Дата начала чата
- * @param {{ keepMarker?: boolean, chatId?: string, chances?: object, manualBody?: object }} options
+ * @param {{ keepMarker?: boolean, manualBody?: object }} options
  * @returns {{ state: object|null, index: number, date: object|null, body: object|null,
- *             told: object|null, changed: boolean }}
+ *             changed: boolean }}
  */
 export function readChat(chat, startDate = null, options = {}) {
-    const empty = { state: null, index: -1, date: null, body: null, told: null, changed: false };
+    const empty = { state: null, index: -1, date: null, body: null, changed: false };
     if (!Array.isArray(chat) || chat.length === 0) return empty;
 
     let changed = false;
@@ -321,7 +297,6 @@ export function readChat(chat, startDate = null, options = {}) {
         index: found?.index ?? -1,
         date: resolved.current,
         body: resolved.body,
-        told: resolved.told,
         changed,
     };
 }
@@ -386,660 +361,6 @@ function rollLostYear(date, carried, source) {
     return then > was && then - was <= HALF_YEAR ? rolled : date;
 }
 
-/**
- * Применяет события тела к состоянию на дату этого сообщения.
- *
- * Порядок разбора важнее, чем кажется. Роды и потеря закрывают беременность,
- * зачатие её открывает, кровь двигает якорь цикла — и всё это может прийти
- * в одном сообщении. Разбираем по одному, слева направо, как оно и случилось
- * бы в сцене.
- *
- * Зачатие не гадаем: семя, пролившееся в плодовитые дни, даёт дитя. Бросок
- * кубика тут смотрелся бы честнее, но невоспроизводимо — свайп давал бы то
- * беременность, то нет, а календарь обязан считать одинаково.
- */
-function applyBodyEvents(body, events, today, ctx = {}) {
-    let next = body ? { ...body } : {};
-
-    /* Мертворождение читаем заранее, а не отдельным случаем в разборе.
-       «Дитя родилось мёртвым» задевает два правила сразу — роды и исход, —
-       и порядок между ними зависел бы от того, как их записали в таблице. */
-    const stillborn = events.includes("stillborn");
-
-    for (const event of events) {
-        switch (event) {
-            case "bleedStart":
-                /*
-                 * Беременную кровь не сбрасывает.
-                 *
-                 * Сброс ниже пересобирает состояние с нуля и переносит через
-                 * себя только `children` и `herb`. Для небеременной это верно:
-                 * кровь пришла — круг пошёл заново. Для беременной это было
-                 * тихое уничтожение всей линии: `pregnancy` не переносилась
-                 * и исчезала, а следа не оставалось — ни `lastLoss`, ни
-                 * `oddBleed`, ни строки в панели. Состояние просто откатывалось
-                 * к обычному циклу, день первый.
-                 *
-                 * И это не теоретический путь: при угрозе bodyContext() сам
-                 * говорит модели, что мажет кровью, — а из трёх кровяных слов
-                 * промпта верное («кровь не в срок») она выбирает на слух.
-                 * Разбор слов в BLOCK_BODY эту вероятность снижает, но цена
-                 * ошибки невосстановима, и здесь нужна гарантия, а не шанс.
-                 * Все прочие переходы своей охраной прикрыты, этот был один
-                 * без неё и самый разрушительный по последствиям.
-                 *
-                 * Кровь при ношении — это либо кровь не в срок, либо потеря,
-                 * и то и другое приходит своим событием. Уводим в первое:
-                 * ошибка модели в выборе слова не должна стоить дитяти.
-                 *
-                 * Тяготу (`strain`) при этом НЕ добавляем, и намеренно.
-                 * Смысл охраны в том, чтобы неудачно выбранное слово легло
-                 * на то же событие, что и верное, — а `oddBleeding` тяготы
-                 * не добавляет. Иначе выбор слова по-прежнему менял бы исход,
-                 * только иначе. К тому же addStrain() кидает на угрозу, а
-                 * кровь при ношении чаще всего сама и есть примета уже
-                 * объявленной угрозы: вышел бы круг «угроза мажет кровью,
-                 * кровь кидает на угрозу». Считать ли кровотечение при
-                 * ношении тяготой — отдельное решение, и принимать его надо
-                 * в STRAINS вместе с весом риска, а не здесь.
-                 */
-                if (next.pregnancy) {
-                    next.oddBleed = { ...today };
-                    break;
-                }
-                /*
-                 * Кровь закрывает и подозрение, и кормление: цикл пошёл заново.
-                 *
-                 * Но не всё, что было, ею отменяется. Уже рождённых детей
-                 * кровь не уносит, и выпитый отвар не перестаёт мутить оттого,
-                 * что тидир пришли, — а приходят они как раз после него.
-                 * Переносим их через сброс поимённо.
-                 */
-                next = {
-                    lastBleed: { ...today },
-                    ...(next.children ? { children: next.children } : {}),
-                    ...(next.herb ? { herb: next.herb } : {}),
-                    /*
-                     * Кормление кровь не отменяет.
-                     *
-                     * Стояло так, что вернувшиеся тидир сносили кормление
-                     * целиком, и молоко пропадало в тот же день. В жизни это
-                     * две разные вещи: у кормящей кровь может вернуться, а
-                     * молоко идти ещё год. Круг возвращает кровь, кормление
-                     * кончает «отняли от груди» — и больше ничто.
-                     */
-                    ...(next.nursing ? { nursing: next.nursing } : {}),
-                };
-                break;
-            case "bleedEnd":
-                /* Кровь кончилась раньше или позже, чем считает таблица фаз.
-                   Своего счёта не заводит — только поправляет вид панели. */
-                if (next.lastBleed) next.bleedEnded = { ...today };
-                break;
-            case "oddBleeding":
-                /* Кровь не в срок — не начало цикла, и якорь она НЕ двигает:
-                   иначе одно тревожное пятно сбивало бы весь дальнейший счёт.
-                   Записываем как примету, а не как тидир. */
-                next.oddBleed = { ...today };
-                break;
-            case "labour":
-                /* Схватки. Родов ещё нет — они придут своим событием, — но
-                   с этой минуты панель показывает роды, а не ношение. */
-                if (next.pregnancy) {
-                    next.pregnancy = { ...next.pregnancy, labour: { ...today } };
-                }
-                break;
-            case "seedSpilled":
-                next = tryConceive(next, today, true, ctx);
-                break;
-            case "seedWithheld":
-                /* Наружу или с оглядкой — шанс мал, но не ноль, и бросок
-                   всё равно делается: иначе «мы же поберёглись» становилось бы
-                   стопроцентной защитой, чего в XI веке не бывало. */
-                next = tryConceive(next, today, false, ctx);
-                break;
-            case "kick":
-                /* Шевеление — и отметка, что дитя живо, и, если это первое,
-                   тот самый квикнан. Затишье оно снимает. */
-                if (next.pregnancy) {
-                    next.pregnancy = { ...next.pregnancy, lastKick: { ...today }, quietSince: null };
-                    if (!next.pregnancy.quickened) {
-                        next.pregnancy.quickened = { ...today };
-                        next.pregnancy.knownSince = next.pregnancy.knownSince ?? { ...today };
-                    }
-                }
-                break;
-            case "divined":
-                /*
-                 * Сходили к гадающему.
-                 *
-                 * Гадание — оглашение, а не решение: пол решён в день зачатия
-                 * и лежит в записи (sexOf), гадать заново нечего. Здесь
-                 * помечается только день, когда о нём спросили, — и с этого
-                 * дня панель вправе назвать пол. До похода она знает о нём
-                 * ровно столько, сколько знает сам дом: ничего.
-                 *
-                 * Первый поход и есть ответ: `divination()` считает от даты
-                 * зачатия, поэтому второй гадающий сказал бы то же слово.
-                 * Поэтому и отметка ставится один раз.
-                 */
-                if (next.pregnancy && !next.pregnancy.divined) {
-                    next.pregnancy = { ...next.pregnancy, divined: { ...today } };
-                }
-                break;
-            case "quiet":
-                /*
-                 * Затишье — своя отметка, а не поддельное шевеление.
-                 *
-                 * Раньше здесь при пустом lastKick ставился lastKick = сегодня,
-                 * то есть на слова «дитя затихло» панель отвечала «Дитя бьётся
-                 * крепко». Теперь запоминаем день, с которого дитя не слыхать,
-                 * и счётчик тишины растёт от него.
-                 */
-                if (next.pregnancy && !next.pregnancy.quietSince) {
-                    next.pregnancy = { ...next.pregnancy, quietSince: { ...today } };
-                }
-                break;
-            case "quickened":
-                if (next.pregnancy) {
-                    /* Первое шевеление — оно же и последнее на сегодня: без
-                       lastKick счётчик тишины не от чего было бы считать, и
-                       вся тревога о дитяти оставалась мёртвой веткой. */
-                    next.pregnancy = {
-                        ...next.pregnancy,
-                        quickened: { ...today },
-                        lastKick: { ...today },
-                        quietSince: null,
-                    };
-                    /* Шевеление и есть тот миг, когда подозрение становится
-                       знанием. Исторически — ровно так. */
-                    if (!next.pregnancy.knownSince) next.pregnancy.knownSince = { ...today };
-                }
-                break;
-            case "hungr":
-            case "sott":
-            case "ferd":
-            case "ugg":
-                /* Сбой откладывает кровь. Беременной он ничего не меняет:
-                   там своя причина, и вторая поверх неё была бы шумом. */
-                if (!next.pregnancy && !next.nursing) {
-                    next.disruption = { id: event, at: { ...today } };
-                }
-                /* Но на утробу голод и хворь давят наравне с падением. */
-                next = addStrain(next, event, today, ctx);
-                break;
-            case "heavy":
-            case "strained":
-            case "fell":
-            case "beaten":
-                next = addStrain(next, event, today, ctx);
-                break;
-            case "rest":
-                /* Единственный ответ на угрозу, какой был у этого века:
-                   лечь и не вставать. Помогает не всегда — какие угрозы
-                   отлёживаются, решено в тот же миг, что и сама угроза. */
-                next.resting = { ...today };
-                if (next.pregnancy?.threat?.savable) {
-                    const { threat, ...rest } = next.pregnancy;
-                    next.pregnancy = { ...rest, held: { ...today } };
-                }
-                break;
-            case "conceived":
-                /* Сцена объявила зачатие — бросок больше не спрашиваем. */
-                if (!next.pregnancy) next.pregnancy = newPregnancy(next, today, ctx);
-                break;
-            case "realized":
-                /* Героиня поняла, что тяжела. Если в данных беременности нет —
-                   значит бросок промахнулся, а игра ушла вперёд; верим сцене
-                   и заводим дитя от последней близости. */
-                if (!next.pregnancy) next.pregnancy = newPregnancy(next, today, ctx);
-                if (!next.pregnancy.knownSince) {
-                    next.pregnancy = { ...next.pregnancy, knownSince: { ...today } };
-                }
-                break;
-            case "birth": {
-                if (!next.pregnancy) break;
-                const term = pregnancyTerm(next.pregnancy.conceived, today);
-                const roll = rollStillbirth({
-                    chatId: ctx.chatId,
-                    risks: ctx.risks,
-                    conceived: next.pregnancy.conceived,
-                    termDays: term?.days ?? TERM_DAYS,
-                    load: strainLoad(next.strain, today),
-                });
-                /* Сцена вправе объявить мертворождение сама — тогда бросок
-                   не спрашиваем, как и при объявленном зачатии. */
-                if (stillborn || roll.still) {
-                    /* Дитя не заводим вовсе: мёртворождённого не окропляли
-                       водой и не нарекали, по закону он человеком не стал.
-                       Панели о нём сказать нечего, кроме самой потери. */
-                    next.lastLoss = { at: { ...today }, kind: "stillborn", early: roll.early };
-                    next.lastBleed = { ...today };
-                } else {
-                    /* Дитя заводим ДО того, как стереть беременность: пол
-                       и число берутся из неё, а решены они были в день зачатия. */
-                    next.children = [
-                        ...(next.children ?? []),
-                        ...bornChildren(next.pregnancy, today, ctx.kin).map(
-                            (c) => (roll.early ? { ...c, early: true } : c)),
-                    ];
-                    /* Кормление само по себе отменяет тидир — счёт цикла встаёт
-                       до тех пор, пока дитя не отнимут от груди. */
-                    next.nursing = { since: { ...today } };
-                }
-                delete next.pregnancy;
-                delete next.oddBleed;
-                delete next.strain;
-                break;
-            }
-            /* Веха ставится тому, у кого её ещё нет: у двойни первым пошёл
-               кто-то один, и записывать это обоим было бы неправдой. */
-            case "childTooth":
-                next.children = markMilestone(next.children, "tooth", today);
-                break;
-            case "childWalks":
-                next.children = markMilestone(next.children, "walks", today);
-                break;
-            case "childSpeaks":
-                next.children = markMilestone(next.children, "speaks", today);
-                break;
-            case "childSick":
-                next.children = markMilestone(next.children, "sick", today, true);
-                break;
-            case "childWell":
-                next.children = (next.children ?? []).map((c) => {
-                    if (!c.sick) return c;
-                    const { sick, ...rest } = c;
-                    return rest;
-                });
-                break;
-            case "stillborn":
-                /* Прочитано выше, до разбора. «Дитя родилось мёртвым» задевает
-                   сразу два правила — роды и исход, — и порядок между ними
-                   зависел бы от того, как их записали в таблице событий.
-                   Случай оставлен пустым нарочно: он и есть обработчик. */
-                break;
-            case "childDied":
-                /* Уносим младшего: если умирает дитя, это почти всегда
-                   новорождённое, а старшего сцена назвала бы по имени. */
-                if (next.children?.length) {
-                    const youngest = [...next.children].sort(
-                        (a, b) => serialOf(b.born.year, b.born.month, b.born.day)
-                            - serialOf(a.born.year, a.born.month, a.born.day))[0];
-                    next.children = next.children.filter((c) => c !== youngest);
-                    if (!next.children.length) delete next.children;
-                }
-                break;
-            case "lost":
-                if (next.pregnancy) next.lastLoss = { at: { ...today }, kind: "lost" };
-                delete next.pregnancy;
-                delete next.oddBleed;
-                delete next.bleedEnded;
-                delete next.strain;
-                next.lastBleed = { ...today };
-                break;
-            case "nursingStart":
-                /*
-                 * Кормление открывается один раз и с этого дня не двигается.
-                 *
-                 * Стояло без `!next.nursing`, и якорь прыгал на сегодня при
-                 * КАЖДОМ «дитя у груди». А пишет его модель постоянно: дитя
-                 * берёт грудь в каждой второй сцене. Отсюда всё послеродовое
-                 * и разъезжалось — счёт от родов сбрасывался в ноль, стадия
-                 * возвращалась к «лежит после родов» через год после родов,
-                 * приметы откатывались к лохиям, а бросок на зачатие снова
-                 * запирался, потому что до поворота ему ещё год.
-                 *
-                 * Роды кормление и так открывают. Это событие нужно лишь там,
-                 * где родов в чате не было: ролевая началась с готовым дитятей
-                 * либо запись поставлена руками.
-                 */
-                if (!next.pregnancy && !next.nursing) next.nursing = { since: { ...today } };
-                break;
-            case "nursingEnd":
-                delete next.nursing;
-                delete next.bleedEnded;
-                next.lastBleed = { ...today };
-                break;
-            default:
-                break;
-        }
-    }
-    return Object.keys(next).length ? next : null;
-}
-
-/**
- * Близость — бросок на зачатие.
- *
- * Шанс берётся по фазе цикла, бросок детерминированный (см. rollConception).
- * Результат кладём в состояние целиком: он же показывается в отладке, и по
- * нему видно, был ли бросок вообще и насколько близко разошлось.
- */
-/**
- * Насколько давняя близость ещё может считаться причиной.
- *
- * Без потолка «понесла» через полгода после единственной записанной близости
- * заводило дитя задним числом: героиня объявляла о беременности и в тот же ход
- * оказывалась на восьмой части ношения. Полтора цикла — предел, за которым
- * связывать одно с другим уже гадание, а не счёт.
- */
-const SEED_MEMORY_DAYS = 45;
-
-/**
- * Дитя, зачатое по слову сцены, а не по броску.
- *
- * Дата берётся от последней близости, если она была недавно: именно от неё
- * ребёнок и пошёл. Не было или было слишком давно — считаем от сегодняшнего дня.
- */
-function newPregnancy(body, today, ctx = {}) {
-    const seed = body.lastSeed;
-    const ago = seed
-        ? serialOf(today.year, today.month, today.day) - serialOf(seed.year, seed.month, seed.day)
-        : null;
-    const fresh = ago !== null && ago >= 0 && ago <= SEED_MEMORY_DAYS;
-    const conceived = fresh ? { ...seed } : { ...today };
-    return startedPregnancy(conceived, ctx);
-}
-
-/**
- * Новая запись о ношении.
- *
- * Пол и число дитяти решаются здесь, один раз, и ложатся В ЗАПИСЬ. Раньше пол
- * считали при каждом чтении из одной только даты зачатия — без чата в сиде,
- * поэтому две разные истории с одинаковым началом рожали одинаковых детей.
- */
-function startedPregnancy(conceived, ctx = {}) {
-    const births = rollBirths(ctx.chatId, conceived, ctx.multiples);
-    const sexes = rollSexes(ctx.chatId, conceived, births);
-    return {
-        conceived,
-        quickened: null,
-        knownSince: null,
-        births,
-        sexes,
-        /* Первый — он же тот, о ком гадают. Двойню до последней части срока
-           всё равно никто не различает. */
-        sex: sexes[0],
-    };
-}
-
-/**
- * Дети, родившиеся из этой беременности.
- *
- * `order` нужен, чтобы двойня не жила в такт: нужды у них считаются от одного
- * дня рождения, и без порядкового номера оба всегда хотели бы одного и того же.
- */
-function bornChildren(pregnancy, today, kin = null) {
-    const count = Math.max(1, pregnancy.births ?? 1);
-    const sexes = pregnancy.sexes ?? [pregnancy.sex ?? null];
-    return Array.from({ length: count }, (_, i) => ({
-        born: { ...today },
-        order: i,
-        sex: sexes[i] ?? sexes[0] ?? null,
-        name: null,
-        /*
-         * Отцовство и положение по закону кладём В САМО ДИТЯ, а не оставляем
-         * висеть у матери.
-         *
-         * Это её и не касается: признают дитя, и по закону рождается дитя.
-         * А в панели матери они стояли до конца чата — и промпт продолжал
-         * спрашивать их каждый ход, хотя решено это было однажды, в час
-         * рождения, и больше не менялось.
-         *
-         * У двойни оба поля общие: отец признаёт обоих, и закон судит их
-         * по одному и тому же браку.
-         */
-        faderni: kin?.faderni ?? null,
-        rank: kin?.rank ?? null,
-    }));
-}
-
-/**
- * Раздаёт имена детям из строки маркера.
- *
- * Двойню модель называет через «; », как и события: «Хельга; Торвальд».
- * Имена ложатся по порядку рождения и больше не меняются — переименование
- * после обряда наречения этот век не знал.
- */
-/**
- * Отмечает веху у первого дитяти, у которого её ещё нет.
- *
- * @param {boolean} everyone true — ставить всем (хворь ходит по дому разом)
- */
-function markMilestone(children, key, today, everyone = false) {
-    if (!children?.length) return children;
-    let done = false;
-    return children.map((child) => {
-        if (child[key]) return child;
-        if (done && !everyone) return child;
-        done = true;
-        return { ...child, [key]: { ...today } };
-    });
-}
-
-function nameChildren(children, told) {
-    if (!children?.length || !told) return children;
-    const names = String(told).split(";").map((s) => s.trim()).filter(Boolean);
-    if (!names.length) return children;
-
-    /* Именуем только тех, кто ещё под присмотром: имя из свежего маркера
-       не должно переименовать давно выросшего. */
-    let changed = false;
-    const out = children.map((child, i) => {
-        const name = names[i];
-        /* Два служебных слова, а не одно: «не наречён» говорит childBlock
-           о рождённом, «не выбрано» — BLOCK_KIN о том, что в утробе. Оба
-           значат «имени ещё нет» и в имя записываться не должны. */
-        const flat = name.replace(/ё/g, "е");
-        if (!name || child.name === name
-            || /^не наречен/i.test(flat) || /^не выбрано/i.test(flat)) return child;
-        changed = true;
-        return { ...child, name };
-    });
-    return changed ? out : children;
-}
-
-/**
- * Тягота легла на тело — и, если она беременна, бросок на угрозу.
- *
- * Список чистим от того, что уже отпустило: незачем таскать по всему чату
- * запись о голоде трёхмесячной давности. Порог — самая долгая тягота из всех.
- */
-function addStrain(body, id, today, ctx = {}) {
-    const spec = STRAINS[id];
-    if (!spec) return body;
-
-    const here = serialOf(today.year, today.month, today.day);
-    const kept = (body.strain ?? []).filter((item) => {
-        const age = here - serialOf(item.at.year, item.at.month, item.at.day);
-        return age >= 0 && age < (STRAINS[item.id]?.days ?? 0);
-    });
-    const next = { ...body, strain: [...kept, { id, at: { ...today } }] };
-
-    /* Угроза бывает только при дитяти, и только одна зараз: вторая поверх
-       первой ничего не добавила бы, а сроки перепутала бы наверняка. */
-    if (!next.pregnancy || next.pregnancy.threat) return next;
-
-    const term = pregnancyTerm(next.pregnancy.conceived, today);
-    if (!term) return next;
-
-    const roll = rollThreat({
-        chatId: ctx.chatId,
-        risks: ctx.risks,
-        today,
-        conceived: next.pregnancy.conceived,
-        termDays: term.days,
-        load: strainLoad(next.strain, today),
-        strainId: id,
-    });
-    next.lastThreatRoll = { at: { ...today }, id, ...roll };
-    if (roll.hit) {
-        next.pregnancy = {
-            ...next.pregnancy,
-            threat: { at: { ...today }, cause: id, outcome: roll.outcome, savable: roll.savable },
-        };
-    }
-    return next;
-}
-
-/**
- * Угроза, провисевшая свой срок, сбывается.
- *
- * Зовётся из общего прохода по чату, когда дата доехала до дня расплаты.
- * Событие подставляется то же самое, каким его написала бы сцена, — поэтому
- * дальше всё идёт обычным путём, и никакой второй ветки состояний нет.
- */
-function matureThreat(body, today, ctx = {}) {
-    const threat = body?.pregnancy?.threat;
-    if (!threat) return body;
-    const due = serialOf(threat.at.year, threat.at.month, threat.at.day) + THREAT_DAYS;
-    if (serialOf(today.year, today.month, today.day) < due) return body;
-
-    /* Выкидыш — это факт, а не сцена: он случился, и сцене остаётся его
-       описать. Роды раньше срока — наоборот, целая сцена, и отбирать её
-       у ролевой нельзя. Поэтому здесь не рождение, а начало схваток;
-       дитя родится, когда сцена напишет «родила». */
-    if (threat.outcome === "lost") {
-        return applyBodyEvents(body, ["lost"], today, ctx);
-    }
-    const { threat: gone, ...rest } = body.pregnancy;
-    return { ...body, pregnancy: { ...rest, labour: { ...today }, early: true } };
-}
-
-function tryConceive(body, today, internal, ctx) {
-    const next = { ...body };
-    if (next.pregnancy) return next;
-
-    /*
-     * День близости запоминаем раньше всех проверок и независимо от них.
-     *
-     * Бросок может не состояться — утроба закрыта отваром, счёт цикла ещё
-     * не заведён или дата сцены ушла раньше якоря крови, — а близость всё
-     * равно была, и помнить её надо. Ради этого lastSeed и существует: если
-     * сцена позже напишет «понесла», дитя отсчитается от этой ночи, а не от
-     * дня, когда героиня о нём догадалась (см. newPregnancy).
-     *
-     * Раньше строка стояла в двух местах из трёх, и средний выход — тот,
-     * что по несчитаемому циклу, — терял близость молча. Кончалось это
-     * ношением, отставшим на месяц: панель показывала 1/9 там, где по счёту
-     * было 2/9, и роды приезжали позже срока.
-     */
-    next.lastSeed = { ...today };
-
-    /*
-     * Кормление закрывает утробу не навсегда.
-     *
-     * Снятие `nursing` было только событийным — `weaned` от модели либо
-     * сброс по крови, — а срока по дням не было вовсе. Между тем `weaned`
-     * никто не просит: childBlock() спрашивает про руки, лицо и нужду,
-     * <norse_body> прямо предупреждает, что от модели тут ничего не ждут,
-     * и единственный намёк — строка стадии `vending`, сказанная как факт
-     * о мире, а не как просьба поставить маркер. В ролевой, где дитя росло,
-     * а модель не догадалась написать «отняла от груди», героиня оставалась
-     * бесплодной до конца чата: бросок даже не делался.
-     *
-     * И панель при этом обещала обратное. На повороте она говорит вслух:
-     * «Тидир вот-вот вернутся. Кровь может прийти в любую луну». Обещать
-     * одно, а считать другое — расхождение панели с движком, а не строгость.
-     *
-     * Поэтому: до поворота утроба закрыта наглухо, как и была, а на повороте
-     * бросок состоится — но вполовину слабее. Кормящая зачинает хуже, и ровного
-     * дня, в который фертильность возвращается целиком, у тела нет. Целиком
-     * её возвращает «weaned», то есть сцена.
-     *
-     * Проверка стоит ПОСЛЕ lastSeed и по той же причине, что и у отвара:
-     * бросок может не состояться, а близость всё равно была, и помнить её
-     * надо. Иначе объявленное сценой зачатие отсчиталось бы от дня догадки.
-     */
-    let nursingToll = 1;
-    if (next.nursing?.since) {
-        const days = serialOf(today.year, today.month, today.day)
-            - serialOf(next.nursing.since.year, next.nursing.since.month, next.nursing.since.day);
-        /*
-         * Открывают утробу две вещи, и любой из них довольно.
-         *
-         * Первая — вернувшаяся кровь: круг пошёл заново, и спорить с этим
-         * календарём было бы странно. Раньше её тут не было вовсе, потому
-         * что кровь сносила кормление целиком и до этой ветки не доходила.
-         *
-         * Вторая — срок, как и была: если сцена о крови не сказала, тело
-         * всё равно поворачивает само, и держать бросок закрытым до конца
-         * чата значило бы вернуть ту самую дыру.
-         */
-        if (!bloodBack(next) && postpartumStage(days).id !== "vending") return next;
-        nursingToll = NURSING_CHANCE;
-    }
-
-    /* После чёрных рожков утроба месяц не примет семени вовсе — это и есть
-       настоящая цена спорыньи, а не смертельный исход по тумблеру. */
-    if (herbBarren(next.herb, today)) return next;
-
-    /* Фазу без якоря крови не вычислить, а без фазы нет и шанса. Бросок
-       пропускаем, но выше уже записано, что близость была. */
-    const cycle = cycleSummary(next, today, CYCLE_DEFAULT);
-    if (!cycle) return next;
-
-    const roll = rollConception({
-        chatId: ctx.chatId,
-        today,
-        cycleDay: cycle.day,
-        phaseId: cycle.phase.id,
-        internal,
-        chances: ctx.chances,
-        modifiers: nursingToll,
-    });
-    next.lastRoll = { at: { ...today }, ...roll, internal };
-    if (roll.hit) {
-        next.pregnancy = startedPregnancy({ ...today }, ctx);
-    }
-    return next;
-}
-
-/* ============================================================
- * 3b-bis. СКАЗАННОЕ ОДИН РАЗ
- *
- * Имя, данное при обряде, признание отцовства, положение дитяти по закону,
- * повитуха и приготовления к родам — это не наблюдения сцены, а факты. Модель
- * называет их однажды, а действуют они дальше.
- *
- * Раньше их читали из снимка последнего сообщения, и стоило модели не повторить
- * строку — панель их теряла. Теперь они едут по чату тем же обозом, что дата
- * и тело: выводятся заново на каждом пересчёте, поэтому откат и удаление
- * сообщений уносят их сами собой, как и всё остальное.
- * ============================================================ */
-
-/** Готовность к родам: после родов она уже ни к чему. */
-const BIRTH_WATCH_FIELDS = ["midwife"];
-
-/**
- * Подхватывает названное в этом сообщении и решает, что пережило события.
- *
- * @param {object|null} told Что доехало сюда
- * @param {object} state Снимок сцены этого сообщения
- * @param {string[]} events События тела из того же сообщения
- */
-function carryTold(told, state, events) {
-    let next = told;
-    for (const key of TOLD_FIELDS) {
-        const value = state[key];
-        if (!value || next?.[key] === value) continue;
-        next = { ...(next ?? {}), [key]: value };
-    }
-    if (!next) return null;
-
-    /* Дитя потеряно — вместе с ним уходит и всё, что о нём говорили. */
-    if (events.includes("lost")) return null;
-
-    /* Родила — приготовления сделали своё дело. Имя, фадерни и положение
-       по закону остаются: они о самом дитяти, а не о ожидании. */
-    if (events.includes("birth")) {
-        const rest = { ...next };
-        for (const key of BIRTH_WATCH_FIELDS) delete rest[key];
-        return Object.keys(rest).length ? rest : null;
-    }
-    return next;
-}
-
 /** Номер эйкты 0–7, либо null. */
 function eyktIndex(state) {
     return hasTime(state) ? eyktForHour(state.hour) : null;
@@ -1069,7 +390,7 @@ function dateOf(entry) {
  * @returns {{changed: boolean, current: object|null}} current — дата на конце чата
  */
 export function resolveDates(chat, startDate = null, options = {}) {
-    if (!Array.isArray(chat)) return { changed: false, current: null, body: null, told: null };
+    if (!Array.isArray(chat)) return { changed: false, current: null, body: null };
 
     let carried = dateOf(startDate); // дата, доехавшая сюда
     let lastEykt = null;             // эйкта сообщения, откуда её везём
@@ -1080,17 +401,12 @@ export function resolveDates(chat, startDate = null, options = {}) {
      *
      * Иначе счёт не идёт вовсе, пока в сцене не случится кровь, — а можно
      * забыть, заторопиться или просто не захотеть начинать ролевую с этого.
-     * Первый день — предположение, и любое явное указание его перебивает:
-     * и событие в маркере, и рука в Tímatal.
+     * Первый день — предположение, и рука в Tímatal его перебивает.
      */
     let bodyCarried = carried ? { lastBleed: { ...carried } } : null;
 
-    /* Названное однажды — имя дитяти, фадерни, повитуха — едет отдельно от
-       тела: кровь и роды перезаводят счёт цикла, а имя от этого не меняется. */
-    let toldCarried = null;
-
     /* Ручная запись из метаданных встаёт в тот день, на который её поставили,
-       и дальше события сцены ложатся уже поверх неё. */
+       и дальше счёт идёт уже от неё. */
     const manual = options.manualBody?.at && options.manualBody?.body ? options.manualBody : null;
     let manualDone = !manual;
     const manualAt = manual ? serialOf(manual.at.year, manual.at.month, manual.at.day) : 0;
@@ -1111,8 +427,7 @@ export function resolveDates(chat, startDate = null, options = {}) {
         }
 
         /* Якорь даты фиксирует день, но сообщение на этом не заканчивается:
-           в том же маркере могут стоять и события тела. Раньше здесь стоял
-           continue, и «семя пролилось» в сообщении с датой просто терялось. */
+           ниже по нему ещё ведётся счёт тела. */
         const anchor = msg.extra[KEY_DATE];
         const anchorDate = dateOf(anchor);
 
@@ -1186,94 +501,6 @@ export function resolveDates(chat, startDate = null, options = {}) {
             manualDone = true;
         }
 
-        /* Тело едет тем же обозом, что и дата: событие «кровь пришла»
-           запоминает день, от которого дальше считается цикл. Считаем прямо
-           здесь, потому что дата этого сообщения уже известна — отдельным
-           проходом пришлось бы вычислять её заново.
-
-           Якорь, поставленный руками, прочитан выше и любые события до него
-           уже перебил; событие в этом же сообщении, наоборот, свежее. */
-        /* Близость приходит отдельными полями: сцена её видит, а событием
-           в общем списке она смотрелась бы наравне с родами. */
-        const events = [...(state.body ?? [])];
-        if (state.sex === true) {
-            /*
-             * Сравнение именно с false, а не проверка на истинность, — и это
-             * не описка. parseYesNo() отдаёт null и на «неизвестно», и на поле,
-             * которого в маркере нет вовсе; оба случая идут во внутренний
-             * исход, с полным шансом.
-             *
-             * Так и задумано. «Семя не пролилось» — намеренное действие, чей-то
-             * поступок в сцене, и только он считается за оглядку. Незнание
-             * поступком не является, а умолчание в этом веке означает «внутрь».
-             * Третий шанс посередине был бы догадкой, внесённой в главный
-             * бросок движка, — против принципа закрытого списка: разбираем
-             * названное, среднего не додумываем.
-             *
-             * Цена этого решения названа модели вслух, в BLOCK_BED, и там же
-             * `internal` выведено из-под общего разрешения опускать поля.
-             */
-            events.unshift(state.internal === false ? "seedWithheld" : "seedSpilled");
-        }
-        if (!msg.extra[KEY_BODY]?.anchored && events.length) {
-            bodyCarried = applyBodyEvents(bodyCarried, events, carried, {
-                chatId: options.chatId,
-                chances: options.chances,
-                risks: options.risks,
-                /*
-                 * Род — то, что застывает в дитяти при рождении, и разбору
-                 * событий он нужен готовым. Берём и сказанное этим же
-                 * сообщением, и доехавшее из прошлых: маркер KIN и «родила»
-                 * вполне приходят вместе, а carryTold() считается ниже.
-                 */
-                kin: {
-                    faderni: state.faderni ?? toldCarried?.faderni ?? null,
-                    rank: state.childRank ?? toldCarried?.childRank ?? null,
-                },
-            });
-        }
-
-        /*
-         * Угроза, провисевшая свои два дня, сбывается сама — здесь, в общем
-         * проходе, потому что здесь известна дата этого сообщения.
-         *
-         * Считать это в панели было бы проще и неверно: панель показывает,
-         * а состояние меняет только разбор событий. Иначе выкидыш случился бы
-         * на экране, а в счёте цикла — нет.
-         *
-         * ПОСЛЕ событий сообщения, и это важно: «легла пластом» в тот самый
-         * день, когда срок вышел, обязано успеть. Иначе последний день угрозы
-         * был бы уже не последним, а прошедшим.
-         */
-        if (!msg.extra[KEY_BODY]?.anchored) {
-            bodyCarried = matureThreat(bodyCarried, carried, {
-                chatId: options.chatId,
-                chances: options.chances,
-                risks: options.risks,
-            });
-        }
-        toldCarried = carryTold(toldCarried, state, events);
-
-        /* Имя из маркера ложится на рождённых детей. Делаем это здесь, а не
-           в applyBodyEvents: имя приходит отдельным полем и живёт в told,
-           а события про него ничего не знают. */
-        if (bodyCarried?.children?.length && toldCarried?.childName) {
-            const named = nameChildren(bodyCarried.children, toldCarried.childName);
-            if (named !== bodyCarried.children) bodyCarried = { ...bodyCarried, children: named };
-        }
-
-        /* Выросших из-под присмотра убираем: два года — и дитя больше не
-           младенец, панели о нём сказать нечего. */
-        if (bodyCarried?.children?.length) {
-            const here = serialOf(carried.year, carried.month, carried.day);
-            const young = bodyCarried.children.filter(
-                (c) => here - serialOf(c.born.year, c.born.month, c.born.day) <= CHILD_WATCH_DAYS);
-            if (young.length !== bodyCarried.children.length) {
-                bodyCarried = { ...bodyCarried };
-                if (young.length) bodyCarried.children = young;
-                else delete bodyCarried.children;
-            }
-        }
         /* Даты начала чата не было (её дал старый маркер посреди истории) —
            начинаем счёт с первого дня отсюда. */
         if (!bodyCarried) bodyCarried = { lastBleed: { ...carried } };
@@ -1297,7 +524,7 @@ export function resolveDates(chat, startDate = null, options = {}) {
        ручное просто становится последним словом. */
     if (!manualDone) bodyCarried = JSON.parse(JSON.stringify(manual.body));
 
-    return { changed, current: carried, body: bodyCarried, told: toldCarried };
+    return { changed, current: carried, body: bodyCarried };
 }
 
 /**
@@ -1370,17 +597,20 @@ export function cycleAnchor(today, day) {
 }
 
 /**
- * Запись ручной беременности — чтобы начать ролевую уже тяжёлой.
+ * Запись ручной беременности — чтобы вести срок ношения.
  *
  * Дату зачатия можно не знать: тогда считаем назад от названной части срока.
- * Такая дата помечается вычисленной, и в отладке видно, что она не настоящая.
+ * Такая дата помечается вычисленной — чтобы форма в Tímatal знала, что
+ * подставила её сама.
+ *
+ * Кровь при этом ставится за две недели до зачатия, как и бывает: снимут
+ * беременность — цикл начнётся заново от того дня, который назовут.
  *
  * @param {object} today Дата сцены
- * @param {{part?: number, conceived?: object|null, known?: boolean, father?: string|null}|null} setup
+ * @param {{part?: number, conceived?: object|null}|null} setup
  *        null — снять беременность
- * @param {object|null} previous Что уже накопилось, чтобы не потерять
  */
-export function pregnancyAnchor(today, setup, previous = null, ctx = {}) {
+export function pregnancyAnchor(today, setup) {
     if (!today || today.year == null) return null;
 
     /* Сняли — цикл начинается заново от сегодняшнего дня. */
@@ -1391,130 +621,13 @@ export function pregnancyAnchor(today, setup, previous = null, ctx = {}) {
         ? { ...setup.conceived }
         : serialToDate(serialOf(today.year, today.month, today.day) - (part - 1) * 30);
 
-    /* Сколько дитяти. Не назвали — жребий по дате зачатия, как при обычном
-       зачатии в игре. Назвали — столько и будет: это авторский акт. */
-    const births = setup.births
-        ? Math.max(1, Math.min(3, Math.round(Number(setup.births))))
-        : (previous?.births ?? rollBirths(ctx.chatId, conceived, ctx.multiples));
-
-    /*
-     * Пол. «Случайно» — это не «оставить как было», а бросок по дате зачатия:
-     * он детерминированный, поэтому на одну и ту же дату всегда даёт одно и то
-     * же. Названный пол ставится всем: у двойни выбор один на обоих, иначе
-     * форма разрослась бы в три отдельных списка ради редкого случая.
-     */
-    const chosen = setup.sex === "m" || setup.sex === "f" ? setup.sex : null;
-    const sexes = chosen
-        ? Array.from({ length: births }, () => chosen)
-        : rollSexes(ctx.chatId, conceived, births);
-
     return {
         at: { ...today },
         body: {
             lastBleed: serialToDate(serialOf(conceived.year, conceived.month, conceived.day) - 13),
-            pregnancy: {
-                conceived,
-                guessedDate: !setup.conceived,
-                /* Правка части срока не отменяет того, что уже случилось:
-                   шевельнулось — значит шевельнулось. Ходили к гадающему —
-                   значит ходили: список полей здесь белый, и без этой строки
-                   ручная правка срока стирала бы поход молча. */
-                quickened: previous?.quickened ?? null,
-                divined: previous?.divined ?? null,
-                knownSince: setup.known ? (previous?.knownSince ?? { ...today }) : null,
-                births,
-                sexes,
-                sex: sexes[0],
-                /* Отца не выдумываем. Не назвали — так и останется неназванным:
-                   в этом сеттинге отцовство не биология, а признание, и
-                   приписывать его за игрока нельзя. */
-                father: setup.father ?? previous?.father ?? null,
-            },
+            pregnancy: { conceived, guessedDate: !setup.conceived },
         },
     };
-}
-
-/**
- * Призыв Фригг — схватки начинаются сейчас, что бы ни было в сцене.
- *
- * Фригг звали в родах; это её час. Кнопка нужна затем, что иногда ролевая
- * подошла к родам, а движок ждёт своего дня, — и спорить с автором о том,
- * когда начнутся схватки, расширению не по чину.
- *
- * Отменять призыв нечем, и это правильно: схватки не отыгрываются назад.
- * Передумала — «Убрать дитя» или выставь ношение заново.
- *
- * @param {object} today Дата сцены
- * @param {object|null} previous Что уже накоплено про эту беременность
- */
-export function labourAnchor(today, previous = null) {
-    if (!today || today.year == null || !previous?.conceived) return null;
-    return {
-        at: { ...today },
-        body: {
-            lastBleed: serialToDate(
-                serialOf(previous.conceived.year, previous.conceived.month, previous.conceived.day) - 13),
-            pregnancy: {
-                ...previous,
-                /* Угрозу снимаем: схватки её уже переросли, и держать обе
-                   значило бы показывать в панели две беды разом. */
-                threat: undefined,
-                labour: { ...today },
-                /* Роды — тот миг, когда о дитяти знают все. */
-                knownSince: previous.knownSince ?? { ...today },
-                summoned: true,
-            },
-        },
-    };
-}
-
-/**
- * Женское питьё — отвар, возвращающий кровь.
- *
- * Траву не выбирают: героиня пьёт то, что дали. Движок берёт её по сезону и
- * по жребию, и жребий этот детерминированный — пересчёт истории не должен
- * подменить траву задним числом.
- *
- * Разницы между «прервало» и «прерывать было нечего» наружу не отдаём:
- * женщина видит одно и то же, кровь пришла. Правда живёт в скрытом слое.
- *
- * @param {object} today Дата сцены
- * @param {object|null} body Что накопилось к этому дню
- * @param {{chatId?: string, death?: boolean}} ctx
- */
-export function herbAnchor(today, body, ctx = {}) {
-    if (!today || today.year == null) return null;
-
-    const herb = pickHerb(ctx.chatId, today);
-    const pregnant = !!body?.pregnancy;
-    const roll = rollHerb({ chatId: ctx.chatId, today, herb, pregnant, death: !!ctx.death });
-
-    const next = { ...(body ?? {}) };
-    next.herb = {
-        id: herb.id,
-        at: { ...today },
-        worked: roll.worked,
-        /* Скрытый слой: было ли что прерывать. В панель не выходит никогда. */
-        wasPregnant: pregnant,
-        fatal: roll.fatal,
-    };
-
-    if (roll.worked) {
-        /* Кровь пришла. И если было дитя — его больше нет.
-           Потерю не записываем: героиня о ней не узнает, а панель молчит
-           о том, чего героиня не знает. */
-        delete next.pregnancy;
-        delete next.disruption;
-        delete next.bleedEnded;
-        delete next.oddBleed;
-        next.lastBleed = { ...today };
-    } else if (next.pregnancy) {
-        /* Не подействовало — дитя осталось, но отвар его достал.
-           Что из этого выйдет, решим позже: пока только отметка. */
-        next.pregnancy = { ...next.pregnancy, herbExposure: { id: herb.id, at: { ...today } } };
-    }
-
-    return { at: { ...today }, body: next };
 }
 
 /** Состояние тела на конце чата, либо null. */

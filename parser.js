@@ -620,42 +620,17 @@ const NRN_TOPICS = {
        переименовывалась, а чаты с прежним именем остались. */
     COUNSEL: { advice: "advice" },
     ADVICE: { advice: "advice" },
-    FREYJA: { desire: "desire" },
-    /* Приметы: имя поля — вид приметы, и он же ключ к знаку в панели. */
-    SIGNS:  { breast: "sign_breast", sleep: "sign_sleep", nausea: "sign_nausea",
-              smell: "sign_smell", hunger: "sign_hunger",
-              /* Внутри своей темы «нрав» зовётся так же, как её вид, — mood.
-                 С настроением {{char}} он не спорит: разбор идёт по темам,
-                 и одно и то же имя в MIND и в SIGNS ведёт в разные поля.
-                 temper — псевдоним на случай, если модель возьмёт его сама. */
-              mood: "sign_mood", temper: "sign_mood",
-              ache: "sign_ache", swelling: "sign_swelling", heat: "sign_heat",
-              blood: "sign_blood", belly: "sign_belly", lettari: "sign_lettari",
-              /* Молоко — вид послеродового набора. Без этой строки поле
-                 выбрасывалось бы молча: takeTopic() берёт только то, что
-                 в карте, а пул примет живёт в body.js и о карте не знает. */
-              milk: "sign_milk", lochia: "sign_lochia",
-              /* Виды, которые движок порождает сам — из событий, погоды
-                 и счётчиков. Завести их сцена не может: applySceneSigns()
-                 выбрасывает вид не из сегодняшнего набора. А сказать о них
-                 своими словами — может, и в этом вся разница. */
-              hridir: "sign_false_hridir", kicks: "sign_kicks_night",
-              strain: "sign_strain", weather: "sign_weather_toll",
-              oddblood: "sign_odd_blood" },
-    BODY:   { body: "body" },
-    BED:    { sex: "sex", internal: "internal" },
-    BIRTH:  { midwife: "midwife" },
-    /* Имя здесь то же самое поле, что и у CHILD: выбранное до родов и данное
-       при наречении — одно имя, и держать под него два поля незачем. */
-    KIN:    { faderni: "faderni", rank: "child_rank", name: "child_name" },
-    /* Утроба: с чем сравнить дитя и что видно по матери. И то и другое
-       у панели есть своей заготовкой — сцена только подбирает слова. */
-    WOMB:   { size: "womb_size", sign: "womb_sign" },
-    /* Дитя: имя говорится однажды, остальное — каждый ход из сцены.
-       До этого у темы было одно поле, и после родов панель показывала только
-       возраст и нужду из таблицы: живого дитяти в ней не было вовсе. */
-    CHILD:  { name: "child_name", arms: "child_arms", look: "child_look",
-              need: "child_need", growing: "child_growing" },
+    /*
+     * Снятые темы. Женскую линию урезали до счёта, который ведёт панель,
+     * и модель их больше не пишет, — но старые чаты полны таких маркеров,
+     * а модель по привычке может выписать их ещё раз-другой.
+     *
+     * Пустая карта, а не удаление: тема узнаётся, маркер вырезается из
+     * текста, а поля из него не берутся вовсе. Удали тему — и сообщение,
+     * где уцелел только такой маркер, осталось бы с ним в чате.
+     */
+    FREYJA: {}, SIGNS: {}, BODY: {}, BED: {},
+    BIRTH: {}, KIN: {}, WOMB: {}, CHILD: {},
 };
 
 /** Поле внутри маркера темы: «имя: значение», разделитель между полями — «|». */
@@ -739,146 +714,9 @@ function emptyResult() {
     return {
         year: null, month: null, day: null, hour: null, minute: null,
         weather: null, location: null, userAttire: null,
-        charMood: null, charAttire: null, thought: null, passed: null, body: null,
-        charState: null, userState: null, advice: null, desire: null,
-        midwife: null,
-        faderni: null, childRank: null, childName: null,
-        childArms: null, childLook: null, childNeed: null, childGrowing: null,
-        wombSize: null, wombSign: null,
-        sex: null, internal: null,
-        /* Приметы от сцены: вид → слова. Панель решает, какие виды сегодня
-           звучат, сцена подбирает к ним слова. Пустой объект, а не null:
-           отсутствие примет — обычный ход, а не отказ разбора. */
-        signs: {},
+        charMood: null, charAttire: null, thought: null, passed: null,
+        charState: null, userState: null, advice: null,
     };
-}
-
-/**
- * «да» / «нет» / молчание.
- *
- * Третье значение — не лень, а часть смысла: `internal: неизвестно` говорит,
- * что близость была, а куда пролилось семя, сцена не уточнила. Движок тогда
- * считает по меньшему шансу, а не выдумывает за неё.
- */
-export function parseYesNo(value) {
-    if (value === null || value === undefined) return null;
-    const text = String(value).toLowerCase().replace(/ё/g, "е").trim();
-    /* Границу слова ищем отрицательным просмотром вперёд, а не \b: в JS \b
-       считает словом только латиницу, и на кириллице просто не срабатывает.
-       Заодно «неизвестно» не принимается за «нет». */
-    if (/^(да|был|была|было|есть|yes|true|1)(?![а-яa-z])/i.test(text)) return true;
-    if (/^(нет|no|false|0)(?![а-яa-z])/i.test(text)) return false;
-    return null;
-}
-
-/*
- * События тела — закрытый список.
- *
- * Модель называет только то, что случилось в сцене; день цикла, срок и прочую
- * арифметику считает расширение. Список закрыт нарочно: свободную формулировку
- * пришлось бы разбирать догадками, а ошибка тут сдвигает не строчку в панели,
- * а весь дальнейший счёт.
- *
- * ── Два языка на одно событие ────────────────────────────────────────────
- *
- * Промпт просит английские слова: опознавательные токены модель воспроизводит
- * точнее на языке, на котором к ней обращаются, а весь остальной промпт
- * английский. В панель при этом уезжает по-прежнему русское слово — оно
- * берётся не отсюда, а из BODY_EVENT_WORDS по идентификатору события.
- *
- * Русские написания остаются и не уйдут: старые чаты полны «кровь пришла»,
- * и разбор обязан читать их дальше. Заодно они страхуют случай, когда модель
- * сбилась на язык ролевой.
- *
- * ── Порядок и перекрытия ─────────────────────────────────────────────────
- *
- * Разбор собирает ВСЕ совпавшие события, а не первое. Отсюда две ловушки,
- * которых в русском списке не было:
- *
- *  - «child fell sick» содержит «fell sick», и без просмотра назад хворь
- *    матери зажигалась бы от хвори дитяти;
- *  - «child born dead» нарочно зажигает и birth, и stillborn — ровно так же,
- *    как это делает русское «дитя родилось мёртвым», где «дитя родилось»
- *    лежит внутри. Мертворождение — тоже роды, и движок считает его так.
- */
-const BODY_EVENTS = [
-    ["seedWithheld", /семя\s+не\s+пролилось|seed\s+withheld/i],
-    ["seedSpilled", /семя\s+пролилось|seed\s+spilled/i],
-    ["bleedStart", /кровь\s+(?:пришла|началась|пошла)|нача(?:лись|лась)\s+(?:месячные|кровь)|bleeding\s+began/i],
-    ["bleedEnd", /кровь\s+(?:кончилась|прекратилась|ушла)|месячные\s+кончились|bleeding\s+ended/i],
-    ["oddBleeding", /кровь\s+не\s+в\s+срок|bleeding\s+out\s+of\s+season/i],
-    ["quickened", /дитя\s+шевельнулось|шевеление|child\s+stirred/i],
-    /* Поход к гадающему. Пол лежит в записи с дня зачатия — гадание его не
-       решает, а оглашает, и до похода панель о нём молчит.
-
-       Слова нарочно не привязаны к одной традиции: вёльва, сейд, бабка,
-       знахарка — в этом мире ходят к тому, кто есть под рукой. Поэтому
-       в промпте стоит «sought a reading», а не имя обряда. */
-    ["divined", /гадал[аи]|ворожил[аи]|спрашивала\s+в[её]льву|sought\s+a\s+reading/i],
-    ["labour", /схватки\s+начались|labour\s+began|labor\s+began/i],
-    ["birth", /родила|дитя\s+родилось|gave\s+birth|child\s+born/i],
-    ["lost", /выкидыш|дитя\s+не\s+выжило|miscarried/i],
-    /* Прямое объявление из сцены. Нужно потому, что бросок может промахнуться,
-       а ролевая — уже поехать дальше: «а если я понесу от тебя?» и OOC
-       «пометь, что беременность случилась». Без такого события движок и проза
-       расходятся навсегда, и починить это изнутри игры нечем. */
-    /* Сбои цикла: тидир задерживаются не только от дитяти. */
-    ["hungr", /голодала|голодали|went\s+hungry/i],
-    ["sott", /хворала|занемогла|слегла|(?<!child\s)fell\s+sick/i],
-    ["ferd", /была\s+в\s+дороге|дорога\s+измотала|travell?ed\s+hard/i],
-    ["ugg", /извелась|истерзалась|sick\s+with\s+worry/i],
-    /* Шевеления — единственное, чем в этом веке узнавали, жив ли ребёнок.
-       Отсюда и тревога, когда их нет второй день. */
-    ["kick", /дитя\s+(?:бьется|бьётся|толкается|шевелится)|child\s+kicking/i],
-    ["quiet", /дитя\s+(?:затихло|притихло)|дитя\s+не\s+слыхать|child\s+gone\s+quiet/i],
-    ["conceived", /понесла|дитя\s+зачалось|зачатие|conceived/i],
-    ["realized", /поняла,?\s+что\s+тяжела|поняла,?\s+что\s+беременна|knew\s+herself\s+with\s+child/i],
-    ["nursingStart", /дитя\s+у\s+груди|child\s+at\s+the\s+breast/i],
-    ["nursingEnd", /отняли\s+от\s+груди|weaned/i],
-    /* Вехи первых двух лет. Возраст и нужды панель считает сама, а вот эти
-       четыре вещи она увидеть не может — они случаются в сцене и больше
-       нигде. Зубок стоит отдельной строкой не для красоты: за первый зуб
-       дитяти полагался таннфе, подарок, и это событие рода, а не медицина. */
-    ["childTooth", /зубок\s+прорезался|первый\s+зуб|first\s+tooth/i],
-    ["childWalks", /дитя\s+пошло|первые\s+шаги|child\s+walked/i],
-    ["childSpeaks", /дитя\s+заговорило|первое\s+слово|child\s+spoke/i],
-    ["childSick", /дитя\s+занемогло|дитя\s+захворало|child\s+fell\s+sick/i],
-    ["childWell", /дитя\s+поправилось|child\s+recovered/i],
-    ["childDied", /дитя\s+померло|дитя\s+умерло|child\s+died/i],
-    /*
-     * Тяготы. Названы отдельными словами, а не выведены из вольного описания
-     * состояния: догадка тут стоит не строчки в панели, а ребёнка. Голод,
-     * хворь и дорога уже есть выше — они и сбивают цикл, и давят на утробу.
-     */
-    ["heavy", /подняла\s+тяж[её]лое|таскала\s+тяж[её]лое|надсаживалась\s+над|lifted\s+heavy/i],
-    ["strained", /надорвалась|надсадилась|strained\s+herself/i],
-    ["fell", /упала|оступилась|took\s+a\s+fall/i],
-    ["beaten", /побили|избили|ударили\s+её|was\s+beaten/i],
-    /* Единственный способ ответить на угрозу. «Слегла» тут не годится — оно
-       уже занято хворью, и одно слово на два смысла не годится вовсе. */
-    ["rest", /легла\s+пластом|не\s+вста[её]т\s+с\s+постели|лежит\s+пластом|took\s+to\s+bed/i],
-    ["stillborn", /дитя\s+родилось\s+м[её]ртвым|мертворожд[её]нн|born\s+dead|stillborn/i],
-];
-
-/**
- * Список опознанных событий тела в том порядке, в каком они стоят в тексте.
- *
- * Порядок не косметика: «родила; кровь пришла» и «кровь пришла; родила» —
- * разные истории, а разбор по порядку правил дал бы одну и ту же. Сортируем
- * по месту совпадения, то есть по тому, как это случилось в сцене.
- */
-export function parseBodyEvents(value) {
-    if (!value) return null;
-    const raw = String(value).toLowerCase();
-    /* Регулярки писаны с «ё», в тексте её может не быть — сверяем обе формы. */
-    const flat = raw.replace(/ё/g, "е");
-    const found = [];
-    for (const [id, re] of BODY_EVENTS) {
-        const at = Math.max(raw.search(re), flat.search(re));
-        if (at >= 0) found.push({ id, at });
-    }
-    if (!found.length) return null;
-    return found.sort((a, b) => a.at - b.at).map((e) => e.id);
 }
 
 /**
@@ -970,29 +808,12 @@ export function parsePassed(value) {
  * true, если в маркере не оказалось вообще ничего полезного.
  *
  * Проверять одни лишь поля сцены нельзя: маркер, где стоит только
- * `body: кровь пришла`, полями сцены пуст — и раньше отбрасывался целиком
- * вместе с событием. Обрыв генерации и скупой ответ выглядят именно так.
+ * `passed: две недели`, полями сцены пуст — и раньше отбрасывался целиком
+ * вместе со скачком. Обрыв генерации и скупой ответ выглядят именно так.
  */
 export function isEmptyResult(r) {
     if (!r) return true;
-    return !hasDate(r) && !hasTime(r) && !hasDetails(r) && !hasEvents(r) && !hasTold(r);
-}
-
-/** Есть ли в маркере событие тела, близость или скачок времени. */
-export function hasEvents(r) {
-    if (!r) return false;
-    return !!(r.body?.length) || r.sex !== null || r.internal !== null || r.passed !== null;
-}
-
-/**
- * Поля, которые модель сообщает один раз, а действуют они дальше:
- * имя дитяти, признание отцовства, готовность к родам.
- */
-export const TOLD_FIELDS = ["midwife", "faderni", "childRank", "childName", "childLook"];
-
-/** Есть ли в маркере хоть одно такое поле. */
-export function hasTold(r) {
-    return !!r && TOLD_FIELDS.some((key) => r[key]);
+    return !hasDate(r) && !hasTime(r) && !hasDetails(r) && r.passed === null;
 }
 
 /**
@@ -1021,15 +842,7 @@ export function hasTime(r) {
 export function hasDetails(r) {
     if (!r) return false;
     return !!(r.weather || r.location || r.userAttire || r.charMood || r.charAttire || r.thought
-        || r.charState || r.userState || r.advice || r.desire
-        || r.childArms || r.childNeed || r.childGrowing
-        /* Слова сцены к заготовкам панели — такая же сцена, как и прочее.
-           Без этих трёх ответ, где уцелел один маркер WOMB или CHILD с одним
-           ростом, разбор счёл бы пустым и выбросил целиком. */
-        || r.wombSize || r.wombSign
-        /* Одни приметы — тоже сцена: ответ, где уцелел только маркер SIGNS,
-           терять незачем. */
-        || Object.keys(r.signs ?? {}).length > 0);
+        || r.charState || r.userState || r.advice);
 }
 
 const FIELD_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*$/;
@@ -1155,44 +968,7 @@ function fieldsToResult(fields, cleanInner) {
     result.charState = clean(fields.char_state);
     result.userState = clean(fields.user_state);
     result.advice = clean(fields.advice);
-    /* Тяга (fýsn) — своё желание героини, а не состояние лона. Лоно считает
-       панель по дню цикла, тягу решает сцена: беременная, хворая, в горе или
-       в ссоре женщина хочет иначе, чем велит счёт дней. */
-    result.desire = clean(fields.desire);
-    /* Готовность к родам и правовой слой. Спрашиваются не всегда, а только
-       когда к месту, — поля просто отсутствуют в остальное время. */
-    result.midwife = clean(fields.midwife);
-    result.faderni = clean(fields.faderni);
-    result.childRank = clean(fields.child_rank);
-    result.childName = clean(fields.child_name);
-    /* На руках и нужда — про эту сцену; на кого похоже — сказанное однажды
-       и потому в TOLD_FIELDS: приметы лица не меняются от хода к ходу. */
-    result.childArms = clean(fields.child_arms);
-    result.childLook = clean(fields.child_look);
-    result.childNeed = clean(fields.child_need);
-    /* Слова сцены поверх заготовок панели: размер дитяти, что видно по
-       матери, как растёт рождённое. Панель без них не пустеет — у каждого
-       есть свой ряд в body.js, и он остаётся запасным. */
-    result.wombSize = clean(fields.womb_size);
-    result.wombSign = clean(fields.womb_sign);
-    result.childGrowing = clean(fields.child_growing);
     result.passed = parsePassed(clean(fields.passed));
-    result.body = parseBodyEvents(clean(fields.body));
-    result.sex = parseYesNo(clean(fields.sex));
-    result.internal = parseYesNo(clean(fields.internal));
-
-    /*
-     * Приметы от сцены. Ключ — вид приметы, тот же, которым панель зовёт знак.
-     *
-     * Какие виды сегодня звучат, по-прежнему решает счёт: сцена не вправе
-     * завести примету, которой не время, и лишние ключи движок тела просто
-     * не найдёт, куда приложить. За сценой остаются слова.
-     */
-    for (const [name, value] of Object.entries(fields)) {
-        if (!name.startsWith("sign_")) continue;
-        const text = clean(value);
-        if (text) result.signs[name.slice(5).replace(/_/g, "-")] = text;
-    }
 
     return isEmptyResult(result) ? null : result;
 }

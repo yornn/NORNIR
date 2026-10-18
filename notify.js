@@ -80,21 +80,8 @@ export const DEFAULT_NOTICES = ["day", "cycle"];
 
 const ICONS = Object.fromEntries(NOTICE_KINDS.map((k) => [k.id, k.icon]));
 
-/** Фазу цикла ведёт вид «cycle», всё прочее в утробе — вид «body». */
-const CYCLE_STATES = ["cycling", "late"];
-
-/*
- * Состояния, о которых панель молчит по замыслу, — и уведомления молчат тоже.
- *
- * Скрытая беременность: зачатие уже в данных, но героиня о нём не знает.
- * Всплывашка в день соития выдала бы кубик с головой, а дальше приходила бы
- * каждые сутки: заголовком у этого состояния служит счётчик дней задержки,
- * и он тикает. Ни того, ни другого быть не должно.
- *
- * Вместо этого голос подаёт задержка — см. lateDays ниже. Женщина замечает,
- * что крови нет; причины она не знает, и уведомление её не называет.
- */
-const HIDDEN_STATES = ["pregnant_unknown"];
+/** Фазу цикла ведёт вид «cycle», ношение — вид «body». */
+const CYCLE_STATES = ["cycling"];
 
 /** За сколько дней предупреждать о приближении праздника. */
 export const FEAST_WARNING_DAYS = 3;
@@ -193,32 +180,11 @@ export function watchSnapshot(input = {}) {
            дней («12/28») в метку не входит нарочно: он меняется каждые сутки,
            и уведомление приходило бы ежедневно вместо смены фазы. */
         bodyState: view?.state ?? null,
-        mark: view ? `${view.state}|${view.title ?? ""}|${view.labour ? "labour" : ""}` : null,
+        mark: view ? `${view.state}|${view.title ?? ""}` : null,
         title: view?.title ?? null,
         hint: view?.titleHint ?? null,
         status: view?.status ?? null,
         count: view?.count ?? null,
-        /* Число, а не строка: по строке «кровь не приходила 29 дней» нельзя
-           понять, первый ли это день задержки, — она меняется каждые сутки. */
-        lateDays: view?.lateDays ?? null,
-        /*
-         * Шевеление и отвар живут отдельно от главной метки.
-         *
-         * У них своя новость и свои слова, и подмешивать их в `mark` нельзя:
-         * тогда «дитя притихло» пришло бы под заголовком стадии ношения.
-         * В метку берём настроение, а не строку: строка считает дни («тихо
-         * три дня») и менялась бы каждые сутки.
-         */
-        kicks: view?.kicks
-            ? { mood: view.kicks.alarm ? "alarm" : "calm", text: view.kicks.text }
-            : null,
-        draught: view?.draught
-            ? {
-                mark: `${view.draught.id}|${view.draught.lingering ? "after" : "toll"}`,
-                title: view.draught.title,
-                status: view.draught.status,
-            }
-            : null,
         stale: !!stale,
     };
 
@@ -365,73 +331,22 @@ export function noticesBetween(prev, next, kinds = DEFAULT_NOTICES) {
         }
     }
 
-    /* ── Задержка ──
-     *
-     * Голос вместо молчания скрытого состояния.
-     *
-     * Отсутствие крови месяц и дольше женщина замечает в любом веке: тидир
-     * ходили всю её жизнь раз в месяц, и не заметить их отсутствия нельзя.
-     * Чего она не знает — так это причины: дитя, хворь, голод, дорога. Мы
-     * говорим ровно то, что ей видно, и ни слова о причине.
-     *
-     * Один раз, а не каждые сутки: считаем не строку со счётчиком, а сам
-     * переход «задержки не было → задержка есть».
-     *
-     * Только в скрытом состоянии: при названном сбое о задержке и так
-     * сказано своим уведомлением, вместе с причиной, которую героиня знает.
-     */
-    if (on("cycle")
-        && next.lateDays != null
-        && prev.lateDays == null
-        && HIDDEN_STATES.includes(next.bodyState)) {
-        out.push(notice(
-            "cycle",
-            `Кровь не приходила ${next.lateDays} ${plural(next.lateDays, "день", "дня", "дней")}.`,
-            "Tíðir",
-        ));
-    }
-
     /* ── Утроба ──
        Оба вида читают одну метку, но разные её половины: цикл — свои
-       состояния, ношение и всё прочее — остальные. Так «Tíðir» не приходит
-       беременной, а «Схватки начались» не приходит вместо смены фазы. */
-    if (next.mark && next.mark !== prev.mark && !HIDDEN_STATES.includes(next.bodyState)) {
+       состояния, ношение — свои. Так «Tíðir» не приходит беременной. */
+    if (next.mark && next.mark !== prev.mark) {
         const isCycle = CYCLE_STATES.includes(next.bodyState);
         const kind = isCycle ? "cycle" : "body";
         if (on(kind)) {
-            /*
-             * Счёт дней прячем ровно у одного состояния — счёта цикла.
-             *
-             * Там это «12/28», голая дробь без слова, да ещё и меняющаяся
-             * каждые сутки. У всех прочих счёт — часть новости: «Ношение:
-             * 4/9» у ношения, «Кровь не приходила: 40 дней» у сбоя. Задержка
-             * от названной причины должна сообщать столько же, сколько
-             * задержка без причины, — иначе по одной короткой строке видно,
-             * что причины нет, а это уже подсказка.
-             */
-            const head = [next.hint, next.bodyState === "cycling" ? null : next.count]
+            /* Счёт дней прячем ровно у счёта цикла: там это «12/28», голая
+               дробь без слова. У ношения счёт — часть новости: «Ношение: 4/9». */
+            const head = [next.hint, isCycle ? null : next.count]
                 .filter(Boolean).join(" · ");
             out.push(notice(
                 kind,
                 [head, next.status].filter(Boolean).join(". "),
                 next.title,
-                next.bodyState === "threat" || next.bodyState === "loss" ? "warning" : "info",
             ));
-        }
-    }
-
-    /* ── Дитя и отвар ──
-       Обе новости идут под видом «утроба», какой бы ни была главная метка:
-       отвар пьют и не нося дитя, а шевеление важнее стадии срока. */
-    if (on("body")) {
-        const mood = next.kicks?.mood ?? null;
-        if (mood && mood !== (prev.kicks?.mood ?? null)) {
-            out.push(notice("body", `${next.kicks.text}.`, null, mood === "alarm" ? "warning" : "info"));
-        }
-
-        const drank = next.draught?.mark ?? null;
-        if (drank && drank !== (prev.draught?.mark ?? null)) {
-            out.push(notice("body", next.draught.status, next.draught.title, "warning"));
         }
     }
 
