@@ -1855,61 +1855,17 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
 .nrn-icon[data-icon="char-state"]      { --nrn-icon: url("icons/char-state.svg"); }
 .nrn-icon[data-icon="char-thought"]    { --nrn-icon: url("icons/char-thought.svg"); }
 
-/* --- фазы тела: один знак на всё состояние героини --- */
+/* --- фазы цикла и стадии ношения --- */
 .nrn-icon[data-icon="phase-tidir"]      { --nrn-icon: url("icons/phase-tidir.svg"); }
 .nrn-icon[data-icon="phase-hreinsun"]   { --nrn-icon: url("icons/phase-hreinsun.svg"); }
 .nrn-icon[data-icon="phase-opit"]       { --nrn-icon: url("icons/phase-opit.svg"); }
 .nrn-icon[data-icon="phase-thverrandi"] { --nrn-icon: url("icons/phase-thverrandi.svg"); }
-.nrn-icon[data-icon="phase-late"]       { --nrn-icon: url("icons/phase-late.svg"); }
-.nrn-icon[data-icon="phase-unknown"]    { --nrn-icon: url("icons/phase-unknown.svg"); }
 .nrn-icon[data-icon="phase-dulid"]      { --nrn-icon: url("icons/phase-dulid.svg"); }
 .nrn-icon[data-icon="phase-kviknat"]    { --nrn-icon: url("icons/phase-kviknat.svg"); }
 .nrn-icon[data-icon="phase-falli"]      { --nrn-icon: url("icons/phase-falli.svg"); }
-.nrn-icon[data-icon="phase-hridir"]     { --nrn-icon: url("icons/phase-hridir.svg"); }
-.nrn-icon[data-icon="phase-threat"]     { --nrn-icon: url("icons/phase-threat.svg"); }
-.nrn-icon[data-icon="phase-loss"]       { --nrn-icon: url("icons/phase-loss.svg"); }
-.nrn-icon[data-icon="phase-saeng"]      { --nrn-icon: url("icons/phase-saeng.svg"); }
-.nrn-icon[data-icon="phase-hreinsan"]   { --nrn-icon: url("icons/phase-hreinsan.svg"); }
-.nrn-icon[data-icon="phase-brjost"]     { --nrn-icon: url("icons/phase-brjost.svg"); }
-.nrn-icon[data-icon="phase-vending"]    { --nrn-icon: url("icons/phase-vending.svg"); }
 
-/* --- сводка об утробе --- */
+/* --- когда ждать, совет --- */
 .nrn-icon[data-icon="body-due"]        { --nrn-icon: url("icons/body-due.svg"); }
-.nrn-icon[data-icon="body-rest"]       { --nrn-icon: url("icons/body-rest.svg"); }
-.nrn-icon[data-icon="body-father"]     { --nrn-icon: url("icons/body-father.svg"); }
-.nrn-icon[data-icon="body-divination"] { --nrn-icon: url("icons/body-divination.svg"); }
-
-/* --- приметы --- */
-.nrn-icon[data-icon="sign-breast"]       { --nrn-icon: url("icons/sign-breast.svg"); }
-.nrn-icon[data-icon="sign-nausea"]       { --nrn-icon: url("icons/sign-nausea.svg"); }
-.nrn-icon[data-icon="sign-false-hridir"] { --nrn-icon: url("icons/sign-false-hridir.svg"); }
-.nrn-icon[data-icon="sign-kicks-night"]  { --nrn-icon: url("icons/sign-kicks-night.svg"); }
-.nrn-icon[data-icon="sign-blood"]        { --nrn-icon: url("icons/sign-blood.svg"); }
-.nrn-icon[data-icon="sign-lettari"]      { --nrn-icon: url("icons/sign-lettari.svg"); }
-.nrn-icon[data-icon="sign-strain"]       { --nrn-icon: url("icons/sign-strain.svg"); }
-.nrn-icon[data-icon="sign-odd-blood"]    { --nrn-icon: url("icons/sign-odd-blood.svg"); }
-.nrn-icon[data-icon="sign-weather-toll"] { --nrn-icon: url("icons/sign-weather-toll.svg"); }
-/* Знаки примет цикла ещё не нарисованы: sign-sleep, sign-smell, sign-belly,
-   sign-swelling, sign-ache, sign-mood, sign-hunger, sign-heat. Пока их нет
-   в этом списке, панель рисует `_fallback.svg` и вёрстка этого не замечает —
-   строки при этом читаются целиком. Как файлы лягут в icons/, сюда добавятся
-   восемь строк, и больше ничего трогать не придётся. */
-
-/* --- дозор --- */
-.nrn-icon[data-icon="watch-kicks"]     { --nrn-icon: url("icons/watch-kicks.svg"); }
-.nrn-icon[data-icon="watch-midwife"]   { --nrn-icon: url("icons/watch-midwife.svg"); }
-.nrn-icon[data-icon="watch-women"]     { --nrn-icon: url("icons/watch-women.svg"); }
-.nrn-icon[data-icon="watch-charms"]    { --nrn-icon: url("icons/watch-charms.svg"); }
-.nrn-icon[data-icon="watch-gear"]      { --nrn-icon: url("icons/watch-gear.svg"); }
-.nrn-icon[data-icon="watch-faderni"]   { --nrn-icon: url("icons/watch-faderni.svg"); }
-.nrn-icon[data-icon="watch-rank"]      { --nrn-icon: url("icons/watch-rank.svg"); }
-.nrn-icon[data-icon="watch-name"]      { --nrn-icon: url("icons/watch-name.svg"); }
-
-/* --- отвар, дети, совет --- */
-.nrn-icon[data-icon="draught"]         { --nrn-icon: url("icons/draught.svg"); }
-.nrn-icon[data-icon="child"]           { --nrn-icon: url("icons/child.svg"); }
-.nrn-icon[data-icon="child-need"]      { --nrn-icon: url("icons/child-need.svg"); }
-.nrn-icon[data-icon="child-mark"]      { --nrn-icon: url("icons/child-mark.svg"); }
 .nrn-icon[data-icon="advice"]          { --nrn-icon: url("icons/advice.svg"); }
 
 /* --- строка факта: знак, подпись, значение ---
