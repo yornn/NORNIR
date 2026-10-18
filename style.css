@@ -1386,6 +1386,29 @@ dialog.popup.nrn-popup .popup-controls .menu_button:hover {
     margin: 16px 0 7px;
 }
 
+/* Абзац женской книги — обычный текст страницы, без рамки заметки. */
+.nrn-t-text {
+    margin: 0 0 10px;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--nrn-text);
+}
+
+/* Список «слово — значение»: слово ярче, строки с воздухом. */
+.nrn-t-terms {
+    margin-top: 4px;
+    margin-bottom: 10px;
+}
+
+.nrn-t-term + .nrn-t-term {
+    margin-top: 6px;
+}
+
+.nrn-t-term-word {
+    font-weight: bold;
+    color: var(--nrn-text-bright);
+}
+
 .nrn-t-note {
     margin-top: 14px;
     padding: 11px 15px;

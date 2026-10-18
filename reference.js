@@ -43,6 +43,8 @@ import { phaseOf, pregnancySummary } from "./body.js";
 
 import { NOTICE_KINDS } from "./notify.js";
 
+import { LORE, LORE_LAYERS } from "./lore.js";
+
 import {
     AUKNAETR_DAYS,
     AUK_AFTER_MONTH,
@@ -1136,10 +1138,20 @@ const SECTIONS = [
       title: () => t`The calendar block`, build: blockSection },
     { id: "css",   group: "tool", rune: "ᛚ", norse: "Ásýnd",      sub: () => t`look`,
       title: () => t`Look — layout, theme and CSS`, build: cssSection },
+
+    /* Женская книга — справки для чтения, по странице на тему (lore.js).
+       Подписи у них русские, как и сам текст: это знание о мире, а не
+       надписи интерфейса. */
+    ...LORE.map((entry) => ({
+        id: `lore-${entry.id}`, group: "lore", rune: entry.rune, norse: entry.norse,
+        sub: () => entry.sub, title: () => entry.title,
+        build: (body) => loreSection(body, entry),
+    })),
 ];
 
 const GROUP_TITLES = {
     book: () => t`The book of time`,
+    lore: () => t`The women's book`,
     tool: () => t`The workshop`,
 };
 
@@ -1152,6 +1164,33 @@ export const COLUMN_KEYS = Object.keys(COLUMN_LABELS);
 function dateSection(body, state, prefs, extras) {
     body.append(lead(t`This is the one thing the panel cannot read out of the reply: the day everything else is counted from. Set it once, and the day carries itself onward.`));
     if (extras?.onSetDate) body.append(datePicker(state, extras.onSetDate));
+}
+
+/**
+ * Страница женской книги: вступление, потом куски со своим слоем.
+ *
+ * Слой стоит подписью под заголовком куска — тем же тихим шрифтом, что
+ * пояснения слоёв у праздников: это не украшение, а то, насколько тексту
+ * можно верить.
+ */
+function loreSection(body, entry) {
+    body.append(lead(entry.lead));
+    for (const part of entry.parts) {
+        body.append(h("div", "nrn-t-subhead", part.head));
+        const layer = LORE_LAYERS[part.layer];
+        if (layer) body.append(h("div", "nrn-t-hint", `${layer.ru} — ${layer.hint}`));
+        for (const para of part.text ?? []) body.append(h("div", "nrn-t-text", para));
+        if (part.terms?.length) {
+            const list = h("div", "nrn-t-note nrn-t-terms");
+            for (const [word, meaning] of part.terms) {
+                const row = h("div", "nrn-t-term");
+                row.append(h("span", "nrn-t-term-word", word), h("span", null, ` — ${meaning}`));
+                list.append(row);
+            }
+            body.append(list);
+        }
+    }
+    if (entry.note) body.append(h("div", "nrn-t-note", entry.note));
 }
 
 function wombSection(body, state, prefs, extras) {
@@ -1208,7 +1247,7 @@ function buildHub(state, sections, prefs) {
     else header.append(h("div", "nrn-t-subtitle", t`Norse reckoning of time`));
     hub.append(header);
 
-    for (const group of ["book", "tool"]) {
+    for (const group of ["book", "lore", "tool"]) {
         const defs = sections.filter((s) => s.group === group);
         if (!defs.length) continue;
         hub.append(groupHead(GROUP_TITLES[group]()));
@@ -1286,6 +1325,9 @@ export function buildReference(state, theme = "thread-dark", prefs, onSetDate = 
     const sections = SECTIONS.filter((def) => {
         if (def.id === "date") return !!onSetDate;
         if (def.id === "womb") return !!cycle;
+        /* Женская книга — при женской линии: выключена она — незачем
+           и читать о ней посреди календаря. */
+        if (def.group === "lore") return !!cycle;
         return true;
     });
 
